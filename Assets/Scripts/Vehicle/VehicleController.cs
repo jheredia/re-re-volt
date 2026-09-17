@@ -72,6 +72,7 @@ namespace Vehicle
         // Computed
         public float CurrentSpeed => vehicleRigidBody != null ? vehicleRigidBody.linearVelocity.magnitude * 3.6f: 0f; // Current speed in m/s
         public bool IsDrifting { get; private set; } // True when the car is drifting, determined by brake input and speed
+        public bool IsConfigured => wheelFL != null && wheelFR != null && wheelRL != null && wheelRR != null;
         #endregion
 
 
@@ -90,8 +91,10 @@ namespace Vehicle
 
         void FixedUpdate()
         {
+            if (!IsConfigured) return;
             if (!inputEnabled)
             {
+                wheelRL.motorTorque = wheelRR.motorTorque = 0f;
                 ApplyBrake(maxBrakeTorque); // Apply brakes to stop the car if input is disabled
                 return;
             }
@@ -113,7 +116,21 @@ namespace Vehicle
                 ThrottleInput = 0f;
                 SteerInput = 0f;
                 BrakeInput = 0f;
+                IsDrifting = false;
+                if (IsConfigured)
+                {
+                    wheelRL.motorTorque = wheelRR.motorTorque = 0f;
+                    ApplyBrake(maxBrakeTorque);
+                }
             }
+        }
+
+        public void ConfigureWheels(WheelCollider frontLeft, WheelCollider frontRight, WheelCollider rearLeft, WheelCollider rearRight)
+        {
+            wheelFL = frontLeft;
+            wheelFR = frontRight;
+            wheelRL = rearLeft;
+            wheelRR = rearRight;
         }
 
         #region Motor
@@ -207,14 +224,24 @@ namespace Vehicle
         #region Vehicle Reset
         public void ResetVehicle()
         {
-            // Reset velocity
+            if (TryGetComponent(out VehicleRecovery recovery)) recovery.TryRecover();
+        }
+
+        public void Teleport(Pose pose)
+        {
             vehicleRigidBody.linearVelocity = Vector3.zero;
             vehicleRigidBody.angularVelocity = Vector3.zero;
-
-            // Reset position and rotation
-            Vector3 pos = transform.position + Vector3.up * 0.5f; // Slightly above current position to avoid ground collision
-            Quaternion rot = Quaternion.Euler(0, transform.eulerAngles.y, 0); // Keep current Y rotation
-            transform.SetPositionAndRotation(pos, rot);
+            vehicleRigidBody.position = pose.position;
+            vehicleRigidBody.rotation = pose.rotation;
+            transform.SetPositionAndRotation(pose.position, pose.rotation);
+            ThrottleInput = SteerInput = BrakeInput = currentSteerAngle = 0f;
+            IsDrifting = false;
+            if (IsConfigured)
+            {
+                wheelRL.motorTorque = wheelRR.motorTorque = 0f;
+                wheelFL.steerAngle = wheelFR.steerAngle = 0f;
+                ApplyBrake(0f);
+            }
         }
         #endregion
     }

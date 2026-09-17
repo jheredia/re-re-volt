@@ -1,165 +1,111 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Users;
 using Vehicle;
 
 namespace Core
 {
-/// <summary>
-/// Reads player input and writes normalized values onto VehicleController.
-///
-/// Two input paths, mutually exclusive:
-///   A) New Input System callbacks  — used when a PlayerInput component is
-///      present and a binding fires (gamepad or remapped keys).
-///   B) Legacy keyboard polling     — fallback when no PlayerInput is found,
-///      useful for quick in-editor testing without any Input System setup.
-///
-/// Path A takes full ownership once detected: the callback sets a flag that
-/// suppresses the keyboard poll for the rest of that frame.
-/// </summary>
-[RequireComponent(typeof(Vehicle.VehicleController))]
-    public class InputHandler : MonoBehaviour
+    /// <summary>Reads only this player's explicitly paired Gamepad. No global-device fallback.</summary>
+    [RequireComponent(typeof(VehicleController))]
+    public sealed class InputHandler : MonoBehaviour
     {
         private VehicleController vehicle;
-        private PlayerInput playerInput;
+        private InputUser user;
+        private RaceManager race;
+        private RacerState racer;
+        private int joinedFrame;
+        private Gamepad lastConnectedPad;
 
-        // Cached input values
-        private float throttle;
-        private float steer;
-        private float brake;
+        public event Action FireRequested;
+        public event Action PauseRequested;
+        public event Action LeaveRequested;
+        public bool GameplaySuspended { get; set; }
 
-        // Flag to detect if we've received input from the new Input System this frame
-        private bool callbackReceivedThisFrame = false;
-
-        void Awake()
+        public Gamepad PairedGamepad
         {
-            TryGetComponent(out vehicle);
-            if (vehicle == null)
+            get
             {
-                Debug.LogError("InputHandler requires a VehicleController component on the same GameObject.");
+                if (!user.valid) return null;
+                foreach (InputDevice device in user.pairedDevices)
+                    if (device is Gamepad pad && pad.added && pad.enabled) return pad;
+                return null;
+            }
+        }
+
+        public bool IsConnected => PairedGamepad != null;
+
+        private void Awake()
+        {
+            vehicle = GetComponent<VehicleController>();
+            vehicle.SetInputEnabled(false);
+        }
+
+        private void OnEnable() => InputSystem.onDeviceChange += OnDeviceChange;
+
+        private void OnDeviceChange(InputDevice device, InputDeviceChange change)
+        {
+            if (device == lastConnectedPad &&
+                (change == InputDeviceChange.Removed || change == InputDeviceChange.Disabled))
+            {
+                lastConnectedPad = null;
+                vehicle.SetInputEnabled(false);
+            }
+        }
+
+        public void Initialize(InputUser pairedUser, RaceManager raceManager, RacerState racerState)
+        {
+            if (!pairedUser.valid || pairedUser.pairedDevices.Count != 1 ||
+                !(pairedUser.pairedDevices[0] is Gamepad) || raceManager == null || racerState == null)
+                throw new ArgumentException("Local input requires one paired Gamepad and a registered racer.");
+            user = pairedUser;
+            race = raceManager;
+            racer = racerState;
+            joinedFrame = Time.frameCount;
+            lastConnectedPad = null;
+        }
+
+        private void Update()
+        {
+            Gamepad pad = PairedGamepad;
+            if (pad != lastConnectedPad)
+            {
+                // Reconnected devices may reuse controls with cached values from an old state buffer.
+                // Refresh once on reconnect so a now-neutral trigger cannot retain its former value.
+                if (pad != null) pad.ApplyParameterChanges();
+                lastConnectedPad = pad;
+            }
+            bool driving = pad != null && race != null && race.RaceRunning && !racer.IsFinished &&
+                           !GameplaySuspended && Time.timeScale > 0f;
+            vehicle.SetInputEnabled(driving);
+            if (pad == null || race == null || Time.frameCount == joinedFrame) return;
+
+            // Pause remains available while gameplay is suspended or timeScale is zero.
+            if (pad.startButton.wasPressedThisFrame)
+            {
+                PauseRequested?.Invoke();
+                vehicle.SetInputEnabled(false);
                 return;
             }
-
-            TryGetComponent(out playerInput);
-        }
-
-        void Update()
-        {
-            if (!GameManager.Instance.IsRacing)
+            if (race.CurrentState == RaceManager.RaceState.Idle && pad.selectButton.wasPressedThisFrame)
             {
-                ClearInputs();
+                LeaveRequested?.Invoke();
                 return;
             }
+            if (!driving) return;
 
-            if (playerInput == null || !callbackReceivedThisFrame)
-            {
-                ReadKeyboardInput();
-            }
-
-            vehicle.ThrottleInput = throttle;
-            vehicle.SteerInput = steer;
-            vehicle.BrakeInput = brake;
-
-            // Reset callback flag for the next frame
-            callbackReceivedThisFrame = false;
+            vehicle.ThrottleInput = pad.rightTrigger.ReadValue() - pad.leftTrigger.ReadValue();
+            vehicle.SteerInput = pad.leftStick.x.ReadValue();
+            vehicle.BrakeInput = pad.buttonSouth.isPressed ? 1f : 0f;
+            if (pad.buttonWest.wasPressedThisFrame) FireRequested?.Invoke();
+            if (pad.buttonNorth.wasPressedThisFrame) vehicle.ResetVehicle();
         }
 
-        // ── Keyboard Fallback (new Input System API) ───────────────────────────
-        private void ReadKeyboardInput()
+        private void OnDisable()
         {
-            var kb = Keyboard.current;
-            if (kb == null) return;
-    
-            // Throttle
-            throttle = 0f;
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed)   throttle =  1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) throttle = -1f;
-    
-            // Steer
-            steer = 0f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steer =  1f;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed)  steer = -1f;
-    
-            // Brake / Drift
-            brake = kb.spaceKey.isPressed ? 1f : 0f;
-    
-            // Reset vehicle
-            if (kb.rKey.wasPressedThisFrame)
-                vehicle.ResetVehicle();
-    
-            // Pause
-            if (kb.escapeKey.wasPressedThisFrame)
-                TogglePause();
+            InputSystem.onDeviceChange -= OnDeviceChange;
+            lastConnectedPad = null;
+            if (vehicle != null) vehicle.SetInputEnabled(false);
         }
-
-        #region Input System callbacks
-        // Input System callbacks (set up via PlayerInput component)
-        public void OnThrottle(InputValue value)
-        {
-            throttle = value.Get<float>();
-            callbackReceivedThisFrame = true;
-        }
-
-        public void OnSteer(InputValue value)
-        {
-            steer = value.Get<float>();
-            callbackReceivedThisFrame = true;
-        }
-
-        public void OnBrake(InputValue value)
-        {
-            brake = value.Get<float>();
-            callbackReceivedThisFrame = true;
-        }
-
-        public void OnFireWeapon(InputValue value)
-        {
-            if (value.isPressed)
-            {
-                // vehicle.FireWeapon();
-            }
-        }
-
-        public void OnResetVehicle(InputValue value)
-        {
-            callbackReceivedThisFrame = true;
-            if (value.isPressed)
-            {
-                vehicle.ResetVehicle();
-            }
-        }
-
-        public void OnPause(InputValue value)
-        {
-            callbackReceivedThisFrame = true;
-            if (value.isPressed)
-            {
-                TogglePause();
-            }
-        }
-        # endregion
-    
-        
-
-        # region Helpers
-        // Helpers
-
-        private void ClearInputs()
-        {
-            throttle = brake = steer = 0f;
-            vehicle.ThrottleInput = vehicle.SteerInput = vehicle.BrakeInput = 0f;
-        }
-
-        private void TogglePause()
-        {
-            if (GameManager.Instance.IsPaused)
-            {
-                GameManager.Instance.ResumeGame();
-            }
-            else
-            {
-                GameManager.Instance.PauseGame();
-            }
-        }
-        #endregion
-    }   
+    }
 }

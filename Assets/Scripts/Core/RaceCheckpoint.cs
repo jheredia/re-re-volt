@@ -12,6 +12,8 @@ namespace Core
         [SerializeField] private RaceManager raceManager;
         [Min(0)]
         [SerializeField] private int checkpointIndex;
+        [Tooltip("Optional safe recovery anchor on the road, facing along the circuit.")]
+        [SerializeField] private Transform recoveryAnchor;
 
         public int CheckpointIndex => checkpointIndex;
 
@@ -28,17 +30,23 @@ namespace Core
             }
         }
 
-        public void Configure(RaceManager manager, int index)
+        public void Configure(RaceManager manager, int index, Transform safeRecoveryAnchor = null)
         {
             raceManager = manager;
             checkpointIndex = Mathf.Max(0, index);
+            recoveryAnchor = safeRecoveryAnchor;
         }
 
         private void OnTriggerEnter(Collider other)
         {
             if (raceManager != null)
             {
-                raceManager.ReportCheckpoint(other.gameObject, checkpointIndex);
+                if (raceManager.ReportCheckpoint(other.gameObject, checkpointIndex))
+                {
+                    Vehicle.VehicleRecovery recovery = other.GetComponentInParent<Vehicle.VehicleRecovery>();
+                    Transform anchor = recoveryAnchor != null ? recoveryAnchor : transform;
+                    if (recovery != null) recovery.RecordCheckpoint(new Pose(anchor.position, anchor.rotation));
+                }
             }
         }
     }

@@ -1,0 +1,5 @@
+{
+  "name": "ReReVolt.Runtime",
+  "references": ["ReReVolt.RaceRules", "Unity.InputSystem", "Unity.TextMeshPro"],
+  "autoReferenced": true
+}
