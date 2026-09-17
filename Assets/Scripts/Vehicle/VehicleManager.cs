@@ -76,10 +76,8 @@ namespace Vehicle
 
             allVehicles.Add(playerVehicle);
 
-            // Register player with RaceManager
-            RacerData racerData = new() { DisplayName = "Player", IsPlayer = true, VehicleObject = playerObj };
-
-            GameManager.Instance.RaceManager.RegisterRacer(racerData);
+            // Stage 2 replaces this legacy path with device-paired local players.
+            GameManager.Instance.RaceManager.RegisterRacer("player-1", playerObj, "Player 1", true, 0);
         }
 
         private void SpawnAI(Transform spawnPoint, int index)
@@ -98,10 +96,7 @@ namespace Vehicle
 
             allVehicles.Add(aiVehicle);
 
-            // Register AI with RaceManager
-            RacerData racerData = new() { DisplayName = $"AI {index}", IsPlayer = false, VehicleObject = aiObj };
-
-            GameManager.Instance.RaceManager.RegisterRacer(racerData);
+            GameManager.Instance.RaceManager.RegisterRacer($"ai-{index}", aiObj, $"AI {index}", false);
         }
 
         #endregion 
