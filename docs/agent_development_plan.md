@@ -16,7 +16,7 @@ on a single machine using controllers and automatic split-screen cameras.
 - Pickup boxes and at least two usable weapons: a projectile and an oil hazard.
 - Per-player HUD showing position, lap, held weapon, and race state.
 - Controller navigation from join/setup through results and rematch.
-- A reproducible desktop build and a documented control scheme.
+- Reproducible macOS and Windows desktop builds with a documented control scheme.
 
 Online multiplayer, progression, vehicle selection, content unlocks, and a
 large content library are explicitly outside this vertical slice.
@@ -57,8 +57,8 @@ receive, and recover from both weapons.
 A validation agent audits the integrated prototype, fixes only scoped blocking
 issues, runs compilation/tests/build checks, exercises one-to-four-player flows,
 and records exact evidence and remaining limitations. Gate: the prototype is
-either delivered as playable with an artifact path or reported with a precise
-blocking issue and reproduction steps.
+delivered with macOS and Windows artifact paths, or either platform is reported
+with a precise blocking issue and reproduction steps.
 
 ## Integration rules
 

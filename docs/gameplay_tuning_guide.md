@@ -95,6 +95,10 @@ Current standalone baseline (2026-09-20):
   macOS 12.0, Mono backend. Despite the `-buildOSXUniversalPlayer` command flag,
   the executable inspected as ARM64 only.
 - Build log: `/private/tmp/re-re-volt-stage5-build.log`.
+- Windows x86_64 build is an explicit Stage 5 requirement and remains pending.
+  Record its artifact and build log separately. A cross-build on macOS proves
+  buildability only; controller and runtime behavior must be tested on Windows
+  before claiming a Windows playtest baseline.
 - A stable standalone launch/end-to-end flow is not yet accepted: the attempted
   player log was empty at the usage cutoff.
 - Physical-controller baseline is **pending**. The host exposed no attached

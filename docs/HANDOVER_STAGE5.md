@@ -30,6 +30,11 @@ user-requested conservative 80% cutoff. No production or test code was changed.
   minimum macOS 12.0). Although the command used
   `-buildOSXUniversalPlayer`, file inspection proves the executable is ARM64
   only. It was built with Mono in Unity 6000.6.0f1 on Apple Silicon.
+- Windows build: **required and pending**. Produce a Windows x86_64 player as a
+  separate Stage 5 artifact, retain its build log, and distinguish "built" from
+  "launched on Windows." This macOS host can establish a successful cross-build
+  only if Unity's Windows build-support module is installed; runtime validation
+  requires an actual Windows environment.
 - Launch smoke: **not accepted as validated**. A launch was attempted, but the
   supplied `/private/tmp/re-re-volt-stage5-player.log` remained empty and no
   player process remained at handover. Do not infer an end-to-end pass.
@@ -53,10 +58,13 @@ Smallest safe continuation after usage refresh:
 1. Verify `git status` still contains only these Stage 5 documentation updates.
 2. Launch the standalone artifact with a non-empty player log and capture a
    stable lobby/race window; then exercise results and rematch if feasible.
-3. Connect one real controller and perform join/start/driving/triggers/A-B-X-Y,
+3. Produce the required Windows x86_64 build and record its artifact/log paths.
+   If the Unity module is unavailable, record the exact module/tooling blocker.
+4. Connect one real controller and perform join/start/driving/triggers/A-B-X-Y,
    pause/reconnect, pickup/weapon and full-race checks. Repeat with four physical
    controllers when available, verifying four-way HUD readability.
-4. Record exact controller models and outcomes here and in the tuning guide.
+5. Record exact controller models and platform outcomes here and in the tuning
+   guide. Do not claim Windows runtime validation without running it on Windows.
 
 ## Combat authority and integration contract
 
@@ -242,9 +250,12 @@ regenerate the same migration noise. No further Stage 4 blocking evidence remain
    on the available controller families. Record the hardware actually used.
 3. Tune only scoped blocking handling/combat problems; keep race authority,
    input ownership, checkpoint order and reset paths intact.
-4. Build a standalone desktop player, launch it, and drive the complete flow
-   from controller joining through a three-lap finish and rematch/lobby return.
-   Record build path, target, resolution, logs and any platform limitations.
+4. Build standalone macOS and Windows players. Launch the macOS artifact and
+   drive the complete flow from controller joining through a three-lap finish
+   and rematch/lobby return. Cross-build Windows x86_64 on this host when build
+   support is available, and reserve Windows runtime claims for an actual
+   Windows environment. Record build paths, targets, resolution, logs and all
+   platform limitations.
 5. Re-run relevant tests after fixes; retain visual evidence and update the
    tuning guide with accepted physical-controller/build settings.
 6. Remove only editor-generated migration noise before handoff. Version 6000.6
