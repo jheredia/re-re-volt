@@ -9,7 +9,8 @@ on a single machine using controllers and automatic split-screen cameras.
 ## Prototype contract
 
 - One complete three-lap race on an original toy-scale circuit.
-- One to four local human racers, with one controller paired to each player.
+- One to four local human racers: one optional keyboard-owned player and one
+  independently paired controller for every remaining player.
 - Automatic one-, two-, three-, and four-player camera layouts.
 - Responsive arcade vehicle handling, recovery, and race-safe respawning.
 - Ordered checkpoints, lap counting, race positions, finish order, and rematch.
@@ -56,9 +57,11 @@ receive, and recover from both weapons.
 
 A validation agent audits the integrated prototype, fixes only scoped blocking
 issues, runs compilation/tests/build checks, exercises one-to-four-player flows,
-and records exact evidence and remaining limitations. Gate: the prototype is
-delivered with macOS and Windows artifact paths, or either platform is reported
-with a precise blocking issue and reproduction steps.
+adds isolated keyboard ownership for solo testing, and records exact evidence
+and remaining limitations. Gate: the prototype is delivered with macOS and
+Windows artifact paths, supports a keyboard-only solo race plus mixed keyboard
+and controller play, or any unmet platform/input criterion is reported with a
+precise blocking issue and reproduction steps.
 
 ## Integration rules
 

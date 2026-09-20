@@ -9,7 +9,7 @@
 - Stage 4 validation status: **Accepted at the Stage 4 gate**, reconciled on
   2026-09-20. Physical controllers and a standalone build remain Stage 5 work.
 - Product: original runtime-built three-lap workbench circuit, one to four
-  controller-paired local racers, split-screen/HUD, ordered race rules,
+  local racers, split-screen/HUD, ordered race rules,
   recovery, pause/disconnect/results/rematch, four pickup boxes, BOLT and OIL.
 - No packages, networking, AI racing, audio production, scene YAML, or borrowed
   visual assets were added for combat.
@@ -41,6 +41,15 @@ user-requested conservative 80% cutoff. No production or test code was changed.
 - Physical controllers: **PENDING / UNAVAILABLE**. IOHID inventory exposed only
   the Apple keyboard, trackpad and headset; no physical gamepad was attached.
   Virtual-pad PlayMode coverage from Stage 4 is not a substitute for this check.
+- Keyboard input: **required and pending**. The keyboard may own exactly one
+  local player (normally Player 1), either alone or with up to three gamepad
+  players. It must use the same `InputUser` ownership boundary and gameplay
+  events as a gamepad; it must never become a global fallback that drives every
+  car. The total roster remains capped at four.
+- Current solo mode: **supported with one gamepad** as a one-car three-lap
+  practice race with pickups and weapons. There are no AI opponents. Keyboard
+  ownership will make this same solo flow easier to test; AI racing is not part
+  of the current prototype contract.
 - Tests: not rerun because Stage 5 made no source/test change. The accepted
   checkpoint remains 36/36 EditMode and 12/12 full PlayMode, with exact evidence
   paths in the validation section below.
@@ -60,10 +69,14 @@ Smallest safe continuation after usage refresh:
    stable lobby/race window; then exercise results and rematch if feasible.
 3. Produce the required Windows x86_64 build and record its artifact/log paths.
    If the Unity module is unavailable, record the exact module/tooling blocker.
-4. Connect one real controller and perform join/start/driving/triggers/A-B-X-Y,
+4. Implement and test one keyboard-owned player: join/start/confirm, steering,
+   throttle/reverse/brake, recovery, weapon, pause/back, results, rematch and
+   lobby return. Validate keyboard-only solo play and keyboard plus three
+   independently owned gamepads without cross-control.
+5. Connect one real controller and perform join/start/driving/triggers/A-B-X-Y,
    pause/reconnect, pickup/weapon and full-race checks. Repeat with four physical
    controllers when available, verifying four-way HUD readability.
-5. Record exact controller models and platform outcomes here and in the tuning
+6. Record exact controller models and platform outcomes here and in the tuning
    guide. Do not claim Windows runtime validation without running it on Windows.
 
 ## Combat authority and integration contract
@@ -250,15 +263,21 @@ regenerate the same migration noise. No further Stage 4 blocking evidence remain
    on the available controller families. Record the hardware actually used.
 3. Tune only scoped blocking handling/combat problems; keep race authority,
    input ownership, checkpoint order and reset paths intact.
-4. Build standalone macOS and Windows players. Launch the macOS artifact and
+4. Add isolated keyboard ownership for one player and validate both a
+   keyboard-only solo race and a mixed keyboard-plus-three-gamepad roster. Reuse
+   the existing `InputUser`, `InputHandler`, race, pause, recovery and weapon
+   event paths; do not add a global keyboard polling path.
+5. Build standalone macOS and Windows players. Launch the macOS artifact and
    drive the complete flow from controller joining through a three-lap finish
    and rematch/lobby return. Cross-build Windows x86_64 on this host when build
    support is available, and reserve Windows runtime claims for an actual
    Windows environment. Record build paths, targets, resolution, logs and all
    platform limitations.
-5. Re-run relevant tests after fixes; retain visual evidence and update the
+6. Re-run relevant tests after fixes; retain visual evidence and update the
    tuning guide with accepted physical-controller/build settings.
-6. Remove only editor-generated migration noise before handoff. Version 6000.6
+7. Accept and reconcile the intentional project baseline migration to Unity
+   6000.6.0f1, then remove only unrelated/generated noise before handoff.
+   Version 6000.6
    rewrites package/version/render/solution settings and may create
    `PhysicsCoreProjectSettings2D.asset` and `ProjectAuditorSettings.asset`.
 

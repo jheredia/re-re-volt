@@ -104,6 +104,10 @@ Current standalone baseline (2026-09-20):
 - Physical-controller baseline is **pending**. The host exposed no attached
   gamepad, only Apple keyboard/trackpad/headset devices. Stage 4 virtual-pad
   tests must not be reported as physical-controller validation.
+- Keyboard support is required and pending. Exactly one keyboard may own one
+  player through the same `InputUser`/`InputHandler` path; up to three gamepads
+  may fill the remaining slots. Record the accepted key map here after runtime
+  validation. Do not implement global keyboard fallback polling.
 - No Stage 5 vehicle, camera, combat, input, performance, or resolution override
   has been accepted. Existing Stage 2–4 tuning remains authoritative.
 
