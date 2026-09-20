@@ -71,3 +71,21 @@ blocking issue and reproduction steps.
   borrowed Re-Volt assets or other copyrighted game content are not.
 - The overseer owns final architecture decisions, cross-stage reconciliation,
   commits, and the final validation report.
+
+## Usage-limit handover protocol
+
+When the active Codex five-hour usage window reaches 95% used (5% remaining),
+the active stage stops starting new implementation work and writes a handover
+before the limit can interrupt it. The handover must include:
+
+- stage objective and acceptance criteria already met;
+- exact files changed, including uncommitted and generated artifacts;
+- current compile, test, runtime, and screenshot evidence with paths;
+- known failures, last actionable logs, and reproduction steps;
+- the next smallest action or command required to resume;
+- temporary editor/process state and any cleanup still required;
+- migration noise or unrelated diffs that must not be committed;
+- architectural decisions and public APIs the next agent must preserve.
+
+The overseer then resumes the stage with a fresh agent after usage refresh,
+using the handover and the last accepted commit as the continuity boundary.

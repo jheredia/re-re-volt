@@ -2,7 +2,8 @@
   "name": "ReReVolt.RaceRules.Tests",
   "rootNamespace": "",
   "references": [
-    "ReReVolt.RaceRules"
+    "ReReVolt.RaceRules",
+    "ReReVolt.Runtime"
   ],
   "includePlatforms": [
     "Editor"

@@ -1,12 +1,6 @@
-using Core;
 using UnityEngine;
 
+/// <summary>Legacy scene marker retained only to preserve the serialized script reference.</summary>
 public class RaceTester : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        GameManager.Instance.StartGame();
-    }
-
 }
