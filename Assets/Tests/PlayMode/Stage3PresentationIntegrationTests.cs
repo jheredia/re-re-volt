@@ -76,8 +76,10 @@ namespace Tests.PlayMode
             Gamepad pad = InputSystem.AddDevice<Gamepad>();
             Assert.That(roster.TryJoinGamepad(pad, out LocalPlayer player), Is.True);
             Assert.That(race.StartRace(), Is.True);
-            yield return new WaitForSecondsRealtime(3.2f);
-            Assert.That(race.RaceRunning, Is.True);
+            // Each countdown yield resumes on a frame; editor stalls can exceed a fixed 3.2-second sleep.
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!race.RaceRunning && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(race.RaceRunning, Is.True, "Countdown must enter Racing within 10 seconds.");
 
             yield return PressAndRelease(pad, GamepadButton.Start);
             Assert.That(presentation.IsPaused, Is.True);

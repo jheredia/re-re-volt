@@ -63,6 +63,29 @@ namespace Vehicle
         private Rigidbody vehicleRigidBody;
         private float currentSteerAngle;
         private bool inputEnabled = true; // Can be used to disable input when the car is flipped or during cutscenes
+        private float combatGrip = 1f;
+        private float combatMotor = 1f;
+        private float combatSteering = 1f;
+        private float frontLeftGrip = 1f;
+        private float frontRightGrip = 1f;
+
+        public bool HasCombatModifier => combatGrip < 1f || combatMotor < 1f || combatSteering < 1f;
+        public float CombatGripMultiplier => combatGrip;
+
+        // These multipliers never enable input or mutate the authored handling values.
+        public void SetCombatModifiers(float grip, float motor, float steering)
+        {
+            combatGrip = Mathf.Clamp01(grip);
+            combatMotor = Mathf.Clamp01(motor);
+            combatSteering = Mathf.Clamp01(steering);
+            if (!IsConfigured) return;
+            SetWheelSidewaysStiffness(wheelFL, frontLeftGrip * combatGrip);
+            SetWheelSidewaysStiffness(wheelFR, frontRightGrip * combatGrip);
+            SetWheelSidewaysStiffness(wheelRL, (IsDrifting ? driftRearGrip : normalRearGrip) * combatGrip);
+            SetWheelSidewaysStiffness(wheelRR, (IsDrifting ? driftRearGrip : normalRearGrip) * combatGrip);
+        }
+
+        public void ClearCombatModifiers() => SetCombatModifiers(1f, 1f, 1f);
 
         // Raw inputs (set by InputHandler or AIDriverController)
         [HideInInspector] public float ThrottleInput; // -1 to 1
@@ -87,6 +110,7 @@ namespace Vehicle
 
             // Set the center of mass for better stability
             vehicleRigidBody.centerOfMass = centerOfMassOffset;
+            if (IsConfigured) CacheFrontGrip();
         }
 
         void FixedUpdate()
@@ -131,6 +155,13 @@ namespace Vehicle
             wheelFR = frontRight;
             wheelRL = rearLeft;
             wheelRR = rearRight;
+            CacheFrontGrip();
+        }
+
+        private void CacheFrontGrip()
+        {
+            frontLeftGrip = wheelFL.sidewaysFriction.stiffness;
+            frontRightGrip = wheelFR.sidewaysFriction.stiffness;
         }
 
         #region Motor
@@ -142,7 +173,7 @@ namespace Vehicle
 
             if (currentSpeed < maxSpeed)
             {
-                torque = ThrottleInput * maxMotorTorque;
+                torque = ThrottleInput * maxMotorTorque * combatMotor;
             }
 
             // Rear wheel drive
@@ -166,7 +197,7 @@ namespace Vehicle
         #region Steering
         private void HandleSteering()
         {
-            float targetAngle = SteerInput * maxSteerAngle;
+            float targetAngle = SteerInput * maxSteerAngle * combatSteering;
             currentSteerAngle = Mathf.Lerp(currentSteerAngle, targetAngle, steerSpeed * Time.fixedDeltaTime);
         
             wheelFL.steerAngle = currentSteerAngle;
@@ -180,7 +211,7 @@ namespace Vehicle
         {
             IsDrifting = BrakeInput > driftThreshold && CurrentSpeed > 2f; // Simple condition to enter drift
 
-            float rearGrip = IsDrifting ? driftRearGrip : normalRearGrip;
+            float rearGrip = (IsDrifting ? driftRearGrip : normalRearGrip) * combatGrip;
 
             SetWheelSidewaysStiffness(wheelRL, rearGrip);
             SetWheelSidewaysStiffness(wheelRR, rearGrip);
@@ -229,6 +260,7 @@ namespace Vehicle
 
         public void Teleport(Pose pose)
         {
+            ClearCombatModifiers();
             vehicleRigidBody.linearVelocity = Vector3.zero;
             vehicleRigidBody.angularVelocity = Vector3.zero;
             vehicleRigidBody.position = pose.position;

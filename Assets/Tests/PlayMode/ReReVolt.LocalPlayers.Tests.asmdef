@@ -1,6 +1,6 @@
 {
   "name": "ReReVolt.LocalPlayers.Tests",
-  "references": ["ReReVolt.Runtime", "ReReVolt.RaceRules", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
+  "references": ["ReReVolt.Runtime", "ReReVolt.RaceRules", "Unity.InputSystem", "Unity.InputSystem.TestFramework", "Unity.TextMeshPro"],
   "optionalUnityReferences": ["TestAssemblies"],
   "autoReferenced": false
 }

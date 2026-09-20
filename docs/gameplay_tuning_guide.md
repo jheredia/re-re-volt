@@ -53,16 +53,38 @@ four-player race before accepting a new baseline.
 
 ## Stage 4 — Pickups and weapons
 
-Stage 4 must replace this placeholder with the exact implemented files and
-defaults. It must document at least:
+`Assets/Scripts/Weapons/WeaponManager.cs` owns combat and its serialized tuning.
+`Stage3Bootstrap` configures the existing manager after the race, roster and HUD.
+All times below use its fixed-step `SimulationTime`, which freezes outside
+Racing, while timeScale is zero, when any controller disconnects, or when an
+unfinished player's `InputHandler.GameplaySuspended` is set. Combat never
+enables input or changes authored driving values.
 
-- pickup positions, respawn time, and weapon-selection rule;
-- one-slot inventory behavior;
-- projectile speed, lifetime, hit radius/force, shooter grace period, and
-  disruption duration;
-- oil hazard lifetime, arming delay, grip/control effect, and recovery behavior;
-- live-weapon limits and reset/rematch cleanup;
-- HUD weapon names and feedback timings.
+| Desired change | Field / location | Implemented default |
+| --- | --- | --- |
+| Pickup positions | `WeaponManager.GetPickupPosition` | Four world positions: `(-13.3, .95, 3)`, `(0, .95, 16.7)`, `(13.3, .95, 0)`, `(0, .95, -13.3)`. Triggers only, between checkpoints and clear of grid/recovery search lanes. |
+| Pickup size / motion | `Core/PickupSpawner.cs`, `Configure` / `Step` | Trigger `1.5 × 1.7 × 1.5`; box `.85`; rotation `65°/s`; vertical bob amplitude `.1`, frequency `3 rad/s`. |
+| Respawn | `PickupSpawner.respawnCooldown` | `5` active seconds after successful collection. Empty pedestal remains visible. |
+| Selection | `RaceRules/CombatRules.cs`, `PickupCycle` | Even indexed boxes start BOLT, odd start OIL; alternate after each successful collection; reset repeats initial sequence. No random/global RNG. |
+| Inventory | `CombatInventory` | Exactly one slot per local player; full slots leave the box untouched; one successful collection per spawn cycle. |
+| Fire spacing | `WeaponManager.fireCooldown` | `.35` seconds; failed fire, full live-weapon cap, or unsupported oil drop retains the item. |
+| Bolt movement / bounds | `projectileSpeed`, `projectileLifetime`, `projectileRadius` | `32 m/s`, `3 s`, `.3 m` sphere; spawns `1.25 m` forward and `.15 m` above car origin. Swept sphere plus spawn overlap handles walls and cars. |
+| Bolt shooter protection | `LiveCombatWeapon.IsShooter` | Shooter excluded for the entire lifetime, including all child colliders (stronger than a finite grace). |
+| Bolt impact | `impactDuration`, `impactVelocityChange`, `impactMotorMultiplier`, `impactSteeringMultiplier` | `1 s`; horizontal `3 m/s` velocity change; motor `.25`, steering `.5`; grip unchanged. |
+| Oil placement / hit volume | `OnFireRequested`, `oilRadius` | Drop `2.7 m` behind car onto drivable ground only; radius `1.35 m`; overlap volume center `.35 m` above slick with `.5 m` half-height and a circular planar filter. |
+| Oil lifetime / grace | `oilLifetime`, `oilArmingDelay`, `oilShooterGrace` | `9 s` lifetime; harmless to everyone for `.6 s`; harmless to shooter for `1.2 s`; then the shooter can be hit too. Slick is consumed by its first valid hit. |
+| Oil handling | `oilDuration`, `oilGripMultiplier`, `oilMotorMultiplier`, `oilSteeringMultiplier` | `2.5 s`; all-wheel sideways grip `.18`, motor `.65`, steering `.45`. Existing drift setting is multiplied, not overwritten. |
+| Effect stacking | `WeaponManager.FixedUpdate` | Repeated hits refresh the corresponding duration, never add multipliers. Impact motor takes priority while active; steering uses the lower active value. |
+| Recovery protection | `recoveryGrace` | Successful recovery immediately clears disruption/feedback; `.75 s` protection against new hits and pickup collection. Held item is retained. Grid reset clears everything. |
+| Counts | `maximumLiveWeapons`, `maximumFeedbackEffects` | `16` weapons globally; `16` transient pulse effects; up to one 3-spark feedback object per player; exactly four pickups. |
+| Feedback | `feedbackLifetime`, `CreateMaterial`, `TryHit` | `.45 s` expanding pulse; amber bolt, violet oil, white pickup band; three orbiting sparks for the victim's remaining disruption. Materials are shared and destroyed with manager. |
+| HUD names | `PublishSlot` → `Stage3RacePresentation.SetWeaponSlot` | `BOLT`, `OIL`, `--`; the west face button fires/drops only through `VehicleManager.FireRequested`. |
+
+Finish clears that player's inventory, modifiers, feedback and owned weapons.
+Countdown, all-finished, lobby reset, rematch and manager disable clear all
+inventories, live weapons, effects, modifiers, cooldowns, pickup sequences and
+simulation time. Re-enable binds the current roster once. All spawned geometry
+is runtime-only; no scene or prefab wiring is required.
 
 ## Stage 5 — Validation and final prototype tuning
 

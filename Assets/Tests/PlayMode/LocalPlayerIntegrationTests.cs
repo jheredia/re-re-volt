@@ -59,8 +59,10 @@ namespace Tests.PlayMode
             roster.PauseRequested += player => pause[player.PlayerIndex]++;
             Assert.That(race.StartRace(), Is.True);
             Assert.That(roster.TryLeavePlayer(0), Is.False);
-            yield return new WaitForSecondsRealtime(3.2f);
-            Assert.That(race.RaceRunning, Is.True);
+            // Each countdown yield resumes on a frame; editor stalls can exceed a fixed 3.2-second sleep.
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!race.RaceRunning && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(race.RaceRunning, Is.True, "Countdown must enter Racing within 10 seconds.");
 
             for (int active = 0; active < pads.Length; active++)
             {

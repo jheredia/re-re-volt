@@ -2,6 +2,7 @@ using Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Vehicle;
+using Weapons;
 
 namespace Presentation
 {
@@ -17,6 +18,7 @@ namespace Presentation
         public RaceManager RaceManager { get; private set; }
         public VehicleManager VehicleManager { get; private set; }
         public Stage3RacePresentation Presentation { get; private set; }
+        public WeaponManager WeaponManager { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
         public RaceCheckpoint[] Checkpoints => circuit?.Checkpoints;
@@ -60,6 +62,9 @@ namespace Presentation
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
             Presentation.Configure(RaceManager, VehicleManager);
+            WeaponManager = FindAnyObjectByType<WeaponManager>();
+            if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
+            WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask);
             ConfigureGameManager();
             initialized = true;
             Debug.Log("[Stage3] Craft-room circuit and controller-first race presentation are ready.", this);
@@ -154,6 +159,7 @@ namespace Presentation
             }
             manager.RaceManager = RaceManager;
             manager.VehicleManager = VehicleManager;
+            manager.WeaponManager = WeaponManager;
             manager.UIManager = null;
             manager.ReturnToMainMenu();
         }
