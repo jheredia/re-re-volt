@@ -18,6 +18,46 @@ Read `docs/agent_development_plan.md`, `docs/stage2_local_players.md`,
 `docs/stage3_playable_circuit.md`, and `docs/gameplay_tuning_guide.md` before work.
 The tuning guide contains all Stage 4 fields and exact code defaults.
 
+## Stage 5 early-stop record — 2026-09-20
+
+Stage 5 was stopped at 79% of the active five-hour usage window, using the
+user-requested conservative 80% cutoff. No production or test code was changed.
+
+- Starting checkpoint: `6b37021` on `codex/local-multiplayer-prototype`.
+- Standalone build: **passed**, Unity process exit 0 and `Build Finished,
+  Result: Success.` in `/private/tmp/re-re-volt-stage5-build.log`.
+- Artifact: `/private/tmp/re-re-volt-stage5-build/ReReVolt.app` (version 0.1.0,
+  minimum macOS 12.0). Although the command used
+  `-buildOSXUniversalPlayer`, file inspection proves the executable is ARM64
+  only. It was built with Mono in Unity 6000.6.0f1 on Apple Silicon.
+- Launch smoke: **not accepted as validated**. A launch was attempted, but the
+  supplied `/private/tmp/re-re-volt-stage5-player.log` remained empty and no
+  player process remained at handover. Do not infer an end-to-end pass.
+- Physical controllers: **PENDING / UNAVAILABLE**. IOHID inventory exposed only
+  the Apple keyboard, trackpad and headset; no physical gamepad was attached.
+  Virtual-pad PlayMode coverage from Stage 4 is not a substitute for this check.
+- Tests: not rerun because Stage 5 made no source/test change. The accepted
+  checkpoint remains 36/36 EditMode and 12/12 full PlayMode, with exact evidence
+  paths in the validation section below.
+- Visuals: existing 1366×768 one-player and four-player captures were inspected
+  and remain readable. Optional two-/three-player capture expansion was skipped
+  at the early cutoff.
+- Cleanup completed: the Unity 6000.6 build regenerated only known editor
+  migration noise in Packages, ProjectSettings, `Assets/Settings`, and
+  `re-re-volt.slnx`; those tracked files were restored to `6b37021`. The two
+  untracked generated ProjectSettings assets were moved to recoverable copies at
+  `/private/tmp/re-re-volt-stage5-generated-{PhysicsCoreProjectSettings2D,ProjectAuditorSettings}.asset`.
+
+Smallest safe continuation after usage refresh:
+
+1. Verify `git status` still contains only these Stage 5 documentation updates.
+2. Launch the standalone artifact with a non-empty player log and capture a
+   stable lobby/race window; then exercise results and rematch if feasible.
+3. Connect one real controller and perform join/start/driving/triggers/A-B-X-Y,
+   pause/reconnect, pickup/weapon and full-race checks. Repeat with four physical
+   controllers when available, verifying four-way HUD readability.
+4. Record exact controller models and outcomes here and in the tuning guide.
+
 ## Combat authority and integration contract
 
 `Weapons.WeaponManager` is the single combat owner. `Stage3Bootstrap` configures

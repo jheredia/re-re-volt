@@ -88,13 +88,20 @@ is runtime-only; no scene or prefab wiring is required.
 
 ## Stage 5 — Validation and final prototype tuning
 
-Stage 5 records the physical-controller and standalone-build baselines here:
+Current standalone baseline (2026-09-20):
 
-- target platform and resolution;
-- confirmed controller families/count;
-- measured frame-rate/physics settings;
-- accepted vehicle and camera tuning values;
-- any platform-specific input or performance overrides.
+- Build succeeds with Unity 6000.6.0f1 to
+  `/private/tmp/re-re-volt-stage5-build/ReReVolt.app`; version 0.1.0, minimum
+  macOS 12.0, Mono backend. Despite the `-buildOSXUniversalPlayer` command flag,
+  the executable inspected as ARM64 only.
+- Build log: `/private/tmp/re-re-volt-stage5-build.log`.
+- A stable standalone launch/end-to-end flow is not yet accepted: the attempted
+  player log was empty at the usage cutoff.
+- Physical-controller baseline is **pending**. The host exposed no attached
+  gamepad, only Apple keyboard/trackpad/headset devices. Stage 4 virtual-pad
+  tests must not be reported as physical-controller validation.
+- No Stage 5 vehicle, camera, combat, input, performance, or resolution override
+  has been accepted. Existing Stage 2–4 tuning remains authoritative.
 
 ## Safe tuning checklist
 
