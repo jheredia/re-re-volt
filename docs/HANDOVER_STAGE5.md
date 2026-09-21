@@ -79,6 +79,75 @@ Smallest safe continuation after usage refresh:
 6. Record exact controller models and platform outcomes here and in the tuning
    guide. Do not claim Windows runtime validation without running it on Windows.
 
+## Stage 5 continuation handover — 2026-09-20
+
+The five-hour window reached the conservative stop boundary after a power and
+authentication interruption. The repository remained intact. Do not start a
+second Unity instance until the existing user-open Editor is closed normally.
+
+Unity 6000.6 migration reconciliation is statically complete:
+
+- Keep the intentional migration of `ProjectSettings/ProjectVersion.txt`,
+  `Packages/manifest.json`, `Packages/packages-lock.json`,
+  `ProjectSettings/PackageManagerSettings.asset`,
+  `Assets/Settings/UniversalRenderPipelineGlobalSettings.asset`,
+  `ProjectSettings/PhysicsCoreProjectSettings2D.asset`, and
+  `ProjectSettings/ProjectAuditorSettings.asset`.
+- All direct package versions match the installed 6000.6.0f1 Editor's declared
+  minimums; the lock and manifest agree and all 60 resolved package manifests
+  were accounted for.
+- Static GUID/reference checks passed: no duplicate asset GUIDs, every C# file
+  has metadata, all 174 URP global-setting references resolve, and scene/build/
+  graphics/quality references resolve. No scene YAML changed.
+- `re-re-volt.slnx` is regenerated IDE state, not a required migration input.
+  Review it separately before committing; the current generated diff contains
+  CRLF/trailing-whitespace noise.
+- The pre-keyboard Editor import completed package resolution and asset refresh
+  without compiler errors in `Logs/Editor.log`. This does not validate the new
+  keyboard code.
+
+Keyboard implementation is code-complete but unvalidated and uncommitted:
+
+- Modified `Assets/Scripts/Core/InputHandler.cs` to read exactly one paired
+  `Gamepad` or `Keyboard` through the existing `InputUser`, with no global
+  fallback. Keyboard mappings are WASD/arrows drive, Shift brake/drift, Space
+  weapon, R recovery, Enter confirm/start/rematch, and Escape pause/back.
+- Modified `Assets/Scripts/Vehicle/VehicleManager.cs` to admit at most one
+  keyboard player while keeping the total roster at four and routing confirm/
+  back/fire/pause through owned-player events.
+- Modified `Assets/Scripts/Presentation/Stage3RacePresentation.cs` to remove
+  direct gamepad polling and display device-neutral lobby, pause, disconnect,
+  results, and control prompts.
+- Added `Assets/Tests/PlayMode/KeyboardIntegrationTests.cs` and metadata with
+  three scenarios: complete keyboard-only flow; keyboard plus three isolated
+  gamepads; duplicate/disconnect/slot-reuse cleanup.
+- Scoped `git diff --check` passes for keyboard source/tests. No Unity compile,
+  EditMode, targeted PlayMode, full PlayMode, runtime, or player build has been
+  run against these changes yet.
+
+Editor/process state at handover:
+
+- The user's existing Unity 6000.6.0f1 Editor remains open on SampleScene with
+  its asset import workers and `Temp/UnityLockfile`; it was not launched or
+  terminated by either stage agent.
+- The window title shows no unsaved marker, but close it normally and honor any
+  save prompt before command-line validation.
+- Power/auth interruption produced no partial tracked source file and no new
+  test XML or log artifact.
+
+Next smallest safe continuation:
+
+1. Review the keyboard diff and test source, then close the existing Editor
+   normally without discarding user state.
+2. Let Unity 6000.6 import/compile the new code and preserve Console evidence.
+3. Run `Tests.PlayMode.KeyboardIntegrationTests`, then the complete PlayMode
+   suite, followed by full EditMode if any shared/runtime code changed during
+   repair. Save XML/log artifacts under `/private/tmp/re-re-volt-stage5-*`.
+4. Fix only evidenced failures, update the control/tuning docs, and reconcile
+   migration changes separately from keyboard behavior before committing.
+5. Continue macOS launch, Windows build, Web build feasibility, and physical
+   controller checks only after keyboard and migration gates pass.
+
 ## Combat authority and integration contract
 
 `Weapons.WeaponManager` is the single combat owner. `Stage3Bootstrap` configures
