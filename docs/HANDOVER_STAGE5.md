@@ -367,6 +367,9 @@ regenerate the same migration noise. No further Stage 4 blocking evidence remain
 
 ## Usage-limit continuity protocol
 
-At 95% usage of the five-hour window, stop new work and update the active
-handover with exact changed files, editor/process state, test/artifact paths,
-remaining cleanup, last actionable error and the next smallest resumption step.
+Stop starting new work at 75% usage of the five-hour window and finish the
+active handover by 80%. If weekly usage reaches 80% used (20% remaining), stop
+all agents, preserve the same evidence, and wait for an explicit user signal;
+do not auto-resume weekly-limited work. Every handover records exact changed
+files, editor/process state, test/artifact paths, remaining cleanup, the last
+actionable error, and the next smallest resumption step.

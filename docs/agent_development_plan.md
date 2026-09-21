@@ -77,9 +77,16 @@ precise blocking issue and reproduction steps.
 
 ## Usage-limit handover protocol
 
-When the active Codex five-hour usage window reaches 95% used (5% remaining),
-the active stage stops starting new implementation work and writes a handover
-before the limit can interrupt it. The handover must include:
+When the active Codex five-hour usage window reaches 75% used, the active stage
+stops starting new implementation work and must complete a handover by 80%
+used. This conservative boundary supersedes the original 95% emergency cutoff.
+
+When the weekly usage window reaches 80% used (20% remaining), all agents stop
+new work, preserve a precise handover, and wait for an explicit user instruction
+to continue. A weekly-limit stop must not auto-resume after a reset or through a
+scheduled heartbeat; only the user may release it.
+
+Every usage-limit handover must include:
 
 - stage objective and acceptance criteria already met;
 - exact files changed, including uncommitted and generated artifacts;
@@ -90,5 +97,7 @@ before the limit can interrupt it. The handover must include:
 - migration noise or unrelated diffs that must not be committed;
 - architectural decisions and public APIs the next agent must preserve.
 
-The overseer then resumes the stage with a fresh agent after usage refresh,
-using the handover and the last accepted commit as the continuity boundary.
+After a five-hour-only stop, the overseer may resume the stage with a fresh
+agent after usage refresh, using the handover and last accepted commit as the
+continuity boundary. After a weekly stop, the overseer remains paused until the
+user explicitly signals continuation.
