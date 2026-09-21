@@ -27,6 +27,17 @@
   code locations in `docs/gameplay_tuning_guide.md`; no handling values were
   changed during Stage 5.
 
+## Next stage: 5.1 handling-model bake-off
+
+The next implementation stage is now defined in `docs/agent_development_plan.md`.
+It must ship four lobby-selectable models: unchanged baseline A plus three
+candidates covering direction-aware WheelCollider handling, balanced arcade yaw
+assistance, and deliberate input-gated drifting. Each local player selects a
+model independently so two to four friends can compare handling in the same
+race. Do not replace the default or tune from intuition alone; first add the
+shared measurements, implement each candidate through a bounded agent, then
+reconcile objective results with blind player rankings.
+
 ## Continuity and scope
 
 - Active branch: `codex/local-multiplayer-prototype`.

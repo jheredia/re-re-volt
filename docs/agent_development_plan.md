@@ -63,6 +63,59 @@ Windows artifact paths, supports a keyboard-only solo race plus mixed keyboard
 and controller play, or any unmet platform/input criterion is reported with a
 precise blocking issue and reproduction steps.
 
+### Stage 5.1 — Selectable handling-model bake-off
+
+Before visual-production work, a handling investigation compares **four models
+total**: one unchanged control and three purposefully different candidates.
+Four is large enough to expose meaningful preferences without making a local
+playtest exhausting or multiplying the tuning surface beyond what can be
+reconciled safely.
+
+| Test ID | Internal model | Question it answers |
+| --- | --- | --- |
+| A | Current baseline | How much better is each candidate than the accepted Stage 5 controller? |
+| B | Direction-aware WheelCollider | Can explicit oppose-motion braking, prompt direction changes, speed-sensitive steering, and capped reverse steering solve the complaints without artificial yaw? |
+| C | Balanced arcade yaw | Does a restrained target-yaw assist produce the desired forward turning radius while remaining stable and readable? |
+| D | Deliberate drift / velocity alignment | Can controlled rear slip and velocity alignment create expressive drifting that requires drift input instead of being easier in reverse? |
+
+Model A remains unchanged throughout the comparison. Models B–D must use the
+same vehicle mass, maximum speed, input map, camera, circuit, combat rules, and
+race conditions unless a difference is intrinsic to the model and documented.
+Direction-change behavior is part of every candidate, but each candidate may
+solve it differently.
+
+The test build must provide these comparison affordances:
+
+- Each joined local player independently selects A, B, C, or D in the lobby.
+- Public-facing labels stay neutral (`MODEL A`–`MODEL D`) to reduce expectation
+  bias; internal names remain available in the feedback record.
+- The selected model appears beside the player's lobby entry and HUD badge.
+- Handling cannot change during countdown or racing; return to the lobby to
+  change it. Rematch preserves selections.
+- Keyboard and gamepad players use the same model implementations.
+- One-player tests can cycle every model without reconnecting a device; up to
+  four friends can race different models simultaneously.
+
+Every model is measured with the same automated or repeatable scenarios:
+
+- reverse-to-forward and forward-to-reverse transition time;
+- forward and reverse turning radius at low, medium, and high speed;
+- fixed slalom completion time and cone contacts;
+- drift initiation threshold, peak slip/yaw, recovery time, and spin-outs;
+- collision recovery, airborne stability, and keyboard/gamepad parity.
+
+After each playtest, players rank all models tried and record confidence plus
+short reasons. Selection is based primarily on positive player feedback, with
+objective measurements used to reject unsafe or inconsistent models—not to
+overrule a clear feel preference. No candidate becomes the default until the
+overseer reconciles the implementation and documents the chosen values.
+
+Bounded agent deliverables are: baseline instrumentation; one implementation
+agent for each of B, C, and D; lobby/HUD selection integration; and an
+independent reconciliation/validation agent. Gate: all four models are
+selectable in macOS and Windows test builds, comparison evidence is recorded,
+and the current default is preserved until the user accepts a winner.
+
 ## Integration rules
 
 - Each stage begins only after the previous stage is reviewed and reconciled.

@@ -126,3 +126,17 @@ Accepted automated/build baseline (2026-09-21):
 5. Check the four-player viewport/HUD at 1366×768 or smaller.
 6. Confirm reset/rematch removes transient state.
 7. Record the accepted values and reason in this guide or the stage handoff.
+
+## Stage 5.1 — Handling bake-off guardrails
+
+The handling bake-off contains exactly four models: unchanged baseline A and
+candidates B–D defined in `docs/agent_development_plan.md`. Keep each model's
+parameters together rather than scattering model checks across input, recovery,
+combat, or presentation code. Model selection belongs to the lobby and is
+immutable during an active race.
+
+Do not accept a handling change from a single lap or one metric. Compare
+direction-change time, forward/reverse turning circles, slalom performance,
+drift initiation/recovery, spin-outs, collision recovery, and device parity.
+Preserve the two open observations in `docs/Feedback-Notes.md` until a selected
+model demonstrably resolves them and players prefer its feel.
