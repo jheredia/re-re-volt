@@ -35,6 +35,8 @@ namespace Vehicle
         public event Action<LocalPlayer> ControllerConnectionChanged;
         public event Action<LocalPlayer> FireRequested;
         public event Action<LocalPlayer> PauseRequested;
+        public event Action<LocalPlayer> ConfirmRequested;
+        public event Action<LocalPlayer> BackRequested;
 
         private void Awake()
         {
@@ -88,15 +90,29 @@ namespace Vehicle
             foreach (Gamepad pad in Gamepad.all)
                 if (!InputUser.FindUserPairedToDevice(pad).HasValue && pad.startButton.wasPressedThisFrame)
                     TryJoinGamepad(pad, out _);
+            foreach (InputDevice device in InputSystem.devices)
+                if (device is Keyboard keyboard && keyboard.enterKey.wasPressedThisFrame)
+                    TryJoinKeyboard(keyboard, out _);
         }
 
-        public bool TryJoinGamepad(Gamepad pad, out LocalPlayer player)
+        public bool TryJoinGamepad(Gamepad pad, out LocalPlayer player) => TryJoinDevice(pad, out player);
+
+        public bool TryJoinKeyboard(Keyboard keyboard, out LocalPlayer player)
+        {
+            player = null;
+            // Retain the keyboard slot during disconnect, just like a gamepad's racer/viewport.
+            foreach (LocalPlayer existing in players)
+                if (existing.Input.IsKeyboardPlayer) return false;
+            return TryJoinDevice(keyboard, out player);
+        }
+
+        private bool TryJoinDevice(InputDevice device, out LocalPlayer player)
         {
             player = null;
             if (!isActiveAndEnabled || !allowControllerJoining || raceManager == null ||
-                raceManager.CurrentState != RaceManager.RaceState.Idle || pad == null || !pad.added || !pad.enabled ||
+                raceManager.CurrentState != RaceManager.RaceState.Idle || device == null || !device.added || !device.enabled ||
                 players.Count >= LocalPlayerRules.MaximumPlayers || raceManager.Racers.Count >= LocalPlayerRules.MaximumPlayers ||
-                InputUser.FindUserPairedToDevice(pad).HasValue) return false;
+                InputUser.FindUserPairedToDevice(device).HasValue) return false;
 
             // PlayerInput auto-pairing would create a second input authority on the same car.
             if (playerVehiclePrefab != null && playerVehiclePrefab.GetComponentInChildren<PlayerInput>(true) != null)
@@ -127,7 +143,7 @@ namespace Vehicle
                 return false;
             }
 
-            InputUser user = InputUser.PerformPairingWithDevice(pad);
+            InputUser user = InputUser.PerformPairingWithDevice(device);
             InputHandler input = car.GetComponent<InputHandler>() ?? car.AddComponent<InputHandler>();
             input.Initialize(user, raceManager, racer);
             input.GameplaySuspended = gameplaySuspended;
@@ -147,6 +163,8 @@ namespace Vehicle
             LocalPlayer joined = new LocalPlayer(index, user, vehicle, input, recovery, chase, listener, racer);
             input.FireRequested += () => FireRequested?.Invoke(joined);
             input.PauseRequested += () => PauseRequested?.Invoke(joined);
+            input.ConfirmRequested += () => ConfirmRequested?.Invoke(joined);
+            input.BackRequested += () => BackRequested?.Invoke(joined);
             input.LeaveRequested += () => TryLeavePlayer(joined.PlayerIndex);
             recovery.Recovered += chase.SnapToTarget;
 
@@ -175,7 +193,7 @@ namespace Vehicle
         public bool TryReplaceDisconnectedController(int playerIndex, Gamepad replacement)
         {
             LocalPlayer player = players.Find(candidate => candidate.PlayerIndex == playerIndex);
-            if (player == null || player.IsConnected || replacement == null || !replacement.added || !replacement.enabled ||
+            if (player == null || player.Input.IsKeyboardPlayer || player.IsConnected || replacement == null || !replacement.added || !replacement.enabled ||
                 InputUser.FindUserPairedToDevice(replacement).HasValue) return false;
             player.User.UnpairDevices();
             InputUser.PerformPairingWithDevice(replacement, player.User);
@@ -260,14 +278,22 @@ namespace Vehicle
 
         private void ReleasePlayer(LocalPlayer player)
         {
-            player.Input.enabled = false;
+            if (player.Input != null) player.Input.enabled = false;
             if (player.User.valid) player.User.UnpairDevicesAndRemoveUser();
             players.Remove(player);
             allVehicles.Remove(player.Vehicle);
-            player.Camera.gameObject.SetActive(false);
-            player.Vehicle.gameObject.SetActive(false);
-            Destroy(player.Camera.gameObject);
-            Destroy(player.Vehicle.gameObject);
+            Camera playerCamera = player.Camera;
+            if (playerCamera != null)
+            {
+                playerCamera.gameObject.SetActive(false);
+                Destroy(playerCamera.gameObject);
+            }
+            VehicleController playerVehicle = player.Vehicle;
+            if (playerVehicle != null)
+            {
+                playerVehicle.gameObject.SetActive(false);
+                Destroy(playerVehicle.gameObject);
+            }
         }
 
         private void OnDisable()
@@ -279,7 +305,9 @@ namespace Vehicle
             while (players.Count > 0)
             {
                 LocalPlayer player = players[players.Count - 1];
-                if (raceManager != null) raceManager.UnregisterRacer(player.Vehicle.gameObject);
+                VehicleController playerVehicle = player.Vehicle;
+                if (raceManager != null && playerVehicle != null)
+                    raceManager.UnregisterRacer(playerVehicle.gameObject);
                 ReleasePlayer(player);
             }
             RefreshViewports();

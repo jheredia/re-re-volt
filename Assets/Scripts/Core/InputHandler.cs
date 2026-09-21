@@ -6,7 +6,7 @@ using Vehicle;
 
 namespace Core
 {
-    /// <summary>Reads only this player's explicitly paired Gamepad. No global-device fallback.</summary>
+    /// <summary>Reads only this player's explicitly paired device. No global-device fallback.</summary>
     [RequireComponent(typeof(VehicleController))]
     public sealed class InputHandler : MonoBehaviour
     {
@@ -15,25 +15,29 @@ namespace Core
         private RaceManager race;
         private RacerState racer;
         private int joinedFrame;
-        private Gamepad lastConnectedPad;
+        private InputDevice lastConnectedDevice;
 
         public event Action FireRequested;
         public event Action PauseRequested;
         public event Action LeaveRequested;
+        public event Action ConfirmRequested;
+        public event Action BackRequested;
         public bool GameplaySuspended { get; set; }
+        public bool IsKeyboardPlayer { get; private set; }
 
-        public Gamepad PairedGamepad
+        public InputDevice PairedDevice
         {
             get
             {
                 if (!user.valid) return null;
                 foreach (InputDevice device in user.pairedDevices)
-                    if (device is Gamepad pad && pad.added && pad.enabled) return pad;
+                    if ((device is Gamepad || device is Keyboard) && device.added && device.enabled) return device;
                 return null;
             }
         }
 
-        public bool IsConnected => PairedGamepad != null;
+        public Gamepad PairedGamepad => PairedDevice as Gamepad;
+        public bool IsConnected => PairedDevice != null;
 
         private void Awake()
         {
@@ -45,10 +49,10 @@ namespace Core
 
         private void OnDeviceChange(InputDevice device, InputDeviceChange change)
         {
-            if (device == lastConnectedPad &&
+            if (device == lastConnectedDevice &&
                 (change == InputDeviceChange.Removed || change == InputDeviceChange.Disabled))
             {
-                lastConnectedPad = null;
+                lastConnectedDevice = null;
                 vehicle.SetInputEnabled(false);
             }
         }
@@ -56,55 +60,85 @@ namespace Core
         public void Initialize(InputUser pairedUser, RaceManager raceManager, RacerState racerState)
         {
             if (!pairedUser.valid || pairedUser.pairedDevices.Count != 1 ||
-                !(pairedUser.pairedDevices[0] is Gamepad) || raceManager == null || racerState == null)
-                throw new ArgumentException("Local input requires one paired Gamepad and a registered racer.");
+                !(pairedUser.pairedDevices[0] is Gamepad || pairedUser.pairedDevices[0] is Keyboard) ||
+                raceManager == null || racerState == null)
+                throw new ArgumentException("Local input requires one paired Gamepad or Keyboard and a registered racer.");
             user = pairedUser;
+            IsKeyboardPlayer = pairedUser.pairedDevices[0] is Keyboard;
             race = raceManager;
             racer = racerState;
             joinedFrame = Time.frameCount;
-            lastConnectedPad = null;
+            lastConnectedDevice = null;
         }
 
         private void Update()
         {
-            Gamepad pad = PairedGamepad;
-            if (pad != lastConnectedPad)
+            InputDevice device = PairedDevice;
+            if (device != lastConnectedDevice)
             {
                 // Reconnected devices may reuse controls with cached values from an old state buffer.
                 // Refresh once on reconnect so a now-neutral trigger cannot retain its former value.
-                if (pad != null) pad.ApplyParameterChanges();
-                lastConnectedPad = pad;
+                if (device != null) device.ApplyParameterChanges();
+                lastConnectedDevice = device;
             }
-            bool driving = pad != null && race != null && race.RaceRunning && !racer.IsFinished &&
+            bool driving = device != null && race != null && race.RaceRunning && !racer.IsFinished &&
                            !GameplaySuspended && Time.timeScale > 0f;
             vehicle.SetInputEnabled(driving);
-            if (pad == null || race == null || Time.frameCount == joinedFrame) return;
+            if (device == null || race == null || Time.frameCount == joinedFrame) return;
+            Gamepad pad = device as Gamepad;
+            Keyboard keyboard = device as Keyboard;
+            bool back = keyboard != null ? keyboard.escapeKey.wasPressedThisFrame : pad.buttonEast.wasPressedThisFrame;
+            bool confirm = keyboard != null ? keyboard.enterKey.wasPressedThisFrame : pad.buttonSouth.wasPressedThisFrame;
+
+            // Menu commands share the same ownership/events as driving. One press has one state-specific meaning.
+            if (race.CurrentState == RaceManager.RaceState.Idle)
+            {
+                if (keyboard != null ? back : pad.selectButton.wasPressedThisFrame) LeaveRequested?.Invoke();
+                else if (confirm) ConfirmRequested?.Invoke();
+                return;
+            }
+            if (race.CurrentState == RaceManager.RaceState.Finished)
+            {
+                if (back) BackRequested?.Invoke();
+                else if (confirm) ConfirmRequested?.Invoke();
+                return;
+            }
 
             // Pause remains available while gameplay is suspended or timeScale is zero.
-            if (pad.startButton.wasPressedThisFrame)
+            if (keyboard != null ? back : pad.startButton.wasPressedThisFrame)
             {
                 PauseRequested?.Invoke();
                 vehicle.SetInputEnabled(false);
                 return;
             }
-            if (race.CurrentState == RaceManager.RaceState.Idle && pad.selectButton.wasPressedThisFrame)
-            {
-                LeaveRequested?.Invoke();
-                return;
-            }
             if (!driving) return;
 
-            vehicle.ThrottleInput = pad.rightTrigger.ReadValue() - pad.leftTrigger.ReadValue();
-            vehicle.SteerInput = pad.leftStick.x.ReadValue();
-            vehicle.BrakeInput = pad.buttonSouth.isPressed ? 1f : 0f;
-            if (pad.buttonWest.wasPressedThisFrame) FireRequested?.Invoke();
-            if (pad.buttonNorth.wasPressedThisFrame) vehicle.ResetVehicle();
+            if (keyboard != null)
+            {
+                vehicle.ThrottleInput = Axis(keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed,
+                    keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed);
+                vehicle.SteerInput = Axis(keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed,
+                    keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed);
+                vehicle.BrakeInput = keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed ? 1f : 0f;
+                if (keyboard.spaceKey.wasPressedThisFrame) FireRequested?.Invoke();
+                if (keyboard.rKey.wasPressedThisFrame) vehicle.ResetVehicle();
+            }
+            else
+            {
+                vehicle.ThrottleInput = pad.rightTrigger.ReadValue() - pad.leftTrigger.ReadValue();
+                vehicle.SteerInput = pad.leftStick.x.ReadValue();
+                vehicle.BrakeInput = pad.buttonSouth.isPressed ? 1f : 0f;
+                if (pad.buttonWest.wasPressedThisFrame) FireRequested?.Invoke();
+                if (pad.buttonNorth.wasPressedThisFrame) vehicle.ResetVehicle();
+            }
         }
+
+        private static float Axis(bool positive, bool negative) => (positive ? 1f : 0f) - (negative ? 1f : 0f);
 
         private void OnDisable()
         {
             InputSystem.onDeviceChange -= OnDeviceChange;
-            lastConnectedPad = null;
+            lastConnectedDevice = null;
             if (vehicle != null) vehicle.SetInputEnabled(false);
         }
     }

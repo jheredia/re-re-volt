@@ -1,3 +1,6 @@
 ﻿<Solution>
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="ReReVolt.RaceRules.Tests.csproj" />
+  <Project Path="ReReVolt.LocalPlayers.Tests.csproj" />
+  <Project Path="ReReVolt.Runtime.csproj" />
+  <Project Path="ReReVolt.RaceRules.csproj" />
 </Solution>

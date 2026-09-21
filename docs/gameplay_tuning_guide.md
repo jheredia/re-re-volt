@@ -31,6 +31,9 @@ four-player race before accepting a new baseline.
 | Stability | `Assets/Scripts/Vehicle/VehicleController.cs` | `downforce` (`50`) and `centerOfMassOffset` (`0, -0.2, 0`). |
 | Vehicle mass/suspension | `Assets/Scripts/Vehicle/PrototypeVehicleFactory.cs` | Rigidbody mass/collision mode and `CreateWheel` radius, spring, damper, suspension distance. |
 | Controller bindings | `Assets/Scripts/Core/InputHandler.cs` | Trigger/stick/button reads in `Update`. Preserve per-`InputUser` pairing; never replace these with `Gamepad.current`. |
+| Keyboard bindings | `Assets/Scripts/Core/InputHandler.cs` | Enter joins/confirms, Escape pauses/backs/leaves, WASD or arrows drive, Shift brakes/drifts, Space fires, and R recovers. Preserve exactly one keyboard-owned `InputUser`; never add a global fallback. |
+| Forward/reverse transition | `Assets/Scripts/Vehicle/VehicleController.cs` | Motor/brake application in `FixedUpdate`; current playtest feedback reports excessive delay changing from reverse to forward. Measure before changing torque or braking. |
+| Reverse steering balance | `Assets/Scripts/Vehicle/VehicleController.cs` | Steering input/angle application in `FixedUpdate`; current playtest feedback reports reverse steering as more effective than forward steering. Tune with a forward/reverse slalom comparison. |
 | Camera distance/height | `Assets/Scripts/Vehicle/ChaseCamera.cs` | `offset` (`0, 3, -5`) and `followSharpness` (`9`). |
 | Camera lens | `Assets/Scripts/Vehicle/VehicleManager.cs` | Player camera `fieldOfView` (`65`) during joining. |
 | Split-screen layout | `Assets/Scripts/RaceRules/LocalPlayerRules.cs` | `GetViewport`; keep the exact layout tests updated. |
@@ -88,26 +91,29 @@ is runtime-only; no scene or prefab wiring is required.
 
 ## Stage 5 — Validation and final prototype tuning
 
-Current standalone baseline (2026-09-20):
+Accepted automated/build baseline (2026-09-21):
 
 - Build succeeds with Unity 6000.6.0f1 to
-  `/private/tmp/re-re-volt-stage5-build/ReReVolt.app`; version 0.1.0, minimum
+  `/private/tmp/re-re-volt-stage5-final-builds/ReReVolt-macOS.app`; version 0.1.0, minimum
   macOS 12.0, Mono backend. Despite the `-buildOSXUniversalPlayer` command flag,
   the executable inspected as ARM64 only.
-- Build log: `/private/tmp/re-re-volt-stage5-build.log`.
-- Windows x86_64 build is an explicit Stage 5 requirement and remains pending.
-  Record its artifact and build log separately. A cross-build on macOS proves
-  buildability only; controller and runtime behavior must be tested on Windows
-  before claiming a Windows playtest baseline.
-- A stable standalone launch/end-to-end flow is not yet accepted: the attempted
-  player log was empty at the usage cutoff.
+- macOS build log: `/private/tmp/re-re-volt-stage5-final-builds/macos-build.log`.
+  The player launched to the lobby, was visually inspected, and wrote a non-empty
+  startup log at `macos-player.log`; a complete manual race was not run.
+- Windows x86_64 cross-build passed at
+  `/private/tmp/re-re-volt-stage5-final-builds/ReReVolt-Windows/ReReVolt.exe`;
+  log: `windows-build.log`. Runtime/controller validation on Windows is pending.
+- WebGL build passed at
+  `/private/tmp/re-re-volt-stage5-final-builds/ReReVolt-WebGL/index.html`; log:
+  `webgl-build-final.log`. Browser hosting, input focus, audio and gamepad support
+  remain unverified.
 - Physical-controller baseline is **pending**. The host exposed no attached
   gamepad, only Apple keyboard/trackpad/headset devices. Stage 4 virtual-pad
   tests must not be reported as physical-controller validation.
-- Keyboard support is required and pending. Exactly one keyboard may own one
-  player through the same `InputUser`/`InputHandler` path; up to three gamepads
-  may fill the remaining slots. Record the accepted key map here after runtime
-  validation. Do not implement global keyboard fallback polling.
+- Keyboard ownership is implemented and automated: focused PlayMode 4/4, full
+  PlayMode 16/16, and EditMode 36/36 passed. Exactly one keyboard owns one player
+  through the same `InputUser`/`InputHandler` path; up to three gamepads fill the
+  remaining slots. Physical mixed-device playtesting is still pending.
 - No Stage 5 vehicle, camera, combat, input, performance, or resolution override
   has been accepted. Existing Stage 2–4 tuning remains authoritative.
 

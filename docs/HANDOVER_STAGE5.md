@@ -1,5 +1,32 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5 reconciled checkpoint — 2026-09-21
+
+- Unity baseline is now 6000.6.0f1 with its package, player, quality, graphics,
+  URP and volume-profile migrations preserved. Visible-meta version control and
+  disabled Unity Connect remain intentional project settings.
+- Keyboard ownership is implemented for exactly one local player: Enter joins /
+  confirms, Escape pauses / backs / leaves, WASD or arrows drive, Shift brakes,
+  Space fires, and R recovers. Up to three independently paired gamepads may
+  occupy the remaining slots.
+- A scene-destruction-order regression in `VehicleManager` teardown was fixed by
+  guarding destroyed Camera and VehicleController objects. Its regression test
+  is included in `KeyboardIntegrationTests`.
+- Validation passed on Unity 6000.6: keyboard-focused PlayMode 4/4
+  (`/private/tmp/re-re-volt-stage5-keyboard-targeted.xml`), complete PlayMode
+  16/16 (`/private/tmp/re-re-volt-stage5-playmode-full-final.xml`), and EditMode
+  36/36 (`/private/tmp/re-re-volt-stage5-editmode-full-final.xml`).
+- Fresh builds all report `Build Finished, Result: Success` under
+  `/private/tmp/re-re-volt-stage5-final-builds`: macOS ARM64 app, Windows x86_64
+  player, and WebGL output. The macOS player launched to a visually inspected
+  lobby and wrote `macos-player.log` with no startup exception.
+- Remaining validation limitations: no physical controller was attached;
+  Windows was cross-built but not run on Windows; WebGL was built but not hosted
+  and exercised in a browser; the standalone smoke did not complete a full race.
+- Playtest handling notes are tracked in `docs/Feedback-Notes.md` and mapped to
+  code locations in `docs/gameplay_tuning_guide.md`; no handling values were
+  changed during Stage 5.
+
 ## Continuity and scope
 
 - Active branch: `codex/local-multiplayer-prototype`.

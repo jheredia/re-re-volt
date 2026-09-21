@@ -4,13 +4,12 @@ using System.Text;
 using Core;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Vehicle;
 
 namespace Presentation
 {
-    /// <summary>Controller-first lobby, split HUD, pause, disconnect, and results presentation.</summary>
+    /// <summary>Owned-player lobby, split HUD, pause, disconnect, and results presentation.</summary>
     [DisallowMultipleComponent]
     public sealed class Stage3RacePresentation : MonoBehaviour
     {
@@ -77,6 +76,8 @@ namespace Presentation
             vehicles.PlayerJoined += OnPlayerJoined;
             vehicles.PlayerLeft += OnPlayerLeft;
             vehicles.PauseRequested += OnPauseRequested;
+            vehicles.ConfirmRequested += OnConfirmRequested;
+            vehicles.BackRequested += OnBackRequested;
             vehicles.ControllerConnectionChanged += OnControllerConnectionChanged;
         }
 
@@ -93,6 +94,8 @@ namespace Presentation
                 vehicles.PlayerJoined -= OnPlayerJoined;
                 vehicles.PlayerLeft -= OnPlayerLeft;
                 vehicles.PauseRequested -= OnPauseRequested;
+                vehicles.ConfirmRequested -= OnConfirmRequested;
+                vehicles.BackRequested -= OnBackRequested;
                 vehicles.ControllerConnectionChanged -= OnControllerConnectionChanged;
             }
         }
@@ -113,18 +116,18 @@ namespace Presentation
                 RefreshHudText();
             }
 
-            if (race.CurrentState == RaceManager.RaceState.Idle && !AnyPlayerDisconnected())
-            {
-                LocalPlayer confirmingPlayer = FindPlayerPressing(pad => pad.buttonSouth.wasPressedThisFrame);
-                if (confirmingPlayer != null) StartRaceFromLobby();
-            }
-            else if (race.CurrentState == RaceManager.RaceState.Finished)
-            {
-                if (FindPlayerPressing(pad => pad.buttonSouth.wasPressedThisFrame) != null)
-                    StartRematch();
-                else if (FindPlayerPressing(pad => pad.buttonEast.wasPressedThisFrame) != null)
-                    ResetToLobby();
-            }
+        }
+
+        private void OnConfirmRequested(LocalPlayer player)
+        {
+            if (AnyPlayerDisconnected()) return;
+            if (race.CurrentState == RaceManager.RaceState.Idle) StartRaceFromLobby();
+            else if (race.CurrentState == RaceManager.RaceState.Finished) StartRematch();
+        }
+
+        private void OnBackRequested(LocalPlayer player)
+        {
+            if (race.CurrentState == RaceManager.RaceState.Finished) ResetToLobby();
         }
 
         private void StartRaceFromLobby()
@@ -148,17 +151,6 @@ namespace Presentation
             pauseReason = PauseReason.None;
             Time.timeScale = 1f;
             race.ResetRace();
-        }
-
-        private LocalPlayer FindPlayerPressing(Func<Gamepad, bool> predicate)
-        {
-            for (int i = 0; i < vehicles.Players.Count; i++)
-            {
-                LocalPlayer player = vehicles.Players[i];
-                Gamepad pad = player.Input.PairedGamepad;
-                if (pad != null && predicate(pad)) return player;
-            }
-            return null;
         }
 
         private void OnPlayerJoined(LocalPlayer player)
@@ -192,7 +184,7 @@ namespace Presentation
                 vehicles.SetAllVehiclesEnabled(false);
                 if (GameManager.Instance != null) GameManager.Instance.PauseGame();
                 else Time.timeScale = 0f;
-                ShowModal("RACE PAUSED", "The workshop clock has stopped.", "MENU / START   RESUME");
+                ShowModal("RACE PAUSED", "The workshop clock has stopped.", "ESC / MENU / START   RESUME");
             }
         }
 
@@ -300,7 +292,7 @@ namespace Presentation
                 results.Append(i + 1).Append("  ").Append(racer.DisplayName.ToUpperInvariant())
                     .Append("      ").Append(FormatTime(racer.FinishTime)).AppendLine();
             }
-            ShowModal("FINAL BOARD", results.ToString(), "A / CROSS   REMATCH     B / CIRCLE   LOBBY");
+            ShowModal("FINAL BOARD", results.ToString(), "ENTER / A   REMATCH     ESC / B   LOBBY");
         }
 
         private void RefreshPlayerPresentation()
@@ -350,7 +342,7 @@ namespace Presentation
                 LocalPlayer player = vehicles.Players[i];
                 if (!hudLabels.TryGetValue(player.PlayerIndex, out TextMeshProUGUI label)) continue;
                 RacerState racer = player.Racer;
-                string status = player.IsConnected ? string.Empty : "   CONTROLLER LOST";
+                string status = player.IsConnected ? string.Empty : "   INPUT LOST";
                 string weapon = weaponLabels.TryGetValue(player.PlayerIndex, out string weaponName)
                     ? weaponName
                     : "--";
@@ -366,7 +358,7 @@ namespace Presentation
             if (vehicles.Players.Count == 0)
             {
                 builder.AppendLine("NO DRIVERS PAIRED");
-                builder.AppendLine("PRESS MENU / START ON A CONTROLLER TO JOIN");
+                builder.AppendLine("ENTER: JOIN KEYBOARD   MENU / START: JOIN GAMEPAD");
             }
             else
             {
@@ -374,14 +366,16 @@ namespace Presentation
                 {
                     LocalPlayer player = vehicles.Players[i];
                     builder.Append("P").Append(player.PlayerIndex + 1).Append("  ")
-                        .Append(player.IsConnected ? "READY" : "RECONNECT CONTROLLER").AppendLine();
+                        .Append(player.Input.IsKeyboardPlayer ? "KEYBOARD  " : "GAMEPAD  ")
+                        .Append(player.IsConnected ? "READY" : "RECONNECT DEVICE").AppendLine();
                 }
                 builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
-                else builder.Append("A / CROSS   START 3-LAP RACE");
+                else builder.Append("ENTER / A / CROSS   START 3-LAP RACE");
             }
             builder.AppendLine().AppendLine();
-            builder.Append("RT/LT DRIVE   LEFT STICK STEER   A BRAKE/DRIFT\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
+            builder.Append("WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
+                           "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
         }
 
@@ -390,8 +384,8 @@ namespace Presentation
             StringBuilder lost = new StringBuilder();
             for (int i = 0; i < vehicles.Players.Count; i++)
                 if (!vehicles.Players[i].IsConnected)
-                    lost.Append("PLAYER ").Append(vehicles.Players[i].PlayerIndex + 1).AppendLine(" CONTROLLER DISCONNECTED");
-            ShowModal("CONTROLLER CHECK", lost.ToString(), "RECONNECT THE SAME CONTROLLER TO CONTINUE");
+                    lost.Append("PLAYER ").Append(vehicles.Players[i].PlayerIndex + 1).AppendLine(" INPUT DEVICE DISCONNECTED");
+            ShowModal("INPUT CHECK", lost.ToString(), "RECONNECT THE SAME DEVICE TO CONTINUE");
         }
 
         private void ShowModal(string heading, string body, string footer)
