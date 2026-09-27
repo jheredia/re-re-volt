@@ -1,5 +1,52 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 telemetry build-validation checkpoint — 2026-09-27
+
+Work stopped at the agreed five-hour safety boundary after usage reached 81%;
+weekly usage was 39%. The active validation agent was interrupted and no new
+work should begin until the five-hour window resets. The telemetry/export
+implementation itself is committed as `d310999` on
+`codex/local-multiplayer-prototype`.
+
+Evidence completed before the stop:
+
+- Targeted `HandlingBakeOffReportTests` EditMode: 5/5 passed at
+  `/private/tmp/stage51-telemetry-editmode.xml`.
+- Targeted `HandlingBakeOffIntegrationTests` PlayMode: 2/2 passed at
+  `/private/tmp/stage51-telemetry-playmode.xml`.
+- Fresh macOS ARM64/Mono build succeeded at
+  `/private/tmp/re-re-volt-stage51-telemetry-builds/ReReVolt-macOS.app`; build
+  log: `macos-build.log` in the same directory.
+- The macOS player launched at 1280x720, initialized Metal, PhysX and the Input
+  System, reached the Stage 3 ready log, and showed no startup exception;
+  player log: `macos-player.log` in the same directory. The known
+  `DontDestroyOnLoad` and stripped URP post-processing warnings remain.
+- Fresh Windows x86_64/Mono cross-build succeeded at
+  `/private/tmp/re-re-volt-stage51-telemetry-builds/ReReVolt-Windows/ReReVolt.exe`;
+  build log: `windows-build.log` in the same directory. It was not run on a
+  Windows machine.
+- Both build logs contain `Build Finished, Result: Success.` and include the
+  new handling-report/coordinator scripts. The existing obsolete
+  `FindFirstObjectByType` warning in `VehicleManager.cs:44` remains.
+
+Not completed or not claimed:
+
+- The concrete desktop `FileHandlingBakeOffReportSink` was not independently
+  exercised against disk; current PlayMode coverage uses an injected sink.
+- No race was driven to completion in a standalone player, so no real
+  persistent-data CSV was inspected.
+- No physical controller, four-player split-screen, subjective handling,
+  Windows runtime, or new visual-capture validation was performed.
+- The full EditMode/functional PlayMode suites were not rerun in this bounded
+  pass; their prior passing evidence remains recorded below.
+
+Next smallest bounded deliverable after reset: use a fresh agent to add or run
+an isolated filesystem-sink smoke test, then complete one standalone macOS race
+and confirm that the logged CSV path exists, is readable, has the stable
+44-column contract, and produces a unique filename on a second run. Keep Model
+A as the default. Physical controllers and Windows runtime still require the
+user's hardware.
+
 ## Stage 5.1 measurement/export checkpoint — 2026-09-27
 
 The repeatable bake-off record is implemented without changing any handling
@@ -35,8 +82,8 @@ Validation evidence:
   new visual capture, standalone build, physical-controller feel test, or
   actual desktop persistent-data write was claimed in this deliverable.
 
-Next: reconcile/commit this checkpoint, then run the existing macOS build with
-physical controllers and use the emitted files plus blind player rankings.
+This checkpoint was reconciled and committed as `d310999`. The fresh platform
+build evidence and remaining filesystem/runtime checks are recorded above.
 Model A remains the default until the user accepts a winner.
 
 ## Stage 5.1 integrated test-build checkpoint — 2026-09-27
