@@ -68,9 +68,20 @@ namespace Vehicle
         private float combatSteering = 1f;
         private float frontLeftGrip = 1f;
         private float frontRightGrip = 1f;
+        private HandlingModelId selectedHandlingModel = HandlingModelId.A;
+        private IVehicleHandlingModelRuntime handlingModelRuntime;
+        private DirectionChangeTimer directionChangeTimer;
 
         public bool HasCombatModifier => combatGrip < 1f || combatMotor < 1f || combatSteering < 1f;
         public float CombatGripMultiplier => combatGrip;
+        public HandlingModelId SelectedHandlingModel => selectedHandlingModel;
+        public HandlingModelId ActiveHandlingModel => GetHandlingModelRuntime().Id;
+        public bool HasHandlingModelFallback => SelectedHandlingModel != ActiveHandlingModel;
+        public HandlingMotionSample CurrentHandlingSample { get; private set; }
+        public bool IsDirectionChangeMeasuring => directionChangeTimer.IsMeasuring;
+        public double DirectionChangeElapsedSeconds => directionChangeTimer.ElapsedSeconds;
+        public int CompletedDirectionChanges => directionChangeTimer.CompletedCount;
+        public DirectionChangeMeasurement LastDirectionChange => directionChangeTimer.LastCompleted;
 
         // These multipliers never enable input or mutate the authored handling values.
         public void SetCombatModifiers(float grip, float motor, float steering)
@@ -78,6 +89,11 @@ namespace Vehicle
             combatGrip = Mathf.Clamp01(grip);
             combatMotor = Mathf.Clamp01(motor);
             combatSteering = Mathf.Clamp01(steering);
+            GetHandlingModelRuntime().OnCombatModifiersChanged(this);
+        }
+
+        internal void ApplyBaselineCombatGrip()
+        {
             if (!IsConfigured) return;
             SetWheelSidewaysStiffness(wheelFL, frontLeftGrip * combatGrip);
             SetWheelSidewaysStiffness(wheelFR, frontRightGrip * combatGrip);
@@ -111,6 +127,7 @@ namespace Vehicle
             // Set the center of mass for better stability
             vehicleRigidBody.centerOfMass = centerOfMassOffset;
             if (IsConfigured) CacheFrontGrip();
+            GetHandlingModelRuntime();
         }
 
         void FixedUpdate()
@@ -123,11 +140,45 @@ namespace Vehicle
                 return;
             }
 
+            GetHandlingModelRuntime().FixedStep(this);
+            RecordHandlingSample();
+        }
+
+        internal void FixedStepBaselineHandling()
+        {
+            // Preserve the accepted Stage 5 Model A call order and calculations exactly.
             HandleSteering();
             HandleMotor();
             HandleDrift();
             ApplyDownforce();
             UpdateWheelMeshes();
+        }
+
+        public bool TrySelectHandlingModel(HandlingModelId model)
+        {
+            if (!HandlingModelCatalog.IsDefined(model)) return false;
+            if (handlingModelRuntime != null && selectedHandlingModel == model) return true;
+            handlingModelRuntime?.Reset(this);
+            selectedHandlingModel = model;
+            handlingModelRuntime = VehicleHandlingModelFactory.Create(model);
+            directionChangeTimer.Reset();
+            CurrentHandlingSample = default;
+            handlingModelRuntime.Reset(this);
+            return true;
+        }
+
+        private IVehicleHandlingModelRuntime GetHandlingModelRuntime()
+        {
+            if (handlingModelRuntime == null) handlingModelRuntime = VehicleHandlingModelFactory.Create(selectedHandlingModel);
+            return handlingModelRuntime;
+        }
+
+        private void RecordHandlingSample()
+        {
+            Vector3 localVelocity = transform.InverseTransformDirection(vehicleRigidBody.linearVelocity);
+            float yawRate = Vector3.Dot(vehicleRigidBody.angularVelocity, transform.up) * Mathf.Rad2Deg;
+            CurrentHandlingSample = HandlingMetrics.CreateMotionSample(localVelocity.z, localVelocity.x, yawRate, IsDrifting);
+            directionChangeTimer.Step(Time.fixedDeltaTime, ThrottleInput, localVelocity.z, out _);
         }
 
         // Input Enable/Disable
@@ -141,6 +192,8 @@ namespace Vehicle
                 SteerInput = 0f;
                 BrakeInput = 0f;
                 IsDrifting = false;
+                directionChangeTimer.Cancel();
+                GetHandlingModelRuntime().Reset(this);
                 if (IsConfigured)
                 {
                     wheelRL.motorTorque = wheelRR.motorTorque = 0f;
@@ -268,6 +321,9 @@ namespace Vehicle
             transform.SetPositionAndRotation(pose.position, pose.rotation);
             ThrottleInput = SteerInput = BrakeInput = currentSteerAngle = 0f;
             IsDrifting = false;
+            directionChangeTimer.Cancel();
+            CurrentHandlingSample = default;
+            GetHandlingModelRuntime().Reset(this);
             if (IsConfigured)
             {
                 wheelRL.motorTorque = wheelRR.motorTorque = 0f;
