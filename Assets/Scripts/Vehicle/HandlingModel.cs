@@ -19,7 +19,7 @@ namespace Vehicle
 
         // Candidate agents change only their own entry after their implementation is complete.
         public static bool IsImplemented(HandlingModelId model) =>
-            model == HandlingModelId.A || model == HandlingModelId.B;
+            model == HandlingModelId.A || model == HandlingModelId.B || model == HandlingModelId.C;
 
         public static HandlingModelId ResolveImplementedModel(HandlingModelId selected) =>
             IsDefined(selected) && IsImplemented(selected) ? selected : HandlingModelId.A;
@@ -40,11 +40,13 @@ namespace Vehicle
     {
         public static IVehicleHandlingModelRuntime Create(HandlingModelId selected)
         {
-            // C-D deliberately fall back to the accepted baseline until each bounded candidate is delivered.
+            // D deliberately falls back to the accepted baseline until its bounded candidate is delivered.
             switch (HandlingModelCatalog.ResolveImplementedModel(selected))
             {
                 case HandlingModelId.B:
                     return new DirectionAwareWheelColliderHandlingModelRuntime();
+                case HandlingModelId.C:
+                    return new BalancedArcadeYawHandlingModelRuntime();
                 default:
                     return BaselineHandlingModelRuntime.Instance;
             }
@@ -169,6 +171,123 @@ namespace Vehicle
             currentSteerAngle = DirectionAwareWheelColliderModel.MoveSteerTowards(currentSteerAngle,
                 targetSteerAngle, vehicle.MaximumSteerAngle, UnityEngine.Time.fixedDeltaTime);
             vehicle.FixedStepDirectionAwareWheelHandling(currentSteerAngle, drive.MotorInput, drive.BrakeFraction);
+        }
+
+        public void OnCombatModifiersChanged(VehicleController vehicle) => vehicle.ApplyBaselineCombatGrip();
+
+        public void Reset(VehicleController vehicle)
+        {
+            currentSteerAngle = 0f;
+            vehicle.ResetDirectionAwareWheelState();
+        }
+    }
+
+    /// <summary>Allocation-free yaw-assist result for the balanced arcade candidate.</summary>
+    public readonly struct BalancedArcadeYawDecision
+    {
+        public BalancedArcadeYawDecision(float targetYawRateDegreesPerSecond,
+            float yawAccelerationDegreesPerSecondSquared, bool shouldApply)
+        {
+            TargetYawRateDegreesPerSecond = targetYawRateDegreesPerSecond;
+            YawAccelerationDegreesPerSecondSquared = yawAccelerationDegreesPerSecondSquared;
+            ShouldApply = shouldApply;
+        }
+
+        public float TargetYawRateDegreesPerSecond { get; }
+        public float YawAccelerationDegreesPerSecondSquared { get; }
+        public bool ShouldApply { get; }
+    }
+
+    /// <summary>
+    /// Candidate C's complete tuning surface and deterministic target-yaw calculation. WheelColliders remain
+    /// authoritative for suspension, grip and collisions; this model adds only grounded, bounded yaw torque.
+    /// </summary>
+    public static class BalancedArcadeYawModel
+    {
+        public const int MinimumGroundedWheels = 2;
+        public const float SteeringDeadZone = .05f;
+        public const float MinimumAssistSpeed = 1.5f;
+        public const float FullAssistSpeed = 6f;
+        public const float HighSpeedAttenuationStart = .55f;
+        public const float HighSpeedYawMultiplier = .58f;
+        public const float MaximumTargetYawRateDegreesPerSecond = 120f;
+        public const float ReverseYawMultiplier = .45f;
+        public const float DriftYawMultiplier = .75f;
+        public const float YawErrorGainPerSecond = 7f;
+        public const float MaximumYawAccelerationDegreesPerSecondSquared = 320f;
+
+        /// <summary>
+        /// Model C shares Model B's symmetric oppose-motion braking. Its difference is the bounded yaw-rate
+        /// assistance, not a second acceleration model.
+        /// </summary>
+        public static DirectionAwareDriveDecision EvaluateDrive(float throttleInput, float manualBrakeInput,
+            float signedLongitudinalSpeed, float totalSpeed, float maximumSpeed) =>
+            DirectionAwareWheelColliderModel.EvaluateDrive(throttleInput, manualBrakeInput,
+                signedLongitudinalSpeed, totalSpeed, maximumSpeed);
+
+        /// <summary>
+        /// Produces a speed-aware desired yaw rate and a bounded acceleration toward it. Reverse authority is
+        /// intentionally below forward authority, high-speed authority attenuates smoothly, and fewer than two
+        /// grounded wheels disables the assist so jumps and rolls remain governed by Rigidbody physics.
+        /// </summary>
+        public static BalancedArcadeYawDecision EvaluateYawAssist(float steerInput,
+            float signedLongitudinalSpeed, float maximumSpeed, float currentYawRateDegreesPerSecond,
+            int groundedWheelCount, bool isDrifting, float steeringMultiplier)
+        {
+            float steering = UnityEngine.Mathf.Clamp(steerInput, -1f, 1f);
+            float effectiveSteeringMultiplier = UnityEngine.Mathf.Clamp01(steeringMultiplier);
+            float absoluteSpeed = UnityEngine.Mathf.Abs(signedLongitudinalSpeed);
+            if (groundedWheelCount < MinimumGroundedWheels ||
+                UnityEngine.Mathf.Abs(steering) <= SteeringDeadZone ||
+                effectiveSteeringMultiplier <= 0f || absoluteSpeed < MinimumAssistSpeed || maximumSpeed <= 0f)
+                return default;
+
+            float activation = UnityEngine.Mathf.InverseLerp(MinimumAssistSpeed, FullAssistSpeed, absoluteSpeed);
+            activation = SmoothStep01(activation);
+
+            float normalizedSpeed = UnityEngine.Mathf.Clamp01(absoluteSpeed / maximumSpeed);
+            float highSpeedBlend = UnityEngine.Mathf.InverseLerp(HighSpeedAttenuationStart, 1f, normalizedSpeed);
+            highSpeedBlend = SmoothStep01(highSpeedBlend);
+            float speedMultiplier = UnityEngine.Mathf.Lerp(1f, HighSpeedYawMultiplier, highSpeedBlend);
+
+            bool reversing = signedLongitudinalSpeed < -MinimumAssistSpeed;
+            float directionSign = reversing ? -1f : 1f;
+            float directionMultiplier = reversing ? ReverseYawMultiplier : 1f;
+            float driftMultiplier = isDrifting ? DriftYawMultiplier : 1f;
+            float targetYawRate = steering * MaximumTargetYawRateDegreesPerSecond * activation *
+                                  speedMultiplier * directionSign * directionMultiplier * driftMultiplier *
+                                  effectiveSteeringMultiplier;
+
+            float yawError = targetYawRate - currentYawRateDegreesPerSecond;
+            float yawAcceleration = UnityEngine.Mathf.Clamp(yawError * YawErrorGainPerSecond,
+                -MaximumYawAccelerationDegreesPerSecondSquared,
+                MaximumYawAccelerationDegreesPerSecondSquared);
+            return new BalancedArcadeYawDecision(targetYawRate, yawAcceleration, true);
+        }
+
+        private static float SmoothStep01(float value) => value * value * (3f - 2f * value);
+    }
+
+    internal sealed class BalancedArcadeYawHandlingModelRuntime : IVehicleHandlingModelRuntime
+    {
+        private float currentSteerAngle;
+
+        public HandlingModelId Id => HandlingModelId.C;
+
+        public void FixedStep(VehicleController vehicle)
+        {
+            float signedLongitudinalSpeed = vehicle.SignedLongitudinalSpeed;
+            DirectionAwareDriveDecision drive = BalancedArcadeYawModel.EvaluateDrive(
+                vehicle.ThrottleInput, vehicle.BrakeInput, signedLongitudinalSpeed,
+                vehicle.SpeedMetersPerSecond, vehicle.MaximumSpeedMetersPerSecond);
+            float targetSteerAngle = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(
+                vehicle.SteerInput, vehicle.ThrottleInput, signedLongitudinalSpeed,
+                vehicle.MaximumSpeedMetersPerSecond, vehicle.MaximumSteerAngle,
+                vehicle.CombatSteeringMultiplier);
+            currentSteerAngle = DirectionAwareWheelColliderModel.MoveSteerTowards(currentSteerAngle,
+                targetSteerAngle, vehicle.MaximumSteerAngle, UnityEngine.Time.fixedDeltaTime);
+            vehicle.FixedStepBalancedArcadeYawHandling(currentSteerAngle, drive.MotorInput,
+                drive.BrakeFraction);
         }
 
         public void OnCombatModifiersChanged(VehicleController vehicle) => vehicle.ApplyBaselineCombatGrip();

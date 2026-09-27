@@ -174,6 +174,34 @@ namespace Vehicle
             UpdateWheelMeshes();
         }
 
+        internal void FixedStepBalancedArcadeYawHandling(float steerAngle, float motorInput, float brakeFraction)
+        {
+            wheelFL.steerAngle = steerAngle;
+            wheelFR.steerAngle = steerAngle;
+            float torque = motorInput * maxMotorTorque * combatMotor;
+            wheelRL.motorTorque = torque;
+            wheelRR.motorTorque = torque;
+            ApplyBrake(Mathf.Clamp01(brakeFraction) * maxBrakeTorque);
+            HandleDrift();
+            ApplyBalancedArcadeYawAssist();
+            ApplyDownforce();
+            UpdateWheelMeshes();
+        }
+
+        private void ApplyBalancedArcadeYawAssist()
+        {
+            int groundedWheels = (wheelFL.isGrounded ? 1 : 0) + (wheelFR.isGrounded ? 1 : 0) +
+                                 (wheelRL.isGrounded ? 1 : 0) + (wheelRR.isGrounded ? 1 : 0);
+            float signedLongitudinalSpeed = Vector3.Dot(vehicleRigidBody.linearVelocity, transform.forward);
+            float currentYawRate = Vector3.Dot(vehicleRigidBody.angularVelocity, transform.up) * Mathf.Rad2Deg;
+            BalancedArcadeYawDecision assist = BalancedArcadeYawModel.EvaluateYawAssist(SteerInput,
+                signedLongitudinalSpeed, maxSpeed, currentYawRate, groundedWheels, IsDrifting, combatSteering);
+            if (!assist.ShouldApply) return;
+
+            vehicleRigidBody.AddTorque(transform.up *
+                (assist.YawAccelerationDegreesPerSecondSquared * Mathf.Deg2Rad), ForceMode.Acceleration);
+        }
+
         internal void ResetDirectionAwareWheelState()
         {
             if (!IsConfigured) return;

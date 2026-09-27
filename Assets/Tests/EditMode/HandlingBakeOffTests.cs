@@ -14,18 +14,17 @@ namespace Tests.EditMode
             Assert.That(HandlingModelCatalog.GetPublicLabel(HandlingModelId.D), Is.EqualTo("MODEL D"));
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.A), Is.True);
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.B), Is.True);
+            Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.C), Is.True);
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.A), Is.EqualTo(HandlingModelId.A));
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.B), Is.EqualTo(HandlingModelId.B));
+            Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.C), Is.EqualTo(HandlingModelId.C));
 
-            foreach (HandlingModelId candidate in new[] { HandlingModelId.C, HandlingModelId.D })
-            {
-                Assert.That(HandlingModelCatalog.IsImplemented(candidate), Is.False);
-                Assert.That(HandlingModelCatalog.ResolveImplementedModel(candidate), Is.EqualTo(HandlingModelId.A));
-            }
+            Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.D), Is.False);
+            Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.D), Is.EqualTo(HandlingModelId.A));
         }
 
         [Test]
-        public void VehicleSelectionActivatesBWhileLaterCandidatesStillFallBack()
+        public void VehicleSelectionActivatesImplementedCandidatesWhileDStillFallsBack()
         {
             GameObject gameObject = new GameObject("HandlingModelBSelectionTest");
             try
@@ -36,6 +35,11 @@ namespace Tests.EditMode
                 Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.B), Is.True);
                 Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.B));
                 Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.B));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
+
+                Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.C), Is.True);
+                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.C));
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.C));
                 Assert.That(vehicle.HasHandlingModelFallback, Is.False);
 
                 Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.D), Is.True);
@@ -116,6 +120,123 @@ namespace Tests.EditMode
         }
 
         [Test]
+        public void BalancedArcadeYawBuildsAtMediumSpeedAndAttenuatesAtHighSpeed()
+        {
+            BalancedArcadeYawDecision low = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 2f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision medium = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 8f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision high = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 25f, 25f, 0f, 4, false, 1f);
+
+            Assert.That(low.ShouldApply, Is.True);
+            Assert.That(low.TargetYawRateDegreesPerSecond, Is.GreaterThan(0f));
+            Assert.That(medium.TargetYawRateDegreesPerSecond, Is.GreaterThan(low.TargetYawRateDegreesPerSecond));
+            Assert.That(high.TargetYawRateDegreesPerSecond, Is.LessThan(medium.TargetYawRateDegreesPerSecond));
+        }
+
+        [Test]
+        public void BalancedArcadeYawCapsAndReversesReverseAuthority()
+        {
+            BalancedArcadeYawDecision forward = BalancedArcadeYawModel.EvaluateYawAssist(
+                .8f, 8f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision reverse = BalancedArcadeYawModel.EvaluateYawAssist(
+                .8f, -8f, 25f, 0f, 4, false, 1f);
+
+            Assert.That(forward.TargetYawRateDegreesPerSecond, Is.GreaterThan(0f));
+            Assert.That(reverse.TargetYawRateDegreesPerSecond, Is.LessThan(0f));
+            Assert.That(Mathf.Abs(reverse.TargetYawRateDegreesPerSecond),
+                Is.EqualTo(Mathf.Abs(forward.TargetYawRateDegreesPerSecond) *
+                    BalancedArcadeYawModel.ReverseYawMultiplier).Within(.0001f));
+        }
+
+        [Test]
+        public void BalancedArcadeYawRequiresSteeringSpeedAndGroundContact()
+        {
+            BalancedArcadeYawDecision airborne = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 8f, 25f, 0f, 0, false, 1f);
+            BalancedArcadeYawDecision slow = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 1f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision straight = BalancedArcadeYawModel.EvaluateYawAssist(
+                0f, 8f, 25f, 0f, 4, false, 1f);
+
+            Assert.That(airborne.ShouldApply, Is.False);
+            Assert.That(slow.ShouldApply, Is.False);
+            Assert.That(straight.ShouldApply, Is.False);
+            Assert.That(airborne.YawAccelerationDegreesPerSecondSquared, Is.Zero);
+        }
+
+        [Test]
+        public void BalancedArcadeYawAccelerationIsBoundedSymmetricAndHonorsModifiers()
+        {
+            BalancedArcadeYawDecision positive = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 8f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision negative = BalancedArcadeYawModel.EvaluateYawAssist(
+                -1f, 8f, 25f, 0f, 4, false, 1f);
+            BalancedArcadeYawDecision reduced = BalancedArcadeYawModel.EvaluateYawAssist(
+                1f, 8f, 25f, 0f, 4, true, .5f);
+
+            Assert.That(positive.YawAccelerationDegreesPerSecondSquared,
+                Is.EqualTo(BalancedArcadeYawModel.MaximumYawAccelerationDegreesPerSecondSquared));
+            Assert.That(negative.YawAccelerationDegreesPerSecondSquared,
+                Is.EqualTo(-positive.YawAccelerationDegreesPerSecondSquared).Within(.0001f));
+            Assert.That(reduced.TargetYawRateDegreesPerSecond, Is.EqualTo(
+                BalancedArcadeYawModel.MaximumTargetYawRateDegreesPerSecond *
+                BalancedArcadeYawModel.DriftYawMultiplier * .5f).Within(.0001f));
+        }
+
+        [Test]
+        public void BalancedArcadeDriveChangesDirectionPromptlyAndSymmetrically()
+        {
+            DirectionAwareDriveDecision forward = BalancedArcadeYawModel.EvaluateDrive(
+                1f, 0f, -.5f, .5f, 25f);
+            DirectionAwareDriveDecision reverse = BalancedArcadeYawModel.EvaluateDrive(
+                -1f, 0f, .5f, .5f, 25f);
+
+            Assert.That(forward.IsOpposingMotion, Is.False);
+            Assert.That(reverse.IsOpposingMotion, Is.False);
+            Assert.That(forward.MotorInput, Is.EqualTo(1f));
+            Assert.That(reverse.MotorInput, Is.EqualTo(-1f));
+            Assert.That(forward.BrakeFraction, Is.EqualTo(reverse.BrakeFraction));
+        }
+
+        [Test]
+        public void BalancedArcadeSelectionSurvivesControlDisableAndTeleportReset()
+        {
+            GameObject gameObject = new GameObject("BalancedArcadeLifecycleTest");
+            try
+            {
+                Rigidbody rigidbody = gameObject.AddComponent<Rigidbody>();
+                VehicleController vehicle = gameObject.AddComponent<VehicleController>();
+                typeof(VehicleController).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic)?.Invoke(vehicle, null);
+                vehicle.TrySelectHandlingModel(HandlingModelId.C);
+                vehicle.ThrottleInput = 1f;
+                vehicle.SteerInput = 1f;
+                vehicle.BrakeInput = 1f;
+                vehicle.SetCombatModifiers(.5f, .5f, .5f);
+                rigidbody.linearVelocity = new Vector3(1f, 2f, 3f);
+                rigidbody.angularVelocity = Vector3.one;
+
+                vehicle.SetInputEnabled(false);
+                vehicle.Teleport(new Pose(new Vector3(4f, 0f, 2f), Quaternion.identity));
+
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.C));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
+                Assert.That(vehicle.ThrottleInput, Is.Zero);
+                Assert.That(vehicle.SteerInput, Is.Zero);
+                Assert.That(vehicle.BrakeInput, Is.Zero);
+                Assert.That(vehicle.HasCombatModifier, Is.False);
+                Assert.That(rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
         public void VehicleSelectionRejectsUnknownIdsAndReportsFallbackWithoutChangingSelection()
         {
             GameObject gameObject = new GameObject("HandlingModelSelectionTest");
@@ -127,13 +248,13 @@ namespace Tests.EditMode
                 Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.A));
                 Assert.That(vehicle.HasHandlingModelFallback, Is.False);
 
-                Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.C), Is.True);
-                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.C));
+                Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.D), Is.True);
+                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));
                 Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.A));
                 Assert.That(vehicle.HasHandlingModelFallback, Is.True);
 
                 Assert.That(vehicle.TrySelectHandlingModel((HandlingModelId)99), Is.False);
-                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.C));
+                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));
             }
             finally
             {
