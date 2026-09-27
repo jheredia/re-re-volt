@@ -81,6 +81,16 @@ namespace Vehicle
         internal float SignedLongitudinalSpeed => vehicleRigidBody != null
             ? Vector3.Dot(vehicleRigidBody.linearVelocity, transform.forward)
             : 0f;
+        internal float LateralSpeed => vehicleRigidBody != null
+            ? Vector3.Dot(vehicleRigidBody.linearVelocity, transform.right)
+            : 0f;
+        internal float CurrentYawRateDegreesPerSecond => vehicleRigidBody != null
+            ? Vector3.Dot(vehicleRigidBody.angularVelocity, transform.up) * Mathf.Rad2Deg
+            : 0f;
+        internal int GroundedWheelCount => IsConfigured
+            ? (wheelFL.isGrounded ? 1 : 0) + (wheelFR.isGrounded ? 1 : 0) +
+              (wheelRL.isGrounded ? 1 : 0) + (wheelRR.isGrounded ? 1 : 0)
+            : 0;
         public HandlingModelId SelectedHandlingModel => selectedHandlingModel;
         public HandlingModelId ActiveHandlingModel => GetHandlingModelRuntime().Id;
         public bool HasHandlingModelFallback => SelectedHandlingModel != ActiveHandlingModel;
@@ -188,6 +198,28 @@ namespace Vehicle
             UpdateWheelMeshes();
         }
 
+        internal void FixedStepDeliberateDriftHandling(float steerAngle, float motorInput,
+            float brakeFraction, DeliberateDriftDecision drift)
+        {
+            wheelFL.steerAngle = steerAngle;
+            wheelFR.steerAngle = steerAngle;
+            float torque = motorInput * maxMotorTorque * combatMotor;
+            wheelRL.motorTorque = torque;
+            wheelRR.motorTorque = torque;
+            ApplyBrake(Mathf.Clamp01(brakeFraction) * maxBrakeTorque);
+            IsDrifting = drift.IsDrifting;
+            ApplyDeliberateDriftGrip(drift.RearGripMultiplier);
+            if (drift.ShouldApplyAssistance)
+            {
+                vehicleRigidBody.AddTorque(transform.up *
+                    (drift.YawAccelerationDegreesPerSecondSquared * Mathf.Deg2Rad), ForceMode.Acceleration);
+                vehicleRigidBody.AddForce(transform.right * drift.LateralAccelerationMetersPerSecondSquared,
+                    ForceMode.Acceleration);
+            }
+            ApplyDownforce();
+            UpdateWheelMeshes();
+        }
+
         private void ApplyBalancedArcadeYawAssist()
         {
             int groundedWheels = (wheelFL.isGrounded ? 1 : 0) + (wheelFR.isGrounded ? 1 : 0) +
@@ -207,6 +239,23 @@ namespace Vehicle
             if (!IsConfigured) return;
             wheelFL.steerAngle = wheelFR.steerAngle = 0f;
             wheelRL.motorTorque = wheelRR.motorTorque = 0f;
+        }
+
+        internal void ApplyDeliberateDriftGrip(float rearGripMultiplier)
+        {
+            if (!IsConfigured) return;
+            SetWheelSidewaysStiffness(wheelFL, frontLeftGrip * combatGrip);
+            SetWheelSidewaysStiffness(wheelFR, frontRightGrip * combatGrip);
+            float rearGrip = normalRearGrip * Mathf.Clamp01(rearGripMultiplier) * combatGrip;
+            SetWheelSidewaysStiffness(wheelRL, rearGrip);
+            SetWheelSidewaysStiffness(wheelRR, rearGrip);
+        }
+
+        internal void ResetDeliberateDriftState()
+        {
+            IsDrifting = false;
+            ResetDirectionAwareWheelState();
+            ApplyDeliberateDriftGrip(1f);
         }
 
         public bool TrySelectHandlingModel(HandlingModelId model)

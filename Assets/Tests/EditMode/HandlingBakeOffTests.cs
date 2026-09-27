@@ -8,23 +8,23 @@ namespace Tests.EditMode
     public sealed class HandlingBakeOffTests
     {
         [Test]
-        public void CatalogExposesNeutralIdsAndExplicitBaselineFallbacks()
+        public void CatalogExposesNeutralIdsAndAllImplementedModels()
         {
             Assert.That(HandlingModelCatalog.GetPublicLabel(HandlingModelId.A), Is.EqualTo("MODEL A"));
             Assert.That(HandlingModelCatalog.GetPublicLabel(HandlingModelId.D), Is.EqualTo("MODEL D"));
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.A), Is.True);
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.B), Is.True);
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.C), Is.True);
+            Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.D), Is.True);
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.A), Is.EqualTo(HandlingModelId.A));
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.B), Is.EqualTo(HandlingModelId.B));
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.C), Is.EqualTo(HandlingModelId.C));
-
-            Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.D), Is.False);
-            Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.D), Is.EqualTo(HandlingModelId.A));
+            Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.D), Is.EqualTo(HandlingModelId.D));
+            Assert.That(HandlingModelCatalog.ResolveImplementedModel((HandlingModelId)99), Is.EqualTo(HandlingModelId.A));
         }
 
         [Test]
-        public void VehicleSelectionActivatesImplementedCandidatesWhileDStillFallsBack()
+        public void VehicleSelectionActivatesEveryImplementedCandidate()
         {
             GameObject gameObject = new GameObject("HandlingModelBSelectionTest");
             try
@@ -44,8 +44,8 @@ namespace Tests.EditMode
 
                 Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.D), Is.True);
                 Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));
-                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.A));
-                Assert.That(vehicle.HasHandlingModelFallback, Is.True);
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.D));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
             }
             finally
             {
@@ -237,7 +237,164 @@ namespace Tests.EditMode
         }
 
         [Test]
-        public void VehicleSelectionRejectsUnknownIdsAndReportsFallbackWithoutChangingSelection()
+        public void DeliberateDriftRequiresGroundedForwardSpeedBrakeAndSteering()
+        {
+            DeliberateDriftState initial = DeliberateDriftModel.InitialState;
+            DeliberateDriftDecision valid = DeliberateDriftModel.Evaluate(initial, .8f, .6f, 8f,
+                0f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision noBrake = DeliberateDriftModel.Evaluate(initial, .5f, .6f, 8f,
+                0f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision noSteering = DeliberateDriftModel.Evaluate(initial, .8f, .2f, 8f,
+                0f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision tooSlow = DeliberateDriftModel.Evaluate(initial, .8f, .6f, 4f,
+                0f, 0f, 4, 1f, 1f, .02f);
+
+            Assert.That(valid.State.Phase, Is.EqualTo(DeliberateDriftPhase.Drift));
+            Assert.That(valid.IsDrifting, Is.True);
+            Assert.That(valid.RearGripMultiplier, Is.EqualTo(DeliberateDriftModel.DriftRearGripMultiplier));
+            Assert.That(valid.WheelBrakeMultiplier,
+                Is.EqualTo(DeliberateDriftModel.DriftWheelBrakeMultiplier));
+            Assert.That(noBrake.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+            Assert.That(noSteering.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+            Assert.That(tooSlow.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+        }
+
+        [Test]
+        public void DeliberateDriftUsesHoldAndRecoveryHysteresis()
+        {
+            DeliberateDriftDecision entered = DeliberateDriftModel.Evaluate(DeliberateDriftModel.InitialState,
+                .8f, .6f, 8f, 1f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision heldBelowEntryThresholds = DeliberateDriftModel.Evaluate(entered.State,
+                .4f, .15f, 3.5f, 1f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision exiting = DeliberateDriftModel.Evaluate(heldBelowEntryThresholds.State,
+                .4f, .05f, 3.5f, 1f, 0f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision recovered = DeliberateDriftModel.Evaluate(exiting.State,
+                0f, 0f, 3.5f, .25f, 0f, 4, 1f, 1f,
+                DeliberateDriftModel.MinimumRecoverySeconds);
+
+            Assert.That(heldBelowEntryThresholds.State.Phase, Is.EqualTo(DeliberateDriftPhase.Drift));
+            Assert.That(exiting.State.Phase, Is.EqualTo(DeliberateDriftPhase.Recovery));
+            Assert.That(exiting.IsDrifting, Is.False);
+            Assert.That(exiting.RearGripMultiplier,
+                Is.EqualTo(DeliberateDriftModel.RecoveryRearGripMultiplier).Within(.0001f));
+            Assert.That(recovered.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+            Assert.That(recovered.RearGripMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void DeliberateDriftNeverEntersOrAssistsInReverseOrAirborne()
+        {
+            DeliberateDriftDecision reverse = DeliberateDriftModel.Evaluate(DeliberateDriftModel.InitialState,
+                1f, 1f, -8f, 4f, 90f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision airborne = DeliberateDriftModel.Evaluate(DeliberateDriftModel.InitialState,
+                1f, 1f, 8f, 4f, 90f, 0, 1f, 1f, .02f);
+            DeliberateDriftState active = new DeliberateDriftState(DeliberateDriftPhase.Drift, 0f);
+            DeliberateDriftDecision reverseExit = DeliberateDriftModel.Evaluate(active,
+                1f, 1f, -8f, 4f, 90f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision airborneExit = DeliberateDriftModel.Evaluate(active,
+                1f, 1f, 8f, 4f, 90f, 0, 1f, 1f, .02f);
+
+            Assert.That(reverse.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+            Assert.That(airborne.State.Phase, Is.EqualTo(DeliberateDriftPhase.Grip));
+            Assert.That(reverse.ShouldApplyAssistance, Is.False);
+            Assert.That(airborne.ShouldApplyAssistance, Is.False);
+            Assert.That(reverseExit.State.Phase, Is.EqualTo(DeliberateDriftPhase.Recovery));
+            Assert.That(airborneExit.State.Phase, Is.EqualTo(DeliberateDriftPhase.Recovery));
+            Assert.That(reverseExit.ShouldApplyAssistance, Is.False);
+            Assert.That(airborneExit.ShouldApplyAssistance, Is.False);
+            Assert.That(reverseExit.YawAccelerationDegreesPerSecondSquared, Is.Zero);
+            Assert.That(airborneExit.LateralAccelerationMetersPerSecondSquared, Is.Zero);
+        }
+
+        [Test]
+        public void DeliberateDriftYawAndVelocityAlignmentAreBoundedAndRecoverTowardStableMotion()
+        {
+            DeliberateDriftDecision drift = DeliberateDriftModel.Evaluate(DeliberateDriftModel.InitialState,
+                1f, 1f, 8f, 50f, -1000f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision recovery = DeliberateDriftModel.Evaluate(drift.State,
+                0f, 0f, 8f, 50f, 1000f, 4, 1f, 1f, .02f);
+            DeliberateDriftDecision disrupted = DeliberateDriftModel.Evaluate(DeliberateDriftModel.InitialState,
+                1f, 1f, 8f, 50f, -1000f, 4, .5f, .25f, .02f);
+
+            Assert.That(Mathf.Abs(drift.TargetYawRateDegreesPerSecond),
+                Is.LessThanOrEqualTo(DeliberateDriftModel.MaximumTargetYawRateDegreesPerSecond));
+            Assert.That(drift.YawAccelerationDegreesPerSecondSquared,
+                Is.EqualTo(DeliberateDriftModel.MaximumYawAccelerationDegreesPerSecondSquared));
+            Assert.That(drift.LateralAccelerationMetersPerSecondSquared,
+                Is.EqualTo(-DeliberateDriftModel.MaximumDriftLateralAcceleration));
+            Assert.That(recovery.State.Phase, Is.EqualTo(DeliberateDriftPhase.Recovery));
+            Assert.That(recovery.TargetYawRateDegreesPerSecond, Is.Zero);
+            Assert.That(recovery.YawAccelerationDegreesPerSecondSquared,
+                Is.EqualTo(-DeliberateDriftModel.MaximumYawAccelerationDegreesPerSecondSquared));
+            Assert.That(recovery.LateralAccelerationMetersPerSecondSquared,
+                Is.EqualTo(-DeliberateDriftModel.MaximumRecoveryLateralAcceleration));
+            Assert.That(Mathf.Abs(disrupted.YawAccelerationDegreesPerSecondSquared),
+                Is.LessThanOrEqualTo(DeliberateDriftModel.MaximumYawAccelerationDegreesPerSecondSquared * .5f));
+            Assert.That(Mathf.Abs(disrupted.LateralAccelerationMetersPerSecondSquared),
+                Is.LessThanOrEqualTo(DeliberateDriftModel.MaximumDriftLateralAcceleration * .25f));
+        }
+
+        [Test]
+        public void DeliberateDriftDriveChangesDirectionPromptlyAndSymmetrically()
+        {
+            DirectionAwareDriveDecision forward = DeliberateDriftModel.EvaluateDrive(
+                1f, 0f, -.5f, .5f, 25f);
+            DirectionAwareDriveDecision reverse = DeliberateDriftModel.EvaluateDrive(
+                -1f, 0f, .5f, .5f, 25f);
+
+            Assert.That(forward.IsOpposingMotion, Is.False);
+            Assert.That(reverse.IsOpposingMotion, Is.False);
+            Assert.That(forward.MotorInput, Is.EqualTo(1f));
+            Assert.That(reverse.MotorInput, Is.EqualTo(-1f));
+            Assert.That(forward.BrakeFraction, Is.EqualTo(reverse.BrakeFraction));
+
+            float forwardSteer = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(
+                1f, 1f, 8f, 25f, 35f, 1f);
+            float reverseSteer = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(
+                1f, -1f, -8f, 25f, 35f, 1f);
+            Assert.That(reverseSteer, Is.EqualTo(forwardSteer *
+                DirectionAwareWheelColliderModel.ReverseSteeringMultiplier).Within(.0001f));
+        }
+
+        [Test]
+        public void DeliberateDriftSelectionSurvivesControlDisableAndTeleportReset()
+        {
+            GameObject gameObject = new GameObject("DeliberateDriftLifecycleTest");
+            try
+            {
+                Rigidbody rigidbody = gameObject.AddComponent<Rigidbody>();
+                VehicleController vehicle = gameObject.AddComponent<VehicleController>();
+                typeof(VehicleController).GetMethod("Awake", System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic)?.Invoke(vehicle, null);
+                vehicle.TrySelectHandlingModel(HandlingModelId.D);
+                vehicle.ThrottleInput = 1f;
+                vehicle.SteerInput = 1f;
+                vehicle.BrakeInput = 1f;
+                vehicle.SetCombatModifiers(.5f, .5f, .5f);
+                rigidbody.linearVelocity = new Vector3(1f, 2f, 3f);
+                rigidbody.angularVelocity = Vector3.one;
+
+                vehicle.SetInputEnabled(false);
+                vehicle.Teleport(new Pose(new Vector3(4f, 0f, 2f), Quaternion.identity));
+
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.D));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
+                Assert.That(vehicle.ThrottleInput, Is.Zero);
+                Assert.That(vehicle.SteerInput, Is.Zero);
+                Assert.That(vehicle.BrakeInput, Is.Zero);
+                Assert.That(vehicle.IsDrifting, Is.False);
+                Assert.That(vehicle.HasCombatModifier, Is.False);
+                Assert.That(rigidbody.linearVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(rigidbody.angularVelocity, Is.EqualTo(Vector3.zero));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void VehicleSelectionRejectsUnknownIdsWithoutChangingSelection()
         {
             GameObject gameObject = new GameObject("HandlingModelSelectionTest");
             try
@@ -250,8 +407,8 @@ namespace Tests.EditMode
 
                 Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.D), Is.True);
                 Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));
-                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.A));
-                Assert.That(vehicle.HasHandlingModelFallback, Is.True);
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.D));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
 
                 Assert.That(vehicle.TrySelectHandlingModel((HandlingModelId)99), Is.False);
                 Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));

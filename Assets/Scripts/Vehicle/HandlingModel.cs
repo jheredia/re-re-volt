@@ -19,7 +19,8 @@ namespace Vehicle
 
         // Candidate agents change only their own entry after their implementation is complete.
         public static bool IsImplemented(HandlingModelId model) =>
-            model == HandlingModelId.A || model == HandlingModelId.B || model == HandlingModelId.C;
+            model == HandlingModelId.A || model == HandlingModelId.B || model == HandlingModelId.C ||
+            model == HandlingModelId.D;
 
         public static HandlingModelId ResolveImplementedModel(HandlingModelId selected) =>
             IsDefined(selected) && IsImplemented(selected) ? selected : HandlingModelId.A;
@@ -40,13 +41,14 @@ namespace Vehicle
     {
         public static IVehicleHandlingModelRuntime Create(HandlingModelId selected)
         {
-            // D deliberately falls back to the accepted baseline until its bounded candidate is delivered.
             switch (HandlingModelCatalog.ResolveImplementedModel(selected))
             {
                 case HandlingModelId.B:
                     return new DirectionAwareWheelColliderHandlingModelRuntime();
                 case HandlingModelId.C:
                     return new BalancedArcadeYawHandlingModelRuntime();
+                case HandlingModelId.D:
+                    return new DeliberateDriftHandlingModelRuntime();
                 default:
                     return BaselineHandlingModelRuntime.Instance;
             }
@@ -296,6 +298,234 @@ namespace Vehicle
         {
             currentSteerAngle = 0f;
             vehicle.ResetDirectionAwareWheelState();
+        }
+    }
+
+    public enum DeliberateDriftPhase
+    {
+        Grip = 0,
+        Drift = 1,
+        Recovery = 2
+    }
+
+    /// <summary>Small, allocation-free state carried by each Model D runtime.</summary>
+    public readonly struct DeliberateDriftState
+    {
+        public DeliberateDriftState(DeliberateDriftPhase phase, float recoverySeconds)
+        {
+            Phase = phase;
+            RecoverySeconds = UnityEngine.Mathf.Max(0f, recoverySeconds);
+        }
+
+        public DeliberateDriftPhase Phase { get; }
+        public float RecoverySeconds { get; }
+        public bool IsDrifting => Phase == DeliberateDriftPhase.Drift;
+    }
+
+    /// <summary>Bounded Rigidbody and WheelCollider requests produced by Model D for one physics step.</summary>
+    public readonly struct DeliberateDriftDecision
+    {
+        public DeliberateDriftDecision(DeliberateDriftState state, float rearGripMultiplier,
+            float wheelBrakeMultiplier, float targetYawRateDegreesPerSecond,
+            float yawAccelerationDegreesPerSecondSquared, float lateralAccelerationMetersPerSecondSquared,
+            bool shouldApplyAssistance)
+        {
+            State = state;
+            RearGripMultiplier = rearGripMultiplier;
+            WheelBrakeMultiplier = wheelBrakeMultiplier;
+            TargetYawRateDegreesPerSecond = targetYawRateDegreesPerSecond;
+            YawAccelerationDegreesPerSecondSquared = yawAccelerationDegreesPerSecondSquared;
+            LateralAccelerationMetersPerSecondSquared = lateralAccelerationMetersPerSecondSquared;
+            ShouldApplyAssistance = shouldApplyAssistance;
+        }
+
+        public DeliberateDriftState State { get; }
+        public bool IsDrifting => State.IsDrifting;
+        public float RearGripMultiplier { get; }
+        public float WheelBrakeMultiplier { get; }
+        public float TargetYawRateDegreesPerSecond { get; }
+        public float YawAccelerationDegreesPerSecondSquared { get; }
+        public float LateralAccelerationMetersPerSecondSquared { get; }
+        public bool ShouldApplyAssistance { get; }
+    }
+
+    /// <summary>
+    /// Candidate D's complete tuning surface and deterministic grip/drift/recovery state machine. A drift can
+    /// only start from forward, grounded motion with deliberate brake and steering input. Lower hold thresholds
+    /// provide hysteresis; losing them enters a timed velocity-alignment recovery rather than abruptly restoring
+    /// full grip. Reverse and airborne motion never receive expressive drift assistance.
+    /// </summary>
+    public static class DeliberateDriftModel
+    {
+        public const int MinimumGroundedWheels = 2;
+        public const float EntryBrakeInput = .72f;
+        public const float HoldBrakeInput = .35f;
+        public const float EntrySteeringInput = .32f;
+        public const float HoldSteeringInput = .12f;
+        public const float EntryForwardSpeed = 5f;
+        public const float HoldForwardSpeed = 3f;
+        public const float MinimumRecoverySeconds = .25f;
+        public const float MaximumRecoverySeconds = .8f;
+        public const float RecoveryLateralSpeed = .5f;
+        public const float DriftRearGripMultiplier = .45f;
+        public const float RecoveryRearGripMultiplier = .78f;
+        public const float DriftWheelBrakeMultiplier = .2f;
+        public const float MaximumTargetYawRateDegreesPerSecond = 105f;
+        public const float YawErrorGainPerSecond = 6f;
+        public const float MaximumYawAccelerationDegreesPerSecondSquared = 260f;
+        public const float DriftLateralVelocityRatio = .28f;
+        public const float DriftAlignmentGainPerSecond = 3.5f;
+        public const float RecoveryAlignmentGainPerSecond = 5.5f;
+        public const float MaximumDriftLateralAcceleration = 7f;
+        public const float MaximumRecoveryLateralAcceleration = 12f;
+
+        public static DeliberateDriftState InitialState =>
+            new DeliberateDriftState(DeliberateDriftPhase.Grip, 0f);
+
+        /// <summary>Model D deliberately shares Model B's prompt, symmetric direction-change drive rules.</summary>
+        public static DirectionAwareDriveDecision EvaluateDrive(float throttleInput, float manualBrakeInput,
+            float signedLongitudinalSpeed, float totalSpeed, float maximumSpeed) =>
+            DirectionAwareWheelColliderModel.EvaluateDrive(throttleInput, manualBrakeInput,
+                signedLongitudinalSpeed, totalSpeed, maximumSpeed);
+
+        public static DeliberateDriftDecision Evaluate(DeliberateDriftState previousState, float brakeInput,
+            float steerInput, float signedLongitudinalSpeed, float lateralSpeed,
+            float currentYawRateDegreesPerSecond, int groundedWheelCount, float steeringMultiplier,
+            float gripMultiplier, float deltaSeconds)
+        {
+            float brake = UnityEngine.Mathf.Clamp01(brakeInput);
+            float steering = UnityEngine.Mathf.Clamp(steerInput, -1f, 1f);
+            float absoluteSteering = UnityEngine.Mathf.Abs(steering);
+            float stepSeconds = UnityEngine.Mathf.Max(0f, deltaSeconds);
+            bool grounded = groundedWheelCount >= MinimumGroundedWheels;
+
+            DeliberateDriftState nextState = previousState;
+            switch (previousState.Phase)
+            {
+                case DeliberateDriftPhase.Drift:
+                    bool canHold = grounded && signedLongitudinalSpeed >= HoldForwardSpeed &&
+                                   brake >= HoldBrakeInput && absoluteSteering >= HoldSteeringInput;
+                    nextState = canHold
+                        ? new DeliberateDriftState(DeliberateDriftPhase.Drift, 0f)
+                        : new DeliberateDriftState(DeliberateDriftPhase.Recovery, 0f);
+                    break;
+                case DeliberateDriftPhase.Recovery:
+                    float recoverySeconds = UnityEngine.Mathf.Min(MaximumRecoverySeconds,
+                        previousState.RecoverySeconds + stepSeconds);
+                    bool recovered = recoverySeconds >= MaximumRecoverySeconds ||
+                                     recoverySeconds >= MinimumRecoverySeconds &&
+                                     UnityEngine.Mathf.Abs(lateralSpeed) <= RecoveryLateralSpeed;
+                    nextState = recovered
+                        ? InitialState
+                        : new DeliberateDriftState(DeliberateDriftPhase.Recovery, recoverySeconds);
+                    break;
+                default:
+                    bool canEnter = grounded && signedLongitudinalSpeed >= EntryForwardSpeed &&
+                                    brake >= EntryBrakeInput && absoluteSteering >= EntrySteeringInput;
+                    nextState = canEnter
+                        ? new DeliberateDriftState(DeliberateDriftPhase.Drift, 0f)
+                        : InitialState;
+                    break;
+            }
+
+            float rearGripMultiplier = 1f;
+            float wheelBrakeMultiplier = 1f;
+            if (nextState.Phase == DeliberateDriftPhase.Drift)
+            {
+                rearGripMultiplier = DriftRearGripMultiplier;
+                wheelBrakeMultiplier = DriftWheelBrakeMultiplier;
+            }
+            else if (nextState.Phase == DeliberateDriftPhase.Recovery)
+            {
+                float recoveryBlend = UnityEngine.Mathf.InverseLerp(0f, MaximumRecoverySeconds,
+                    nextState.RecoverySeconds);
+                rearGripMultiplier = UnityEngine.Mathf.Lerp(RecoveryRearGripMultiplier, 1f, recoveryBlend);
+            }
+
+            bool forward = signedLongitudinalSpeed > HandlingMetrics.DefaultSpeedDeadZone;
+            bool shouldApply = grounded && forward && nextState.Phase != DeliberateDriftPhase.Grip;
+            if (!shouldApply)
+                return new DeliberateDriftDecision(nextState, rearGripMultiplier, wheelBrakeMultiplier,
+                    0f, 0f, 0f, false);
+
+            float effectiveSteering = UnityEngine.Mathf.Clamp01(steeringMultiplier);
+            float effectiveGrip = UnityEngine.Mathf.Clamp01(gripMultiplier);
+            float targetYawRate = 0f;
+            float lateralAcceleration;
+            float maximumLateralAcceleration;
+            if (nextState.IsDrifting)
+            {
+                float speedBlend = UnityEngine.Mathf.InverseLerp(HoldForwardSpeed,
+                    EntryForwardSpeed * 2.5f, signedLongitudinalSpeed);
+                float yawSpeedMultiplier = UnityEngine.Mathf.Lerp(.65f, 1f, speedBlend);
+                targetYawRate = steering * MaximumTargetYawRateDegreesPerSecond * yawSpeedMultiplier *
+                                effectiveSteering;
+                float targetLateralSpeed = steering * signedLongitudinalSpeed * DriftLateralVelocityRatio;
+                lateralAcceleration = (targetLateralSpeed - lateralSpeed) * DriftAlignmentGainPerSecond *
+                                      effectiveGrip;
+                maximumLateralAcceleration = MaximumDriftLateralAcceleration * effectiveGrip;
+            }
+            else
+            {
+                lateralAcceleration = -lateralSpeed * RecoveryAlignmentGainPerSecond * effectiveGrip;
+                maximumLateralAcceleration = MaximumRecoveryLateralAcceleration * effectiveGrip;
+            }
+
+            float yawAcceleration = UnityEngine.Mathf.Clamp(
+                (targetYawRate - currentYawRateDegreesPerSecond) * YawErrorGainPerSecond,
+                -MaximumYawAccelerationDegreesPerSecondSquared * effectiveSteering,
+                MaximumYawAccelerationDegreesPerSecondSquared * effectiveSteering);
+            lateralAcceleration = UnityEngine.Mathf.Clamp(lateralAcceleration,
+                -maximumLateralAcceleration, maximumLateralAcceleration);
+            return new DeliberateDriftDecision(nextState, rearGripMultiplier, wheelBrakeMultiplier,
+                targetYawRate, yawAcceleration, lateralAcceleration, true);
+        }
+    }
+
+    internal sealed class DeliberateDriftHandlingModelRuntime : IVehicleHandlingModelRuntime
+    {
+        private float currentSteerAngle;
+        private DeliberateDriftState driftState = DeliberateDriftModel.InitialState;
+        private float rearGripMultiplier = 1f;
+
+        public HandlingModelId Id => HandlingModelId.D;
+
+        public void FixedStep(VehicleController vehicle)
+        {
+            float signedLongitudinalSpeed = vehicle.SignedLongitudinalSpeed;
+            DirectionAwareDriveDecision drive = DeliberateDriftModel.EvaluateDrive(vehicle.ThrottleInput,
+                vehicle.BrakeInput, signedLongitudinalSpeed, vehicle.SpeedMetersPerSecond,
+                vehicle.MaximumSpeedMetersPerSecond);
+            float targetSteerAngle = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(
+                vehicle.SteerInput, vehicle.ThrottleInput, signedLongitudinalSpeed,
+                vehicle.MaximumSpeedMetersPerSecond, vehicle.MaximumSteerAngle,
+                vehicle.CombatSteeringMultiplier);
+            currentSteerAngle = DirectionAwareWheelColliderModel.MoveSteerTowards(currentSteerAngle,
+                targetSteerAngle, vehicle.MaximumSteerAngle, UnityEngine.Time.fixedDeltaTime);
+
+            DeliberateDriftDecision drift = DeliberateDriftModel.Evaluate(driftState, vehicle.BrakeInput,
+                vehicle.SteerInput, signedLongitudinalSpeed, vehicle.LateralSpeed,
+                vehicle.CurrentYawRateDegreesPerSecond, vehicle.GroundedWheelCount,
+                vehicle.CombatSteeringMultiplier, vehicle.CombatGripMultiplier,
+                UnityEngine.Time.fixedDeltaTime);
+            driftState = drift.State;
+            rearGripMultiplier = drift.RearGripMultiplier;
+            float brakeFraction = drive.IsOpposingMotion
+                ? drive.BrakeFraction
+                : drive.BrakeFraction * drift.WheelBrakeMultiplier;
+            vehicle.FixedStepDeliberateDriftHandling(currentSteerAngle, drive.MotorInput,
+                brakeFraction, drift);
+        }
+
+        public void OnCombatModifiersChanged(VehicleController vehicle) =>
+            vehicle.ApplyDeliberateDriftGrip(rearGripMultiplier);
+
+        public void Reset(VehicleController vehicle)
+        {
+            currentSteerAngle = 0f;
+            driftState = DeliberateDriftModel.InitialState;
+            rearGripMultiplier = 1f;
+            vehicle.ResetDeliberateDriftState();
         }
     }
 }
