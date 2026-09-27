@@ -1,5 +1,68 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 handling implementation checkpoint — 2026-09-26
+
+Work stopped at the agreed five-hour safety boundary: usage reached 78%, so no
+new lobby/UI or validation deliverable was started. Weekly usage was 12%. The
+worktree was clean after committing each independently reviewed agent delivery.
+
+Committed checkpoints on `codex/local-multiplayer-prototype`:
+
+- `30ec6d0` — neutral A–D handling-model boundary, explicit candidate fallback,
+  allocation-free motion/direction-change metrics, and focused EditMode tests.
+- `249bd33` — Model B, direction-aware WheelCollider braking and steering.
+- `c606712` — Model C, grounded balanced arcade target-yaw assistance.
+- `8e1a936` — Model D, deliberate forward-only drift/recovery state machine.
+
+All four models are now implemented behind `HandlingModelId` and
+`VehicleController.TrySelectHandlingModel`. Model A preserves the accepted
+Stage 5 steering → motor → drift → downforce → mesh sequence. Models B–D share
+the same mass, maximum speed, input path, combat multipliers, recovery, camera,
+and race rules. No scene, prefab, package, project-setting, or serialized-field
+change was made.
+
+Validation evidence:
+
+- Baseline: targeted 11/11 and full 47/47 EditMode passed at
+  `/private/tmp/re-re-volt-stage51-baseline-editmode.xml` and
+  `/private/tmp/re-re-volt-stage51-baseline-editmode-full.xml`.
+- Model B: targeted 16/16 and full 52/52 EditMode passed at
+  `/private/tmp/re-re-volt-stage51-model-b-editmode.xml` and
+  `/private/tmp/re-re-volt-stage51-model-b-editmode-full.xml`.
+- Model C: targeted 22/22 and full 58/58 EditMode passed at
+  `/private/tmp/re-re-volt-stage51-model-c-editmode.xml` and
+  `/private/tmp/re-re-volt-stage51-model-c-editmode-full.xml`.
+- Model D: targeted 28/28 and full 64/64 EditMode passed at
+  `/private/tmp/re-re-volt-stage51-model-d-editmode-final.xml` and
+  `/private/tmp/re-re-volt-stage51-model-d-editmode-full.xml`.
+- Every agent reported successful Unity compilation and a clean
+  `git diff --check`. Unity-generated ProjectAuditor/solution noise was removed.
+- The baseline full PlayMode attempt stalled before executing tests after
+  loading `Temp/__Backupscenes/0.backup`; it was bounded and terminated. Its log
+  is `/private/tmp/re-re-volt-stage51-baseline-playmode-full.log`. No PlayMode
+  test failure was observed, but PlayMode is not yet accepted for Stage 5.1.
+
+Next smallest bounded deliverable after the five-hour reset:
+
+1. Spawn a fresh lobby/HUD integration agent from `8e1a936`.
+2. Add per-player model cycling while the race is Idle only, using each paired
+   player's owned keyboard/gamepad input. Neutral labels must remain `MODEL A`
+   through `MODEL D`; show the selection in the lobby row and HUD badge.
+3. Preserve selection across rematch and prohibit changes during countdown,
+   racing, pause, disconnect handling, and results. Leaving/rejoining may reset
+   that player to A. Do not create a global input fallback.
+4. Add PlayMode coverage for independent selections with keyboard plus three
+   pads, wraparound, ownership isolation, state gating, rematch preservation,
+   and lobby/HUD labels.
+5. Then use a separate reconciliation/validation agent for complete EditMode
+   and PlayMode suites, dynamic handling measurements, macOS launch/build,
+   Windows cross-build, and the repeatable human bake-off sheet. Physical feel
+   and controller validation remain manual requirements.
+
+Do not choose a winner or change the default from Model A until players compare
+the integrated build. The open feedback items in `docs/Feedback-Notes.md` remain
+unresolved until that evidence exists.
+
 ## Stage 5 reconciled checkpoint — 2026-09-21
 
 - Unity baseline is now 6000.6.0f1 with its package, player, quality, graphics,

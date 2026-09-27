@@ -140,3 +140,19 @@ direction-change time, forward/reverse turning circles, slalom performance,
 drift initiation/recovery, spin-outs, collision recovery, and device parity.
 Preserve the two open observations in `docs/Feedback-Notes.md` until a selected
 model demonstrably resolves them and players prefer its feel.
+
+### Implemented candidate defaults (checkpoint `8e1a936`)
+
+| Model | Runtime approach | Initial comparison values |
+| --- | --- | --- |
+| A | Accepted Stage 5 baseline | Unchanged: authored WheelCollider torque, steering interpolation, brake-gated rear grip, and downforce. |
+| B | Direction-aware WheelCollider | Direction switch at `.75 m/s`; opposing-motion brake `.65–1.0`; high-speed steering `.55`; reverse steering `.72`; steering response `7` max-angle lengths/second. |
+| C | Balanced arcade yaw | Reuses B drive/steering; grounded assist from `1.5–6 m/s`; target yaw `120°/s`; yaw acceleration `320°/s²`; high-speed multiplier `.58`; reverse `.45`; drift `.75`; at least two grounded wheels. |
+| D | Deliberate drift / alignment | Entry brake `.72`, steer `.32`, forward speed `5 m/s`; hold brake `.35`, steer `.12`, speed `3 m/s`; recovery `.25–.8 s`; rear grip `.45` drifting / `.78` at recovery start; target yaw `105°/s`; yaw acceleration `260°/s²`; lateral acceleration `7 m/s²` drift / `12 m/s²` recovery. |
+
+These are deliberately first-pass candidate values, not accepted tuning. Model
+A remains the default until an integrated test build is measured and ranked by
+players. Code ownership is centralized in
+`Assets/Scripts/Vehicle/HandlingModel.cs`; physics application remains in
+`Assets/Scripts/Vehicle/VehicleController.cs`; neutral measurement primitives
+are in `Assets/Scripts/RaceRules/HandlingMetrics.cs`.
