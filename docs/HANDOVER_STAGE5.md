@@ -1,5 +1,65 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 integrated test-build checkpoint — 2026-09-27
+
+Work stopped after the final bounded platform-build deliverable when five-hour
+usage reached 81%; weekly usage was 26%. No further agent or implementation was
+started. The repository was clean after restoring four known Unity-generated
+settings/solution rewrites.
+
+New committed checkpoints:
+
+- `2322ac9` — independently owned, Idle-only A–D selection with wraparound,
+  neutral lobby/HUD labels, and rematch/lobby persistence.
+- `9d6e409` — reconciled A–D runtime lifecycle coverage and a bounded Stage 4
+  pickup-respawn test wait. Production handling code was unchanged.
+
+Integrated validation status is **ready with manual limitations for handling
+bake-off playtests**:
+
+- EditMode: 64/64 passed at
+  `/private/tmp/re-re-volt-stage51-reconcile-editmode-full.xml`.
+- Functional PlayMode: 17/17 passed fixture-by-fixture: LocalPlayers 3/3,
+  Stage 3 functional 2/2, Stage 4 functional 5/5, Keyboard/handling 7/7.
+  Exact XML/log paths are under `/private/tmp/re-re-volt-stage51-reconcile-*`.
+- The full 19-test batch cannot complete because the two pre-existing visual
+  capture tests block at `WaitForEndOfFrame`/`ScreenCapture.CaptureScreenshot`
+  in command-line batch mode. Isolated reproduction logs are
+  `/private/tmp/re-re-volt-stage51-reconcile-playmode-stage3-capture.log` and
+  `/private/tmp/re-re-volt-stage51-reconcile-playmode-stage4-capture.log`.
+  This is test-infrastructure behavior; all 17 nonvisual tests passed.
+- Static reconciliation confirmed Model A remains the default and unchanged;
+  A–D ownership, lifecycle, finite physics, combat, pause, teleport, recovery,
+  reset, UI labels, and selection persistence passed. No scene, prefab, package,
+  input-action asset, serialized field, or ProjectSettings change was retained.
+
+Fresh Stage 5.1 artifacts from `9d6e409`:
+
+- macOS ARM64/Mono: `/private/tmp/re-re-volt-stage51-builds/ReReVolt-macOS.app`
+  with build log `macos-build.log` and launch log `macos-player.log`.
+  Build succeeded; the player stayed alive for 12+ seconds, initialized Metal,
+  PhysX and Input, reached the Stage 3 ready log, and showed no startup exception.
+  No model-selection interaction or full race was claimed.
+- Windows x86_64/Mono: `/private/tmp/re-re-volt-stage51-builds/ReReVolt-Windows/ReReVolt.exe`
+  with `windows-build.log`. Cross-build succeeded; it was not run on Windows.
+
+Controls in the test build: keyboard Left/Right or Q/E, and gamepad d-pad
+Left/Right or LB/RB, cycle only that player's model while the lobby is Idle.
+The selected neutral label appears in that player's lobby row and HUD.
+
+Next smallest bounded deliverable after reset:
+
+1. Use a fresh agent to add/export a repeatable bake-off record (direction-change
+   time, forward/reverse turn radius, slalom, drift/slip/yaw/recovery/spins,
+   collision/airborne stability) without choosing a winner.
+2. Run the macOS build manually with attached controllers and capture readable
+   one- and four-player lobby/race screenshots showing different model labels.
+3. Copy/run the Windows artifact on the user's PC and record controller models,
+   runtime result, and player rankings/reasons. Physical controller feel and
+   subjective ranking remain the decisive missing evidence.
+4. Keep Model A as default until the user accepts a winner. WebGL remains an
+   optional later test build and was intentionally not rebuilt in this window.
+
 ## Stage 5.1 handling implementation checkpoint — 2026-09-26
 
 Work stopped at the agreed five-hour safety boundary: usage reached 78%, so no

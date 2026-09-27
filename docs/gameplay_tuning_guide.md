@@ -156,3 +156,10 @@ players. Code ownership is centralized in
 `Assets/Scripts/Vehicle/HandlingModel.cs`; physics application remains in
 `Assets/Scripts/Vehicle/VehicleController.cs`; neutral measurement primitives
 are in `Assets/Scripts/RaceRules/HandlingMetrics.cs`.
+
+### Test-build selection controls
+
+- Keyboard player: Left/Right arrows or Q/E while the lobby is Idle.
+- Gamepad player: d-pad Left/Right or LB/RB while the lobby is Idle.
+- Selection is per paired player, wraps A↔D, is shown in the lobby and HUD,
+  persists through rematch/lobby return, and is locked outside the Idle lobby.
