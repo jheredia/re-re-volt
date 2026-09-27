@@ -2,6 +2,7 @@ using System.Collections;
 using Core;
 using NUnit.Framework;
 using Presentation;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -213,6 +214,106 @@ namespace Tests.PlayMode
             Assert.That(replacement.PlayerIndex, Is.Zero);
         }
 
+        [UnityTest]
+        public IEnumerator KeyboardAndThreePadsSelectModelsIndependentlyWithWraparoundAndOwnedInputs()
+        {
+            Assert.That(roster.TryJoinKeyboard(keyboard, out LocalPlayer keyboardPlayer), Is.True);
+            Gamepad[] pads = new Gamepad[3];
+            for (int i = 0; i < pads.Length; i++)
+            {
+                pads[i] = InputSystem.AddDevice<Gamepad>();
+                Assert.That(roster.TryJoinGamepad(pads[i], out _), Is.True);
+            }
+            yield return Frames();
+
+            foreach (LocalPlayer player in roster.Players)
+                Assert.That(player.Vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.A));
+
+            yield return Press(Key.LeftArrow);
+            AssertModels(HandlingModelId.D, HandlingModelId.A, HandlingModelId.A, HandlingModelId.A);
+            yield return PressPad(pads[0], GamepadButton.DpadRight);
+            AssertModels(HandlingModelId.D, HandlingModelId.B, HandlingModelId.A, HandlingModelId.A);
+            yield return PressPad(pads[1], GamepadButton.RightShoulder);
+            AssertModels(HandlingModelId.D, HandlingModelId.B, HandlingModelId.B, HandlingModelId.A);
+            yield return PressPad(pads[2], GamepadButton.LeftShoulder);
+            AssertModels(HandlingModelId.D, HandlingModelId.B, HandlingModelId.B, HandlingModelId.D);
+            yield return Press(Key.E);
+            AssertModels(HandlingModelId.A, HandlingModelId.B, HandlingModelId.B, HandlingModelId.D);
+
+            string lobbyText = FindText("PlayersAndControls");
+            Assert.That(lobbyText, Does.Contain("P1  KEYBOARD  MODEL A  READY"));
+            Assert.That(lobbyText, Does.Contain("P2  GAMEPAD  MODEL B  READY"));
+            Assert.That(lobbyText, Does.Contain("P3  GAMEPAD  MODEL B  READY"));
+            Assert.That(lobbyText, Does.Contain("P4  GAMEPAD  MODEL D  READY"));
+            Assert.That(lobbyText, Does.Contain("LEFT/RIGHT OR Q/E"));
+
+            yield return Press(Key.Enter);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Countdown));
+            Assert.That(FindText("RaceData", 0), Does.Contain("P1   MODEL A"));
+            Assert.That(FindText("RaceData", 1), Does.Contain("P2   MODEL B"));
+            Assert.That(FindText("RaceData", 2), Does.Contain("P3   MODEL B"));
+            Assert.That(FindText("RaceData", 3), Does.Contain("P4   MODEL D"));
+            Assert.That(keyboardPlayer.Vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.A));
+        }
+
+        [UnityTest]
+        public IEnumerator SelectionIsIdleOnlyAndRematchAndLobbyReturnPreserveModels()
+        {
+            Assert.That(roster.TryJoinKeyboard(keyboard, out LocalPlayer first), Is.True);
+            Gamepad pad = InputSystem.AddDevice<Gamepad>();
+            Assert.That(roster.TryJoinGamepad(pad, out LocalPlayer second), Is.True);
+            yield return Frames();
+            Assert.That(roster.TryCycleHandlingModel(first.PlayerIndex, 1), Is.True);
+            Assert.That(roster.TryCycleHandlingModel(second.PlayerIndex, -1), Is.True);
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+
+            yield return Press(Key.Enter);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Countdown));
+            Assert.That(roster.TryCycleHandlingModel(first.PlayerIndex, 1), Is.False);
+            yield return PressPad(pad, GamepadButton.DpadRight);
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+            yield return Racing();
+            Assert.That(roster.TryCycleHandlingModel(first.PlayerIndex, 1), Is.False);
+            yield return Press(Key.LeftArrow);
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+
+            yield return Press(Key.Escape);
+            Assert.That(hud.IsPaused, Is.True);
+            Assert.That(roster.TryCycleHandlingModel(second.PlayerIndex, 1), Is.False);
+            yield return Press(Key.Escape);
+
+            InputSystem.RemoveDevice(pad);
+            yield return Frames();
+            Assert.That(second.IsConnected, Is.False);
+            Assert.That(hud.IsPaused, Is.True);
+            Assert.That(roster.TryCycleHandlingModel(second.PlayerIndex, 1), Is.False);
+            InputSystem.AddDevice(pad);
+            InputSystem.QueueStateEvent(pad, new GamepadState());
+            yield return Frames();
+            Assert.That(second.IsConnected, Is.True);
+            Assert.That(hud.IsPaused, Is.False);
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+
+            CompleteProgress(first);
+            Finish(second);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Finished));
+            Assert.That(roster.TryCycleHandlingModel(first.PlayerIndex, 1), Is.False);
+            yield return PressPad(pad, GamepadButton.LeftShoulder);
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+
+            yield return Press(Key.Enter);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Countdown));
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+            yield return Racing();
+            CompleteProgress(first);
+            Finish(second);
+            yield return Press(Key.Escape);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Idle));
+            AssertModels(HandlingModelId.B, HandlingModelId.D);
+            Assert.That(roster.TryCycleHandlingModel(first.PlayerIndex, -1), Is.True);
+            AssertModels(HandlingModelId.A, HandlingModelId.D);
+        }
+
         [Test]
         public void DestroyedPlayerObjectsDoNotInterruptRosterTeardown()
         {
@@ -227,9 +328,15 @@ namespace Tests.PlayMode
 
         private void Finish(LocalPlayer player)
         {
+            CompleteProgress(player);
+            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Finished));
+        }
+
+        private void CompleteProgress(LocalPlayer player)
+        {
             for (int guard = 0; guard < 24 && !player.Racer.IsFinished; guard++)
                 Assert.That(race.ReportCheckpoint(player.Racer.RacerId, player.Racer.NextCheckpointIndex), Is.True);
-            Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Finished));
+            Assert.That(player.Racer.IsFinished, Is.True);
         }
 
         private IEnumerator Press(params Key[] keys)
@@ -238,6 +345,34 @@ namespace Tests.PlayMode
             yield return Frames();
             InputSystem.QueueStateEvent(keyboard, new KeyboardState());
             yield return Frames();
+        }
+
+        private static IEnumerator PressPad(Gamepad pad, GamepadButton button)
+        {
+            InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(button));
+            yield return Frames();
+            InputSystem.QueueStateEvent(pad, new GamepadState());
+            yield return Frames();
+        }
+
+        private void AssertModels(params HandlingModelId[] expected)
+        {
+            Assert.That(roster.Players.Count, Is.EqualTo(expected.Length));
+            for (int i = 0; i < expected.Length; i++)
+                Assert.That(roster.Players[i].Vehicle.SelectedHandlingModel, Is.EqualTo(expected[i]),
+                    $"Unexpected model for player {i + 1}.");
+        }
+
+        private string FindText(string objectName, int occurrence = 0)
+        {
+            int found = 0;
+            foreach (TextMeshProUGUI label in hud.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (label.gameObject.name != objectName) continue;
+                if (found++ == occurrence) return label.text;
+            }
+            Assert.Fail($"Could not find text object {objectName} occurrence {occurrence}.");
+            return null;
         }
 
         private IEnumerator Racing()

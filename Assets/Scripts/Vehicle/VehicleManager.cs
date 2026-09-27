@@ -37,6 +37,7 @@ namespace Vehicle
         public event Action<LocalPlayer> PauseRequested;
         public event Action<LocalPlayer> ConfirmRequested;
         public event Action<LocalPlayer> BackRequested;
+        public event Action<LocalPlayer> HandlingModelChanged;
 
         private void Awake()
         {
@@ -165,6 +166,7 @@ namespace Vehicle
             input.PauseRequested += () => PauseRequested?.Invoke(joined);
             input.ConfirmRequested += () => ConfirmRequested?.Invoke(joined);
             input.BackRequested += () => BackRequested?.Invoke(joined);
+            input.HandlingModelCycleRequested += direction => TryCycleHandlingModel(joined.PlayerIndex, direction);
             input.LeaveRequested += () => TryLeavePlayer(joined.PlayerIndex);
             recovery.Recovered += chase.SnapToTarget;
 
@@ -186,6 +188,24 @@ namespace Vehicle
             ReleasePlayer(player);
             RefreshViewports();
             PlayerLeft?.Invoke(playerIndex);
+            return true;
+        }
+
+        /// <summary>Cycles one player's authoritative vehicle model while the lobby is idle.</summary>
+        public bool TryCycleHandlingModel(int playerIndex, int direction)
+        {
+            if (raceManager == null || raceManager.CurrentState != RaceManager.RaceState.Idle || direction == 0)
+                return false;
+            LocalPlayer player = players.Find(candidate => candidate.PlayerIndex == playerIndex);
+            if (player == null || !player.IsConnected) return false;
+
+            int first = (int)HandlingModelId.A;
+            int count = (int)HandlingModelId.D - first + 1;
+            int step = direction < 0 ? -1 : 1;
+            int current = (int)player.Vehicle.SelectedHandlingModel - first;
+            int wrapped = (current + step + count) % count;
+            if (!player.Vehicle.TrySelectHandlingModel((HandlingModelId)(first + wrapped))) return false;
+            HandlingModelChanged?.Invoke(player);
             return true;
         }
 

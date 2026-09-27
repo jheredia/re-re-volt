@@ -78,6 +78,7 @@ namespace Presentation
             vehicles.PauseRequested += OnPauseRequested;
             vehicles.ConfirmRequested += OnConfirmRequested;
             vehicles.BackRequested += OnBackRequested;
+            vehicles.HandlingModelChanged += OnHandlingModelChanged;
             vehicles.ControllerConnectionChanged += OnControllerConnectionChanged;
         }
 
@@ -96,6 +97,7 @@ namespace Presentation
                 vehicles.PauseRequested -= OnPauseRequested;
                 vehicles.ConfirmRequested -= OnConfirmRequested;
                 vehicles.BackRequested -= OnBackRequested;
+                vehicles.HandlingModelChanged -= OnHandlingModelChanged;
                 vehicles.ControllerConnectionChanged -= OnControllerConnectionChanged;
             }
         }
@@ -128,6 +130,12 @@ namespace Presentation
         private void OnBackRequested(LocalPlayer player)
         {
             if (race.CurrentState == RaceManager.RaceState.Finished) ResetToLobby();
+        }
+
+        private void OnHandlingModelChanged(LocalPlayer player)
+        {
+            RefreshLobbyText();
+            RefreshHudText();
         }
 
         private void StartRaceFromLobby()
@@ -346,7 +354,8 @@ namespace Presentation
                 string weapon = weaponLabels.TryGetValue(player.PlayerIndex, out string weaponName)
                     ? weaponName
                     : "--";
-                label.text = $"P{player.PlayerIndex + 1}   {racer.CurrentPosition}/{total}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
+                label.text = $"P{player.PlayerIndex + 1}   {HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)}   " +
+                             $"{racer.CurrentPosition}/{total}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
                              $"{FormatTime(race.ElapsedTime)}   WPN [{weapon}]";
             }
         }
@@ -367,6 +376,7 @@ namespace Presentation
                     LocalPlayer player = vehicles.Players[i];
                     builder.Append("P").Append(player.PlayerIndex + 1).Append("  ")
                         .Append(player.Input.IsKeyboardPlayer ? "KEYBOARD  " : "GAMEPAD  ")
+                        .Append(HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)).Append("  ")
                         .Append(player.IsConnected ? "READY" : "RECONNECT DEVICE").AppendLine();
                 }
                 builder.AppendLine();
@@ -374,7 +384,8 @@ namespace Presentation
                 else builder.Append("ENTER / A / CROSS   START 3-LAP RACE");
             }
             builder.AppendLine().AppendLine();
-            builder.Append("WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
+            builder.Append("LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
+                           "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
         }
