@@ -86,6 +86,7 @@ namespace Tests.PlayMode
             Assert.That(a.Vehicle.HasCombatModifier, Is.False);
 
             // Both initial cycles have respawned with the opposite weapon.
+            yield return WaitForPickupsAvailable(0, 1);
             yield return Collect(a, 0, WeaponKind.Oil);
             yield return Collect(b, 1, WeaponKind.Bolt);
             Place(a, new Vector3(0f, .8f, 15f), 90);
@@ -306,6 +307,23 @@ namespace Tests.PlayMode
             yield return new WaitForSeconds(.1f);
             Assert.That(combat.HeldWeapon(player.PlayerIndex), Is.EqualTo(expected));
             Assert.That(combat.Pickups[box].IsAvailable, Is.False);
+        }
+
+        private IEnumerator WaitForPickupsAvailable(params int[] boxes)
+        {
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                bool allAvailable = true;
+                for (int i = 0; i < boxes.Length; i++)
+                    allAvailable &= combat.Pickups[boxes[i]].IsAvailable;
+                if (allAvailable) yield break;
+                yield return null;
+            }
+
+            for (int i = 0; i < boxes.Length; i++)
+                Assert.That(combat.Pickups[boxes[i]].IsAvailable, Is.True,
+                    $"Pickup {boxes[i]} must respawn within its documented active-time cooldown.");
         }
 
         private static void Place(LocalPlayer player, Vector3 position, float yaw)

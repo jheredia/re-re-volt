@@ -314,6 +314,85 @@ namespace Tests.PlayMode
             AssertModels(HandlingModelId.A, HandlingModelId.D);
         }
 
+        [UnityTest]
+        public IEnumerator AllModelsRemainFiniteOwnedAndResetSafeThroughRuntimeLifecycle()
+        {
+            Assert.That(roster.TryJoinKeyboard(keyboard, out _), Is.True);
+            Gamepad[] pads = new Gamepad[3];
+            for (int i = 0; i < pads.Length; i++)
+            {
+                pads[i] = InputSystem.AddDevice<Gamepad>();
+                Assert.That(roster.TryJoinGamepad(pads[i], out _), Is.True);
+            }
+            for (int playerIndex = 1; playerIndex < roster.Players.Count; playerIndex++)
+                for (int cycle = 0; cycle < playerIndex; cycle++)
+                    Assert.That(roster.TryCycleHandlingModel(playerIndex, 1), Is.True);
+            AssertModels(HandlingModelId.A, HandlingModelId.B, HandlingModelId.C, HandlingModelId.D);
+
+            yield return Frames();
+            yield return Press(Key.Enter);
+            yield return Racing();
+
+            // Device ownership remains isolated after each car selects a different runtime model.
+            for (int active = 0; active < roster.Players.Count; active++)
+            {
+                InputSystem.QueueStateEvent(keyboard, active == 0 ? new KeyboardState(Key.W, Key.D) : new KeyboardState());
+                for (int i = 0; i < pads.Length; i++)
+                    InputSystem.QueueStateEvent(pads[i], active == i + 1
+                        ? new GamepadState { rightTrigger = 1f, leftStick = Vector2.right }
+                        : new GamepadState());
+                yield return Frames();
+                for (int playerIndex = 0; playerIndex < roster.Players.Count; playerIndex++)
+                {
+                    float expected = playerIndex == active ? 1f : 0f;
+                    Assert.That(roster.Players[playerIndex].Vehicle.ThrottleInput, Is.EqualTo(expected));
+                    Assert.That(roster.Players[playerIndex].Vehicle.SteerInput, Is.EqualTo(expected));
+                }
+            }
+
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.D, Key.LeftShift));
+            for (int i = 0; i < pads.Length; i++)
+                InputSystem.QueueStateEvent(pads[i], new GamepadState { rightTrigger = 1f, leftStick = Vector2.right }
+                    .WithButton(GamepadButton.South));
+            yield return Frames();
+            for (int step = 0; step < 45; step++) yield return new WaitForFixedUpdate();
+
+            for (int playerIndex = 0; playerIndex < roster.Players.Count; playerIndex++)
+            {
+                LocalPlayer player = roster.Players[playerIndex];
+                Rigidbody body = player.Vehicle.GetComponent<Rigidbody>();
+                AssertVectorFinite(body.linearVelocity, $"P{playerIndex + 1} linear velocity");
+                AssertVectorFinite(body.angularVelocity, $"P{playerIndex + 1} angular velocity");
+                AssertFinite(player.Vehicle.CurrentHandlingSample.PlanarSpeed,
+                    $"P{playerIndex + 1} handling sample");
+                Assert.That(player.Vehicle.ActiveHandlingModel, Is.EqualTo((HandlingModelId)playerIndex));
+
+                player.Vehicle.SetCombatModifiers(.18f, .65f, .45f);
+                Assert.That(player.Vehicle.HasCombatModifier, Is.True);
+                player.Vehicle.ClearCombatModifiers();
+                Assert.That(player.Vehicle.HasCombatModifier, Is.False);
+            }
+
+            yield return Press(Key.Escape);
+            Assert.That(hud.IsPaused, Is.True);
+            AssertModels(HandlingModelId.A, HandlingModelId.B, HandlingModelId.C, HandlingModelId.D);
+            for (int playerIndex = 0; playerIndex < roster.Players.Count; playerIndex++)
+            {
+                LocalPlayer player = roster.Players[playerIndex];
+                Pose reset = new Pose(new Vector3(playerIndex * 2f, 1f, -3f), Quaternion.identity);
+                player.Vehicle.Teleport(reset);
+                Rigidbody body = player.Vehicle.GetComponent<Rigidbody>();
+                Assert.That(body.linearVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(body.angularVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(player.Vehicle.ActiveHandlingModel, Is.EqualTo((HandlingModelId)playerIndex));
+                Assert.DoesNotThrow(player.Vehicle.ResetVehicle);
+            }
+
+            yield return Press(Key.Escape);
+            Assert.That(hud.IsPaused, Is.False);
+            AssertModels(HandlingModelId.A, HandlingModelId.B, HandlingModelId.C, HandlingModelId.D);
+        }
+
         [Test]
         public void DestroyedPlayerObjectsDoNotInterruptRosterTeardown()
         {
@@ -361,6 +440,19 @@ namespace Tests.PlayMode
             for (int i = 0; i < expected.Length; i++)
                 Assert.That(roster.Players[i].Vehicle.SelectedHandlingModel, Is.EqualTo(expected[i]),
                     $"Unexpected model for player {i + 1}.");
+        }
+
+        private static void AssertVectorFinite(Vector3 value, string context)
+        {
+            AssertFinite(value.x, context + " x");
+            AssertFinite(value.y, context + " y");
+            AssertFinite(value.z, context + " z");
+        }
+
+        private static void AssertFinite(float value, string context)
+        {
+            Assert.That(float.IsNaN(value), Is.False, context);
+            Assert.That(float.IsInfinity(value), Is.False, context);
         }
 
         private string FindText(string objectName, int occurrence = 0)
