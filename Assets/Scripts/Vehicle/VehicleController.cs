@@ -74,6 +74,13 @@ namespace Vehicle
 
         public bool HasCombatModifier => combatGrip < 1f || combatMotor < 1f || combatSteering < 1f;
         public float CombatGripMultiplier => combatGrip;
+        internal float CombatSteeringMultiplier => combatSteering;
+        internal float MaximumSpeedMetersPerSecond => maxSpeed;
+        internal float MaximumSteerAngle => maxSteerAngle;
+        internal float SpeedMetersPerSecond => vehicleRigidBody != null ? vehicleRigidBody.linearVelocity.magnitude : 0f;
+        internal float SignedLongitudinalSpeed => vehicleRigidBody != null
+            ? Vector3.Dot(vehicleRigidBody.linearVelocity, transform.forward)
+            : 0f;
         public HandlingModelId SelectedHandlingModel => selectedHandlingModel;
         public HandlingModelId ActiveHandlingModel => GetHandlingModelRuntime().Id;
         public bool HasHandlingModelFallback => SelectedHandlingModel != ActiveHandlingModel;
@@ -152,6 +159,26 @@ namespace Vehicle
             HandleDrift();
             ApplyDownforce();
             UpdateWheelMeshes();
+        }
+
+        internal void FixedStepDirectionAwareWheelHandling(float steerAngle, float motorInput, float brakeFraction)
+        {
+            wheelFL.steerAngle = steerAngle;
+            wheelFR.steerAngle = steerAngle;
+            float torque = motorInput * maxMotorTorque * combatMotor;
+            wheelRL.motorTorque = torque;
+            wheelRR.motorTorque = torque;
+            ApplyBrake(Mathf.Clamp01(brakeFraction) * maxBrakeTorque);
+            HandleDrift();
+            ApplyDownforce();
+            UpdateWheelMeshes();
+        }
+
+        internal void ResetDirectionAwareWheelState()
+        {
+            if (!IsConfigured) return;
+            wheelFL.steerAngle = wheelFR.steerAngle = 0f;
+            wheelRL.motorTorque = wheelRR.motorTorque = 0f;
         }
 
         public bool TrySelectHandlingModel(HandlingModelId model)

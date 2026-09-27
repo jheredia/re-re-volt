@@ -13,13 +13,106 @@ namespace Tests.EditMode
             Assert.That(HandlingModelCatalog.GetPublicLabel(HandlingModelId.A), Is.EqualTo("MODEL A"));
             Assert.That(HandlingModelCatalog.GetPublicLabel(HandlingModelId.D), Is.EqualTo("MODEL D"));
             Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.A), Is.True);
+            Assert.That(HandlingModelCatalog.IsImplemented(HandlingModelId.B), Is.True);
             Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.A), Is.EqualTo(HandlingModelId.A));
+            Assert.That(HandlingModelCatalog.ResolveImplementedModel(HandlingModelId.B), Is.EqualTo(HandlingModelId.B));
 
-            foreach (HandlingModelId candidate in new[] { HandlingModelId.B, HandlingModelId.C, HandlingModelId.D })
+            foreach (HandlingModelId candidate in new[] { HandlingModelId.C, HandlingModelId.D })
             {
                 Assert.That(HandlingModelCatalog.IsImplemented(candidate), Is.False);
                 Assert.That(HandlingModelCatalog.ResolveImplementedModel(candidate), Is.EqualTo(HandlingModelId.A));
             }
+        }
+
+        [Test]
+        public void VehicleSelectionActivatesBWhileLaterCandidatesStillFallBack()
+        {
+            GameObject gameObject = new GameObject("HandlingModelBSelectionTest");
+            try
+            {
+                gameObject.AddComponent<Rigidbody>();
+                VehicleController vehicle = gameObject.AddComponent<VehicleController>();
+
+                Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.B), Is.True);
+                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.B));
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.B));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.False);
+
+                Assert.That(vehicle.TrySelectHandlingModel(HandlingModelId.D), Is.True);
+                Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(HandlingModelId.D));
+                Assert.That(vehicle.ActiveHandlingModel, Is.EqualTo(HandlingModelId.A));
+                Assert.That(vehicle.HasHandlingModelFallback, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void DirectionAwareDriveBrakesOpposingMotionSymmetricallyWithNeutralTorque()
+        {
+            DirectionAwareDriveDecision forwardToReverse = DirectionAwareWheelColliderModel.EvaluateDrive(
+                -.8f, 0f, 5f, 5f, 25f);
+            DirectionAwareDriveDecision reverseToForward = DirectionAwareWheelColliderModel.EvaluateDrive(
+                .8f, 0f, -5f, 5f, 25f);
+
+            Assert.That(forwardToReverse.IsOpposingMotion, Is.True);
+            Assert.That(reverseToForward.IsOpposingMotion, Is.True);
+            Assert.That(forwardToReverse.MotorInput, Is.Zero);
+            Assert.That(reverseToForward.MotorInput, Is.Zero);
+            Assert.That(reverseToForward.BrakeFraction, Is.EqualTo(forwardToReverse.BrakeFraction).Within(.0001f));
+            Assert.That(reverseToForward.BrakeFraction, Is.GreaterThanOrEqualTo(
+                DirectionAwareWheelColliderModel.MinimumOpposeMotionBrakeFraction));
+        }
+
+        [Test]
+        public void DirectionAwareDriveSwitchesPromptlyBelowThresholdAndHonorsNeutralAndSpeedCap()
+        {
+            DirectionAwareDriveDecision switching = DirectionAwareWheelColliderModel.EvaluateDrive(
+                1f, 0f, -.5f, .5f, 25f);
+            Assert.That(switching.IsOpposingMotion, Is.False);
+            Assert.That(switching.MotorInput, Is.EqualTo(1f));
+            Assert.That(switching.BrakeFraction, Is.Zero);
+
+            DirectionAwareDriveDecision neutral = DirectionAwareWheelColliderModel.EvaluateDrive(
+                .05f, .25f, 4f, 4f, 25f);
+            Assert.That(neutral.MotorInput, Is.Zero);
+            Assert.That(neutral.BrakeFraction, Is.EqualTo(.25f));
+
+            DirectionAwareDriveDecision capped = DirectionAwareWheelColliderModel.EvaluateDrive(
+                1f, 0f, 25f, 25f, 25f);
+            Assert.That(capped.MotorInput, Is.Zero);
+        }
+
+        [Test]
+        public void DirectionAwareSteeringIsSpeedSensitiveAndReverseIsCapped()
+        {
+            float lowForward = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(1f, 1f, 0f,
+                25f, 35f, 1f);
+            float highForward = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(1f, 1f, 25f,
+                25f, 35f, 1f);
+            float highReverse = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(1f, -1f, -25f,
+                25f, 35f, 1f);
+            float startingReverse = DirectionAwareWheelColliderModel.CalculateTargetSteerAngle(1f, -1f, 0f,
+                25f, 35f, 1f);
+
+            Assert.That(lowForward, Is.EqualTo(35f).Within(.0001f));
+            Assert.That(highForward, Is.LessThan(lowForward));
+            Assert.That(highReverse, Is.EqualTo(highForward *
+                DirectionAwareWheelColliderModel.ReverseSteeringMultiplier).Within(.0001f));
+            Assert.That(startingReverse, Is.EqualTo(lowForward *
+                DirectionAwareWheelColliderModel.ReverseSteeringMultiplier).Within(.0001f));
+        }
+
+        [Test]
+        public void DirectionAwareSteeringResponseIsBoundedAndSymmetric()
+        {
+            float positive = DirectionAwareWheelColliderModel.MoveSteerTowards(0f, 35f, 35f, .02f);
+            float negative = DirectionAwareWheelColliderModel.MoveSteerTowards(0f, -35f, 35f, .02f);
+
+            Assert.That(positive, Is.GreaterThan(0f).And.LessThan(35f));
+            Assert.That(negative, Is.EqualTo(-positive).Within(.0001f));
         }
 
         [Test]
