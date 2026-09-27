@@ -163,3 +163,78 @@ are in `Assets/Scripts/RaceRules/HandlingMetrics.cs`.
 - Gamepad player: d-pad Left/Right or LB/RB while the lobby is Idle.
 - Selection is per paired player, wraps A↔D, is shown in the lobby and HUD,
   persists through rematch/lobby return, and is locked outside the Idle lobby.
+
+### Automatic bake-off record
+
+Every completed race writes one CSV row per joined player. Desktop players are
+saved beneath `Application.persistentDataPath/HandlingBakeOff` with a unique
+`handling-bakeoff-<UTC run>-rNNN.csv` name; the exact path is also printed in a
+`[HandlingBakeOff]` Console/player-log message. WebGL cannot rely on a local
+filesystem, so the same CSV is printed to the browser log instead. Export
+failure is logged and never interrupts results or rematch.
+
+Sampling runs only during unpaused `Racing` fixed steps and stops for a player
+after that player finishes. The report uses the selected neutral model label
+and device kind (`KEYBOARD` or `GAMEPAD`); it does not infer preference. Radius
+samples require deliberate steering (`abs(SteerInput) >= 0.1`, the shared input
+dead zone), so straight-line yaw from a collision does not contaminate turning
+averages. Accepted samples are finite instantaneous planar radii grouped by
+absolute planar speed:
+
+| Band | Speed |
+| --- | --- |
+| low | below `5 m/s` |
+| medium | `5 m/s` up to (but not including) `12 m/s` |
+| high | `12 m/s` and above |
+
+CSV columns are stable and invariant-culture:
+
+- Run identity: `run_id`, `created_utc`, `track_id`, `player_number`,
+  `racer_id`, `device_kind`, `model_id`.
+- Coverage: `active_sample_count`, `active_sample_time_s`.
+- Direction changes: completion count, total seconds, and average seconds.
+- Turn radius: sample count and average metres for forward/reverse ×
+  low/medium/high speed.
+- Stability: drift entries/time, peak absolute slip/yaw, spin entries,
+  grounded/airborne episodes and time, and chassis collision-entry count.
+- Result: finish position, completed/total laps, finish time, and average lap
+  time (`finish_time / total_laps`; this is not a per-lap split).
+- Manual fields: `slalom_time_s`, `slalom_cone_contacts`, `player_rank`,
+  `confidence_1_to_5`, and `short_reason`. These intentionally export blank and
+  must only be filled from an observed playtest.
+
+Collision count means Unity chassis `OnCollisionEnter` events while the run is
+active, not individual contact points. Grounded means at least one configured
+wheel reports grounded. These definitions make comparisons repeatable but are
+diagnostic signals, not a score or an automatic winner.
+
+### Printable A–D playtest card
+
+Use the same build, circuit, lap count, camera, vehicle, and controller for the
+whole card. Do not describe the internal model names or expected strengths to
+drivers until all rankings are locked.
+
+Setup: Date ______  Build/commit ______  Platform ______  Controller ______
+
+1. Give every driver one unscored practice lap on Model A to confirm controls.
+2. Run four complete races. Rotate assignments to reduce player/order bias:
+   `A/B/C/D`, then `B/C/D/A`, then `C/D/A/B`, then `D/A/B/C` for Players 1–4.
+   For fewer players, keep the same model order and continue until every driver
+   has completed one race with every model.
+3. During each race, drive normally. On one safe straight per lap, deliberately
+   complete one forward→reverse→forward change; do not block another player.
+   The automatic file records transition and stability data.
+4. If the facilitator has a fixed six-cone course, use identical spacing,
+   direction, start line, and timing method for every model; enter elapsed time
+   and touched cones in the blank slalom columns. The current workbench circuit
+   has no dedicated cone course, so otherwise leave both fields blank.
+5. Before discussing results, each driver ranks the four neutral labels
+   (`1` best through `4` worst), gives confidence `1`–`5`, and writes one short
+   reason. Do not show telemetry until rankings are submitted.
+6. Keep every CSV. Compare preference first, then use telemetry only to explain
+   differences or reject unstable/unsafe behavior. Model A remains the default
+   until the overseer and players explicitly accept a winner.
+
+Player ____: A rank ____  B rank ____  C rank ____  D rank ____
+
+Confidence ____ / 5    Short reason _________________________________

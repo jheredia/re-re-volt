@@ -1,5 +1,44 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 measurement/export checkpoint — 2026-09-27
+
+The repeatable bake-off record is implemented without changing any handling
+constant, candidate behavior, default selection, scene, prefab, package, or
+serialized asset. `Stage3Bootstrap` code-composes a coordinator that samples
+each unfinished local player only during active, unpaused fixed steps and makes
+one export attempt after the whole race finishes. Rematches start a fresh run;
+an export failure is contained and does not block results or rematch.
+
+Desktop CSV files go to
+`Application.persistentDataPath/HandlingBakeOff/handling-bakeoff-<UTC run>-rNNN.csv`,
+with the exact destination logged. WebGL prints the same CSV to its log. Stable
+invariant-culture rows contain neutral player/device/model identity; sample
+coverage; direction-change time; steering-gated forward/reverse low-, medium-, and high-speed
+turn-radius aggregates; drift/slip/yaw/spin; grounded/airborne and collision
+signals; and finish/average-lap results. Slalom and player rank/confidence/reason
+columns deliberately remain blank for manual entry. Definitions and the
+printable unbiased A–D procedure are in `docs/gameplay_tuning_guide.md`.
+
+Validation evidence:
+
+- Targeted accumulator/CSV EditMode: 5/5 passed at
+  `/private/tmp/re-re-volt-stage51-bakeoff-steering-editmode-targeted.xml`.
+- Full EditMode: 69/69 passed at
+  `/private/tmp/re-re-volt-stage51-bakeoff-steering-editmode-full.xml`.
+- Targeted exporter lifecycle/failure PlayMode: 2/2 passed at
+  `/private/tmp/re-re-volt-stage51-bakeoff-steering-playmode-targeted.xml`.
+- Functional PlayMode: 19/19 passed fixture-by-fixture: LocalPlayers 3/3,
+  Stage 3 nonvisual 2/2, Stage 4 nonvisual 5/5, Keyboard/handling 7/7, and
+  bake-off exporter 2/2. XML/log prefixes are
+  `/private/tmp/re-re-volt-stage51-bakeoff-playmode-*`.
+- The two known command-line screenshot tests were intentionally excluded; no
+  new visual capture, standalone build, physical-controller feel test, or
+  actual desktop persistent-data write was claimed in this deliverable.
+
+Next: reconcile/commit this checkpoint, then run the existing macOS build with
+physical controllers and use the emitted files plus blind player rankings.
+Model A remains the default until the user accepts a winner.
+
 ## Stage 5.1 integrated test-build checkpoint — 2026-09-27
 
 Work stopped after the final bounded platform-build deliverable when five-hour

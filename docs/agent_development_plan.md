@@ -116,6 +116,12 @@ independent reconciliation/validation agent. Gate: all four models are
 selectable in macOS and Windows test builds, comparison evidence is recorded,
 and the current default is preserved until the user accepts a winner.
 
+The repeatable record is code-composed at runtime: an engine-independent
+accumulator consumes the existing handling sample, and the Stage 3 bootstrap
+adds one coordinator that exports a per-player CSV only after full race
+completion. Manual slalom and preference columns stay blank until a facilitator
+records them; automatic telemetry must never fabricate subjective evidence.
+
 ## Integration rules
 
 - Each stage begins only after the previous stage is reviewed and reconciled.

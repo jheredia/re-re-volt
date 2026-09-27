@@ -19,6 +19,7 @@ namespace Presentation
         public VehicleManager VehicleManager { get; private set; }
         public Stage3RacePresentation Presentation { get; private set; }
         public WeaponManager WeaponManager { get; private set; }
+        public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
         public RaceCheckpoint[] Checkpoints => circuit?.Checkpoints;
@@ -65,6 +66,8 @@ namespace Presentation
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask);
+            HandlingBakeOff = gameObject.AddComponent<HandlingBakeOffCoordinator>();
+            HandlingBakeOff.Configure(RaceManager, VehicleManager);
             ConfigureGameManager();
             initialized = true;
             Debug.Log("[Stage3] Craft-room circuit and controller-first race presentation are ready.", this);
