@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.IO;
 using NUnit.Framework;
 using Vehicle;
 
@@ -118,23 +119,86 @@ namespace Tests.EditMode
             Assert.That(csv, Does.StartWith(HandlingBakeOffCsv.Header + "\n"));
         }
 
+        [Test]
+        public void DesktopFileSinkWritesFortyFourColumnsAndDoesNotOverwriteExistingReport()
+        {
+            string runId = "sink-smoke-" + Guid.NewGuid().ToString("N");
+            string directory = Path.Combine(UnityEngine.Application.persistentDataPath, "HandlingBakeOff");
+            string filePrefix = "handling-bakeoff-" + runId;
+            bool directoryExisted = Directory.Exists(directory);
+
+            try
+            {
+                HandlingBakeOffReport report = CreateReport(runId);
+                FileHandlingBakeOffReportSink sink = new FileHandlingBakeOffReportSink();
+
+                string firstPath = sink.Export(report);
+                Assert.That(Path.GetFullPath(Path.GetDirectoryName(firstPath)),
+                    Is.EqualTo(Path.GetFullPath(directory)));
+                Assert.That(File.Exists(firstPath), Is.True);
+
+                string firstContents = File.ReadAllText(firstPath);
+                AssertPersistedReport(firstContents, runId);
+
+                string secondPath = sink.Export(report);
+                Assert.That(secondPath, Is.Not.EqualTo(firstPath));
+                Assert.That(Path.GetFullPath(Path.GetDirectoryName(secondPath)),
+                    Is.EqualTo(Path.GetFullPath(directory)));
+                Assert.That(File.Exists(secondPath), Is.True);
+                Assert.That(File.ReadAllText(firstPath), Is.EqualTo(firstContents),
+                    "A repeated export must leave the original report unchanged.");
+                AssertPersistedReport(File.ReadAllText(secondPath), runId);
+            }
+            finally
+            {
+                if (Directory.Exists(directory))
+                {
+                    foreach (string path in Directory.GetFiles(directory, filePrefix + "*.csv"))
+                        File.Delete(path);
+
+                    if (!directoryExisted && Directory.GetFileSystemEntries(directory).Length == 0)
+                        Directory.Delete(directory);
+                }
+            }
+        }
+
         private static HandlingMotionSample Sample(float signedSpeed, float yaw, bool drift, bool spin)
         {
             return new HandlingMotionSample(signedSpeed, 0f, Math.Abs(signedSpeed), spin ? 80f : 5f,
                 spin ? 200f : yaw, drift, spin);
         }
 
-        private static HandlingBakeOffReport CreateReport()
+        private static HandlingBakeOffReport CreateReport(string runId = "run-1")
         {
             HandlingBakeOffMetrics metrics = new HandlingBakeOffMetrics(
                 1, .02d, 0, 0d,
                 default, default, default, default, default, default,
                 0, 0d, 0d, 0d, 0, 1, .02d, 0, 0d);
             HandlingBakeOffRow row = new HandlingBakeOffRow(
-                "run-1", "2026-09-27T12:00:00.000Z", "WORKBENCH_CIRCUIT", 1,
+                runId, "2026-09-27T12:00:00.000Z", "WORKBENCH_CIRCUIT", 1,
                 "player-1", "KEYBOARD", "MODEL A", metrics, 2, 1, 3, 3, 12.5d);
             return new HandlingBakeOffReport(row.RunId, row.CreatedUtc, row.TrackId,
                 new[] { row });
+        }
+
+        private static void AssertPersistedReport(string csv, string expectedRunId)
+        {
+            string[] lines = csv.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            Assert.That(lines, Has.Length.EqualTo(2));
+
+            string[] headings = lines[0].Split(',');
+            string[] values = lines[1].Split(',');
+            Assert.That(lines[0], Is.EqualTo(HandlingBakeOffCsv.Header));
+            Assert.That(headings, Has.Length.EqualTo(44));
+            Assert.That(values, Has.Length.EqualTo(44));
+            Assert.That(Value(headings, values, "run_id"), Is.EqualTo(expectedRunId));
+            Assert.That(Value(headings, values, "created_utc"), Is.EqualTo("2026-09-27T12:00:00.000Z"));
+            Assert.That(Value(headings, values, "track_id"), Is.EqualTo("WORKBENCH_CIRCUIT"));
+            Assert.That(Value(headings, values, "player_number"), Is.EqualTo("1"));
+            Assert.That(Value(headings, values, "racer_id"), Is.EqualTo("player-1"));
+            Assert.That(Value(headings, values, "device_kind"), Is.EqualTo("KEYBOARD"));
+            Assert.That(Value(headings, values, "model_id"), Is.EqualTo("MODEL A"));
+            Assert.That(Value(headings, values, "finish_time_s"), Is.EqualTo("12.5"));
         }
 
         private static string Value(string[] headings, string[] values, string heading)
