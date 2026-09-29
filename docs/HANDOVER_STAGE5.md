@@ -1,5 +1,49 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 automated release-acceptance checkpoint — 2026-09-29
+
+The current branch state at `8594948` is **ready with hardware and human
+playtest limitations**. A fresh validation-only agent reran every functional
+PlayMode fixture relevant to the prototype's core promise: 19/19 passed, with
+zero failures, skips, or inconclusive results. No implementation change was
+needed and the final worktree was clean.
+
+Evidence by fixture:
+
+- `LocalPlayerIntegrationTests`: 3/3 at
+  `/private/tmp/stage51-release-validation/local-player-integration.xml`.
+  Four virtual gamepads, four-player cap, isolated drive/fire/pause input,
+  disconnect/reconnect ownership, and one-through-four viewport layouts pass.
+- `KeyboardIntegrationTests`: 7/7 at
+  `/private/tmp/stage51-release-validation/keyboard-integration.xml`. Keyboard
+  solo and keyboard plus three pads pass through driving, combat, recovery,
+  pause, finish/rematch/lobby flow, independent A-D selection and labels, and
+  finite pause/teleport/reset runtime behavior.
+- Stage 3 non-capture presentation: 2/2 at
+  `/private/tmp/stage51-release-validation/stage3-presentation-noncapture.xml`.
+  Lobby/countdown/racing transitions, join locking, pause, recovery, finish and
+  rematch behavior pass.
+- Stage 4 non-capture combat: 5/5 at
+  `/private/tmp/stage51-release-validation/stage4-combat-noncapture.xml`.
+  Independent pickup ownership/use, weapon effects, timing, pause/disconnect,
+  recovery and cleanup pass.
+- `HandlingBakeOffIntegrationTests`: 2/2 at
+  `/private/tmp/stage51-release-validation/handling-bakeoff-integration.xml`.
+  Race completion exports once with player/device/model identity, rematch starts
+  a fresh run, and sink failure is contained.
+
+The sole enabled build scene remains `Assets/Scenes/SampleScene.unity`.
+Production source, scenes, packages and project settings are identical to
+`d310999`, the state used for the successful macOS and Windows builds under
+`/private/tmp/re-re-volt-stage51-telemetry-builds`; later commits contain only
+tests and documentation. The two screenshot-only command-line tests remain
+excluded because of their documented batch capture stall.
+
+Remaining acceptance must happen on user hardware: launch the Windows artifact
+on Windows, connect representative physical controllers, run a four-person
+split-screen race, and complete the blind A-D handling bake-off. Automated
+virtual-device tests do not replace physical device or subjective feel proof.
+
 ## Stage 5.1 concrete filesystem-sink checkpoint — 2026-09-29
 
 The remaining automated desktop-export gap is closed at commit `03abac5`.
