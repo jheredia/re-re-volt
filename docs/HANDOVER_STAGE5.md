@@ -1,5 +1,41 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 physical Xbox controller checkpoint — 2026-09-29
+
+The macOS ARM64 player passed a real-device single-player smoke test with a USB
+Microsoft `XboxSeriesXGamepad` (`VID 0x045e`, `PID 0x0b12`). The user joined as
+`P1 GAMEPAD MODEL A`, started and completed three three-lap races, returned to
+the lobby, started a rematch, paused/resumed, recovered the car, disconnected
+the controller during racing, and reconnected the same device. Visual captures
+showed the joined gamepad lobby row, live Lap 1–3 progress, the `RACE PAUSED`
+overlay, recovery to an aligned track position, the `PLAYER 1 INPUT DEVICE
+DISCONNECTED` overlay, and resumed movement with ownership preserved.
+
+Direct runtime evidence:
+
+- Player: `/private/tmp/re-re-volt-stage51-telemetry-builds/ReReVolt-macOS.app`.
+- First session log: `/private/tmp/stage51-physical-controller-player.log`.
+- Three `GAMEPAD` / `MODEL A` CSVs completed 3/3 laps in `51.596462 s`,
+  `47.625889 s`, and `72.93618 s` beneath
+  `~/Library/Application Support/com.Unity-Technologies.com.unity.template.urp-blank/HandlingBakeOff/`.
+- The first two races logged full `MainMenu -> Loading -> Playing -> GameOver
+  -> MainMenu` cycles and distinct exports; the second race proves repeated
+  play/rematch. The third export was produced during the pause/recovery and
+  disconnect/reconnect session.
+- Telemetry recorded forward/reverse turning samples, direction changes,
+  `7`, `12`, and `13` drift entries, collisions, grounded/airborne time, finish
+  position 1, and unique filenames.
+- Fault scans found no exception, error, crash, fatal, assertion, or failed
+  line. Existing non-fatal root-object `DontDestroyOnLoad`, stripped URP
+  post-processing, and shutdown thread-finalization warnings remain.
+
+Status is **ready with limitations** for single-controller macOS playtesting.
+This session did not directly prove the brake button mapping independently of
+measured drift, pickup/fire/combat-hit behavior, more than one physical
+controller, four-human split-screen, Windows runtime, or player preference
+between Models A-D. Existing automated coverage still proves those functional
+paths apart from platform hardware and subjective feel.
+
 ## Stage 5.1 automated release-acceptance checkpoint — 2026-09-29
 
 The current branch state at `8594948` is **ready with hardware and human

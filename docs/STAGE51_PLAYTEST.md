@@ -4,6 +4,13 @@ This build is the handling bake-off prototype from commit `d310999`, validated
 through the current `codex/local-multiplayer-prototype` checkpoint. Model A is
 still the default; Models B–D are candidates, not accepted replacements.
 
+Current physical evidence: a USB Xbox Series controller (`VID 0x045e`,
+`PID 0x0b12`) has completed three three-lap races on the macOS ARM64 player.
+Join/start, sustained driving and checkpoints, pause/resume, recovery,
+disconnect/reconnect ownership, rematch, results/lobby return, and CSV export
+passed. Multiple simultaneous physical controllers and Windows runtime remain
+to be tested.
+
 ## Launch
 
 ### macOS
@@ -105,5 +112,6 @@ CSV filenames attached:
 ```
 
 Do not report virtual-device automated tests as physical-controller results.
-Windows runtime, representative controller families, and four-human-player feel
-remain the important manual validation targets.
+Windows runtime, additional controller families, simultaneous multi-controller
+input, and four-human-player feel remain the important manual validation
+targets.
