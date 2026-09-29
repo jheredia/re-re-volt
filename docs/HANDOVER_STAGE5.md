@@ -1,5 +1,32 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 concrete filesystem-sink checkpoint — 2026-09-29
+
+The remaining automated desktop-export gap is closed at commit `03abac5`.
+`DesktopFileSinkWritesFortyFourColumnsAndDoesNotOverwriteExistingReport`
+invokes the real `FileHandlingBakeOffReportSink`, reads both emitted files back
+from `Application.persistentDataPath/HandlingBakeOff`, verifies the stable
+44-column header/data contract and representative identity/result values, then
+exports the same report again and proves that the original is preserved under
+a unique second filename. The test deletes only its GUID-prefixed files in a
+`finally` block; no smoke-test CSV remained afterward.
+
+Validation evidence:
+
+- Targeted EditMode: 1/1 passed at
+  `/private/tmp/stage51-filesystem-sink-targeted-editmode.xml`.
+- Full EditMode: 70/70 passed at
+  `/private/tmp/stage51-filesystem-sink-full-editmode.xml`.
+- Existing telemetry PlayMode integration: 2/2 passed at
+  `/private/tmp/stage51-filesystem-sink-telemetry-playmode.xml`.
+- No production source, scene, prefab, package, project setting, handling
+  constant, CSV format, or build artifact changed in this checkpoint.
+
+This proves concrete Editor-side desktop filesystem behavior. A completed race
+in the standalone macOS player is still required to prove the end-to-end
+runtime path. Physical controllers, four-player human feel testing, and
+Windows runtime validation remain hardware-dependent limitations.
+
 ## Stage 5.1 telemetry build-validation checkpoint — 2026-09-27
 
 Work stopped at the agreed five-hour safety boundary after usage reached 81%;
