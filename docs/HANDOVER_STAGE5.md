@@ -1,5 +1,32 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 final regression refresh — 2026-10-04
+
+A fresh validation-only agent reran the accepted automated scope on
+`codex/local-multiplayer-prototype` at `9582ab0` with Unity `6000.6.0f1`:
+
+- Full EditMode: **70/70 passed**, with zero failures, skips, or inconclusive
+  results.
+- Functional PlayMode: **19/19 passed**: LocalPlayer 3/3, Keyboard 7/7,
+  Stage 3 non-capture 2/2, Stage 4 non-capture 5/5, and HandlingBakeOff 2/2.
+- Every Unity process exited `0`; no compilation failure or unexpected
+  exception, assertion, crash, or fatal error was found.
+- The handling export test's injected sink failure was expected and its
+  containment assertions passed. Unity licensing-token/Curl teardown noise,
+  the existing URP diagnostic, and inactive-target native-extension messages
+  did not affect execution or results.
+- The two screenshot-only batch methods remain excluded because of their
+  documented capture stall; visual/runtime evidence is supplied by the
+  standalone-player sessions instead.
+- Unity rewrote three Project Settings files and the generated solution during
+  testing; the agent restored only those generated diffs. The Editor is closed
+  and the worktree is clean.
+
+Exact commands, exit codes, XML, logs, and classifications are preserved at
+`/private/tmp/stage51-final-regression-20261004/VALIDATION_SUMMARY.txt` and its
+sibling artifacts. No production code, assets, settings, packages, tests,
+builds, or documentation were changed by the validation agent.
+
 ## Stage 5.1 packaged-artifact revalidation — 2026-10-04
 
 The committed source baseline remains clean on
