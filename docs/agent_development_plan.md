@@ -154,6 +154,18 @@ allocating duplicate materials/outlines, player and pickup colors remain correct
 one- and four-camera views remain readable, and returning to Clean exactly
 restores the baseline presentation.
 
+### Post-prototype deliverable — Reproducible implementation tutorial
+
+After the playable prototype and its architecture are stable, a documentation
+agent will turn the accepted stage history into a step-by-step tutorial rather
+than documenting APIs that are still changing. Each chapter will have a starting
+Git tag, an ending tag, a focused diff, implementation and architecture notes,
+tests, common failure cases, and a playable checkpoint. The planned chapters
+follow the actual build order: race rules, vehicle handling, local input ownership,
+split screen, circuit and presentation, combat, handling bake-off, switchable
+visual style, and build/test/profile packaging. Current stage plans, handovers,
+test evidence, and decision records are the source material for that tutorial.
+
 ## Integration rules
 
 - Each stage begins only after the previous stage is reviewed and reconciled.

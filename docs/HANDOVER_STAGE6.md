@@ -1,5 +1,50 @@
 # Handover — Stage 6 Switchable Visual Identity
 
+## Stage 6A accepted checkpoint — 2026-10-04
+
+Stage 6A is implemented and reconciled on top of `d627730`. It adds the isolated
+mode model, material controller, retained material assets, two URP shaders, and
+focused tests. It does not yet connect the controller to the runtime circuit,
+cars, combat visuals, lobby, pause screen, or player input.
+
+Accepted behavior:
+
+- `Clean3D`, `InkLite`, and `FullInk` cycle in a stable order.
+- Clean restores the exact original `sharedMaterial` references.
+- Ink materials are cached per source material and preserve existing
+  `MaterialPropertyBlock` player colors.
+- Repeated mode changes reuse materials and eligible outline objects.
+- Identical source-material updates are allocation-free no-ops at the controller
+  boundary; ordered multi-material updates remain exact.
+- Destroyed renderers can be pruned, while transient Stage 6B owners are still
+  required to pair registration with `UnregisterRenderer`.
+- Geometry outlines currently support `MeshRenderer`. A
+  `SkinnedMeshRenderer` may use ink materials without an outline; outlined
+  skinned support is explicitly deferred until character rendering is designed.
+- The retained shaders compile on the current Metal Editor and expose the
+  required ForwardLit, ShadowCaster, DepthOnly, DepthNormals, and outline passes.
+
+Validation evidence:
+
+- Full EditMode: 72/72 passed — `/private/tmp/stage6a-full-editmode.xml` and
+  `/private/tmp/stage6a-full-editmode.log`.
+- Functional PlayMode, including all non-capture Stage 1–5 groups and Stage 6A:
+  25/25 passed — `/private/tmp/stage6a-functional-playmode.xml` and
+  `/private/tmp/stage6a-functional-playmode.log`.
+- Focused final Stage 6A PlayMode: 6/6 passed —
+  `/private/tmp/stage6a-review-playmode-final2.xml` and
+  `/private/tmp/stage6a-review-playmode-final2.log`.
+- The unfiltered PlayMode run again stalled in the two pre-existing screenshot
+  capture tests after completing functional tests and produced no result XML.
+  It was stopped after the known no-progress interval; this is existing test
+  infrastructure behavior, not evidence of a Stage 6A failure.
+- Each Unity batch run generated the known Project Auditor/PlayerSettings
+  trailing-space and `.slnx` ordering/line-ending noise. All three files were
+  restored exactly to the accepted checkpoint.
+
+Stage 6A does not prove visual quality, four-camera frame time, screen captures,
+or macOS/Windows/WebGL shader builds. Those remain Stage 6B/6C work.
+
 ## Continuity boundary
 
 - Branch: `codex/local-multiplayer-prototype`
@@ -156,11 +201,10 @@ outlines on environment props while retaining cars, pickups, and hazards.
 
 ## Exact resume action
 
-After the five-hour window resets, start a fresh bounded Stage 6A implementation
-agent from this committed handover. Before editing, confirm a clean worktree and
-that no Unity Editor owns the project. The agent must inspect the existing APIs,
-implement only 6A, run its targeted EditMode/PlayMode tests, and return exact
-changed files and evidence for overseer reconciliation before 6B begins.
-
-At this handover point there is no Stage 6 compile, test, runtime, build, or
-screenshot evidence because no source or Unity asset implementation was begun.
+Start a fresh bounded Stage 6B integration agent from the committed Stage 6A
+checkpoint. Before editing, confirm a clean worktree and that no Unity Editor
+owns the project. Integrate the accepted controller through the exact seams in
+the Stage 6B section, pair every transient renderer lifetime with explicit
+unregistration, keep controller parameters optional for existing tests, and add
+input/UI integration tests. Do not begin screenshot, platform-build, or tuning
+claims until the integrated runtime can switch all three modes reliably.
