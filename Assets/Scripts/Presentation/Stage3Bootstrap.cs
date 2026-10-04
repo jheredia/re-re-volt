@@ -20,6 +20,7 @@ namespace Presentation
         public Stage3RacePresentation Presentation { get; private set; }
         public WeaponManager WeaponManager { get; private set; }
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
+        public VisualStyleController VisualStyle { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
         public RaceCheckpoint[] Checkpoints => circuit?.Checkpoints;
@@ -39,6 +40,15 @@ namespace Presentation
         {
             if (initialized) return true;
 
+            VisualStyleController[] existingStyles = GetComponents<VisualStyleController>();
+            if (existingStyles.Length > 1)
+            {
+                Debug.LogError("[Stage3] Runtime bootstrap requires exactly one VisualStyleController; duplicate components were found.", this);
+                return false;
+            }
+            VisualStyle = existingStyles.Length == 1
+                ? existingStyles[0]
+                : gameObject.AddComponent<VisualStyleController>();
             Time.timeScale = 1f;
             DisableLegacyPrototypeObjects();
             RaceManager = FindAnyObjectByType<RaceManager>();
@@ -53,8 +63,8 @@ namespace Presentation
                 return false;
             }
 
-            circuit = PrototypeCircuitBuilder.Build(RaceManager, transform);
-            if (!VehicleManager.Configure(RaceManager, circuit.Grid, null, lobbyCamera))
+            circuit = PrototypeCircuitBuilder.Build(RaceManager, transform, VisualStyle);
+            if (!VehicleManager.Configure(RaceManager, circuit.Grid, null, lobbyCamera, VisualStyle))
             {
                 Debug.LogError("[Stage3] VehicleManager could not accept the generated four-place grid.", this);
                 return false;
@@ -62,10 +72,10 @@ namespace Presentation
 
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
-            Presentation.Configure(RaceManager, VehicleManager);
+            Presentation.Configure(RaceManager, VehicleManager, VisualStyle);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
-            WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask);
+            WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
             HandlingBakeOff = gameObject.AddComponent<HandlingBakeOffCoordinator>();
             HandlingBakeOff.Configure(RaceManager, VehicleManager);
             ConfigureGameManager();

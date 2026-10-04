@@ -58,6 +58,7 @@ namespace Weapons
         private LayerMask drivableMask;
         private bool configured, subscribed;
         private GameObject combatRoot;
+        private VisualStyleController visualStyle;
 
         public double SimulationTime { get; private set; }
         public IReadOnlyList<PickupSpawner> Pickups => spawnerView ??= spawners.AsReadOnly();
@@ -79,7 +80,7 @@ namespace Weapons
         };
 
         public void Configure(RaceManager raceManager, VehicleManager roster,
-            Stage3RacePresentation hud, LayerMask groundMask)
+            Stage3RacePresentation hud, LayerMask groundMask, VisualStyleController visualStyleController = null)
         {
             if (configured) throw new InvalidOperationException("Combat is already configured.");
             if (raceManager == null || roster == null || hud == null) throw new ArgumentNullException();
@@ -87,6 +88,7 @@ namespace Weapons
             vehicles = roster;
             presentation = hud;
             drivableMask = groundMask;
+            visualStyle = visualStyleController;
             BoltMaterial = CreateMaterial("Combat amber", new Color(1f, .38f, .025f));
             OilMaterial = CreateMaterial("Combat violet", new Color(.63f, .15f, 1f));
             FeedbackMaterial = CreateMaterial("Combat white", new Color(.9f, 1f, 1f));
@@ -212,20 +214,20 @@ namespace Weapons
             if (kind == WeaponKind.Bolt)
             {
                 CreateVisual(weapon.transform, "Bolt core", PrimitiveType.Sphere, Vector3.zero,
-                    new Vector3(.48f, .48f, 1.2f), BoltMaterial);
+                    new Vector3(.48f, .48f, 1.2f), BoltMaterial, true);
                 CreateVisual(weapon.transform, "Bolt fins", PrimitiveType.Cube, Vector3.back * .32f,
-                    new Vector3(.9f, .13f, .4f), FeedbackMaterial);
+                    new Vector3(.9f, .13f, .4f), FeedbackMaterial, true);
                 CreateVisual(weapon.transform, "Bolt tail", PrimitiveType.Sphere, Vector3.back * .8f,
-                    new Vector3(.24f, .24f, .8f), BoltMaterial);
+                    new Vector3(.24f, .24f, .8f), BoltMaterial, true);
             }
             else
             {
                 CreateVisual(weapon.transform, "Oil warning rim", PrimitiveType.Cylinder, Vector3.zero,
-                    new Vector3(oilRadius * 2f, .018f, oilRadius * 2f), OilMaterial);
+                    new Vector3(oilRadius * 2f, .018f, oilRadius * 2f), OilMaterial, true);
                 CreateVisual(weapon.transform, "Oil surface", PrimitiveType.Cylinder, Vector3.up * .025f,
                     new Vector3(oilRadius * 1.8f, .02f, oilRadius * 1.8f), darkOilMaterial);
                 CreateVisual(weapon.transform, "Oil glint", PrimitiveType.Cube, new Vector3(.3f, .055f, .2f),
-                    new Vector3(.55f, .025f, .12f), OilMaterial);
+                    new Vector3(.55f, .025f, .12f), OilMaterial, true);
             }
             PublishSlot(state);
         }
@@ -251,7 +253,12 @@ namespace Weapons
                     impact ? impactMotorMultiplier : oil ? oilMotorMultiplier : 1f,
                     Mathf.Min(impact ? impactSteeringMultiplier : 1f, oil ? oilSteeringMultiplier : 1f));
                 if (state.Feedback == null) continue;
-                if (!oil && !impact) { Destroy(state.Feedback); state.Feedback = null; }
+                if (!oil && !impact)
+                {
+                    UnregisterVisualTree(state.Feedback);
+                    Destroy(state.Feedback);
+                    state.Feedback = null;
+                }
                 else state.Feedback.transform.Rotate(Vector3.up, 180f * delta);
             }
             for (int i = bursts.Count - 1; i >= 0; i--)
@@ -259,7 +266,11 @@ namespace Weapons
                 Burst burst = bursts[i];
                 if (SimulationTime >= burst.Until || burst.Visual == null)
                 {
-                    if (burst.Visual != null) Destroy(burst.Visual);
+                    if (burst.Visual != null)
+                    {
+                        UnregisterVisualTree(burst.Visual);
+                        Destroy(burst.Visual);
+                    }
                     bursts.RemoveAt(i);
                 }
                 else burst.Visual.transform.localScale = Vector3.one * (float)(.3f + 2f * (1f - (burst.Until - SimulationTime) / feedbackLifetime));
@@ -277,7 +288,11 @@ namespace Weapons
                 body.AddForce(source.Direction * impactVelocityChange, ForceMode.VelocityChange);
             }
             else state.OilUntil = SimulationTime + oilDuration;
-            if (state.Feedback != null) Destroy(state.Feedback);
+            if (state.Feedback != null)
+            {
+                UnregisterVisualTree(state.Feedback);
+                Destroy(state.Feedback);
+            }
             state.Feedback = new GameObject("Combat disruption feedback");
             state.Feedback.transform.SetParent(target.Vehicle.transform, false);
             for (int i = 0; i < 3; i++)
@@ -285,7 +300,7 @@ namespace Weapons
                 float angle = i * Mathf.PI * 2f / 3f;
                 CreateVisual(state.Feedback.transform, "Disruption spark", PrimitiveType.Cube,
                     new Vector3(Mathf.Cos(angle) * .8f, 1.05f, Mathf.Sin(angle) * .8f), Vector3.one * .2f,
-                    source.Kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial);
+                    source.Kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial, true);
             }
             ShowBurst(target.Vehicle.transform.position + Vector3.up * .7f, source.Kind);
             return true;
@@ -295,7 +310,7 @@ namespace Weapons
         {
             if (bursts.Count >= maximumFeedbackEffects) return;
             GameObject visual = CreateVisual(combatRoot.transform, "Combat pulse", PrimitiveType.Sphere,
-                Vector3.zero, Vector3.one * .3f, kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial);
+                Vector3.zero, Vector3.one * .3f, kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial, true);
             visual.transform.position = position;
             bursts.Add(new Burst { Visual = visual, Until = SimulationTime + feedbackLifetime });
         }
@@ -316,7 +331,12 @@ namespace Weapons
         {
             state.ImpactUntil = state.OilUntil = state.SafeUntil = 0;
             if (state.Player.Vehicle != null) state.Player.Vehicle.ClearCombatModifiers();
-            if (state.Feedback != null) { state.Feedback.SetActive(false); Destroy(state.Feedback); }
+            if (state.Feedback != null)
+            {
+                UnregisterVisualTree(state.Feedback);
+                state.Feedback.SetActive(false);
+                Destroy(state.Feedback);
+            }
             state.Feedback = null;
         }
 
@@ -332,7 +352,12 @@ namespace Weapons
         private void RemoveWeapon(int index)
         {
             LiveCombatWeapon weapon = liveWeapons[index];
-            if (weapon != null) { weapon.gameObject.SetActive(false); Destroy(weapon.gameObject); }
+            if (weapon != null)
+            {
+                UnregisterVisualTree(weapon.gameObject);
+                weapon.gameObject.SetActive(false);
+                Destroy(weapon.gameObject);
+            }
             liveWeapons.RemoveAt(index);
         }
 
@@ -353,7 +378,12 @@ namespace Weapons
             foreach (PlayerCombat state in players) if (state != null) ClearPlayer(state);
             for (int i = liveWeapons.Count - 1; i >= 0; i--) RemoveWeapon(i);
             foreach (Burst burst in bursts)
-                if (burst.Visual != null) { burst.Visual.SetActive(false); Destroy(burst.Visual); }
+                if (burst.Visual != null)
+                {
+                    UnregisterVisualTree(burst.Visual);
+                    burst.Visual.SetActive(false);
+                    Destroy(burst.Visual);
+                }
             bursts.Clear();
             SimulationTime = 0;
             foreach (PickupSpawner spawner in spawners) if (spawner != null) spawner.ResetPickup();
@@ -380,7 +410,11 @@ namespace Weapons
 
         private void OnDestroy()
         {
-            if (combatRoot != null) Destroy(combatRoot);
+            if (combatRoot != null)
+            {
+                UnregisterVisualTree(combatRoot);
+                Destroy(combatRoot);
+            }
             if (BoltMaterial != null) Destroy(BoltMaterial);
             if (OilMaterial != null) Destroy(OilMaterial);
             if (FeedbackMaterial != null) Destroy(FeedbackMaterial);
@@ -388,7 +422,7 @@ namespace Weapons
         }
 
         internal GameObject CreateVisual(Transform parent, string label, PrimitiveType shape,
-            Vector3 position, Vector3 scale, Material material)
+            Vector3 position, Vector3 scale, Material material, bool outlineEligible = false)
         {
             GameObject visual = GameObject.CreatePrimitive(shape);
             visual.name = label;
@@ -398,8 +432,26 @@ namespace Weapons
             Collider collider = visual.GetComponent<Collider>();
             collider.enabled = false;
             Destroy(collider);
-            visual.GetComponent<Renderer>().sharedMaterial = material;
+            Renderer renderer = visual.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            visualStyle?.RegisterRenderer(renderer, outlineEligible);
             return visual;
+        }
+
+        internal void UpdateVisualSourceMaterial(Renderer renderer, Material sourceMaterial,
+            ref Material currentSourceMaterial)
+        {
+            if (ReferenceEquals(currentSourceMaterial, sourceMaterial)) return;
+            if (visualStyle != null) visualStyle.UpdateSourceMaterial(renderer, sourceMaterial);
+            else renderer.sharedMaterial = sourceMaterial;
+            currentSourceMaterial = sourceMaterial;
+        }
+
+        internal void UnregisterVisualTree(GameObject visualRoot)
+        {
+            if (visualStyle == null || visualRoot == null) return;
+            Renderer[] renderers = visualRoot.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++) visualStyle.UnregisterRenderer(renderers[i]);
         }
 
         private static Material CreateMaterial(string label, Color color)

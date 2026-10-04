@@ -24,6 +24,7 @@ namespace Presentation
         private readonly Dictionary<int, string> weaponLabels = new();
         private RaceManager race;
         private VehicleManager vehicles;
+        private VisualStyleController visualStyle;
         private Canvas canvas;
         private GameObject lobbyPanel;
         private TextMeshProUGUI lobbyPlayers;
@@ -38,6 +39,7 @@ namespace Presentation
         private float nextHudRefresh;
         private float countdownHideAt = -1f;
         private bool configured;
+        private bool subscribed;
 
         public int HudCount => hudLabels.Count;
         public bool LobbyVisible => lobbyPanel != null && lobbyPanel.activeSelf;
@@ -53,7 +55,8 @@ namespace Presentation
             RefreshHudText();
         }
 
-        public void Configure(RaceManager raceManager, VehicleManager vehicleManager)
+        public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
+            VisualStyleController visualStyleController = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -61,15 +64,17 @@ namespace Presentation
 
             race = raceManager;
             vehicles = vehicleManager;
+            visualStyle = visualStyleController;
             BuildInterface();
-            Subscribe();
             configured = true;
+            Subscribe();
             RefreshPlayerPresentation();
             ApplyRaceState(race.CurrentState);
         }
 
         private void Subscribe()
         {
+            if (subscribed) return;
             race.RaceStateChanged += ApplyRaceState;
             race.CountdownChanged += OnCountdownChanged;
             race.RaceCompleted += OnRaceCompleted;
@@ -79,11 +84,15 @@ namespace Presentation
             vehicles.ConfirmRequested += OnConfirmRequested;
             vehicles.BackRequested += OnBackRequested;
             vehicles.HandlingModelChanged += OnHandlingModelChanged;
+            vehicles.VisualStyleCycleRequested += OnVisualStyleCycleRequested;
             vehicles.ControllerConnectionChanged += OnControllerConnectionChanged;
+            if (visualStyle != null) visualStyle.StyleChanged += OnVisualStyleChanged;
+            subscribed = true;
         }
 
         private void Unsubscribe()
         {
+            if (!subscribed) return;
             if (race != null)
             {
                 race.RaceStateChanged -= ApplyRaceState;
@@ -98,9 +107,22 @@ namespace Presentation
                 vehicles.ConfirmRequested -= OnConfirmRequested;
                 vehicles.BackRequested -= OnBackRequested;
                 vehicles.HandlingModelChanged -= OnHandlingModelChanged;
+                vehicles.VisualStyleCycleRequested -= OnVisualStyleCycleRequested;
                 vehicles.ControllerConnectionChanged -= OnControllerConnectionChanged;
             }
+            if (visualStyle != null) visualStyle.StyleChanged -= OnVisualStyleChanged;
+            subscribed = false;
         }
+
+        private void OnEnable()
+        {
+            if (!configured) return;
+            Subscribe();
+            RefreshPlayerPresentation();
+            ApplyRaceState(race.CurrentState);
+        }
+
+        private void OnDisable() => Unsubscribe();
 
         private void Update()
         {
@@ -136,6 +158,21 @@ namespace Presentation
         {
             RefreshLobbyText();
             RefreshHudText();
+        }
+
+        private void OnVisualStyleCycleRequested(LocalPlayer player)
+        {
+            if (visualStyle == null) return;
+            bool allowed = race.CurrentState == RaceManager.RaceState.Idle ||
+                           race.CurrentState == RaceManager.RaceState.Racing && pauseReason == PauseReason.Manual;
+            if (!allowed) return;
+            visualStyle.CycleMode();
+        }
+
+        private void OnVisualStyleChanged(VisualStyleMode mode)
+        {
+            RefreshLobbyText();
+            if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
         }
 
         private void StartRaceFromLobby()
@@ -192,8 +229,17 @@ namespace Presentation
                 vehicles.SetAllVehiclesEnabled(false);
                 if (GameManager.Instance != null) GameManager.Instance.PauseGame();
                 else Time.timeScale = 0f;
-                ShowModal("RACE PAUSED", "The workshop clock has stopped.", "ESC / MENU / START   RESUME");
+                ShowManualPauseModal();
             }
+        }
+
+        private void ShowManualPauseModal()
+        {
+            string styleLine = visualStyle == null
+                ? string.Empty
+                : $"\nVISUAL STYLE  {GetVisualStyleLabel(visualStyle.Mode)}  [V / R3]";
+            ShowModal("RACE PAUSED", "The workshop clock has stopped." + styleLine,
+                "ESC / MENU / START   RESUME");
         }
 
         private void OnControllerConnectionChanged(LocalPlayer player)
@@ -384,11 +430,22 @@ namespace Presentation
                 else builder.Append("ENTER / A / CROSS   START 3-LAP RACE");
             }
             builder.AppendLine().AppendLine();
+            if (visualStyle != null)
+                builder.Append("VISUAL STYLE  ").Append(GetVisualStyleLabel(visualStyle.Mode))
+                    .AppendLine("  [V / R3]");
             builder.Append("LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
                            "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
         }
+
+        private static string GetVisualStyleLabel(VisualStyleMode mode) => mode switch
+        {
+            VisualStyleMode.Clean3D => "CLEAN 3D",
+            VisualStyleMode.InkLite => "INK LITE",
+            VisualStyleMode.FullInk => "FULL INK",
+            _ => mode.ToString().ToUpperInvariant()
+        };
 
         private void ShowDisconnectPrompt()
         {

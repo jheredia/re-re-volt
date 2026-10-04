@@ -23,6 +23,7 @@ namespace Core
         public event Action ConfirmRequested;
         public event Action BackRequested;
         public event Action<int> HandlingModelCycleRequested;
+        public event Action VisualStyleCycleRequested;
         public bool GameplaySuspended { get; set; }
         public bool IsKeyboardPlayer { get; private set; }
 
@@ -90,6 +91,12 @@ namespace Core
             Keyboard keyboard = device as Keyboard;
             bool back = keyboard != null ? keyboard.escapeKey.wasPressedThisFrame : pad.buttonEast.wasPressedThisFrame;
             bool confirm = keyboard != null ? keyboard.enterKey.wasPressedThisFrame : pad.buttonSouth.wasPressedThisFrame;
+            bool visualStyle = keyboard != null
+                ? keyboard.vKey.wasPressedThisFrame
+                : pad.rightStickButton.wasPressedThisFrame;
+
+            // The presentation authority applies the lobby/manual-pause gate. Input stays device-owned.
+            if (visualStyle) VisualStyleCycleRequested?.Invoke();
 
             // Menu commands share the same ownership/events as driving. One press has one state-specific meaning.
             if (race.CurrentState == RaceManager.RaceState.Idle)

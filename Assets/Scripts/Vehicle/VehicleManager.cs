@@ -4,6 +4,7 @@ using Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Users;
+using Presentation;
 
 namespace Vehicle
 {
@@ -25,6 +26,7 @@ namespace Vehicle
         private bool lobbyListenerWasEnabled;
         private bool gameplaySuspended;
         private bool subscribed;
+        private VisualStyleController visualStyle;
 
         public IReadOnlyList<LocalPlayer> Players => playersView ??= players.AsReadOnly();
         public IReadOnlyList<VehicleController> AllVehicles => vehiclesView ??= allVehicles.AsReadOnly();
@@ -38,6 +40,7 @@ namespace Vehicle
         public event Action<LocalPlayer> ConfirmRequested;
         public event Action<LocalPlayer> BackRequested;
         public event Action<LocalPlayer> HandlingModelChanged;
+        public event Action<LocalPlayer> VisualStyleCycleRequested;
 
         private void Awake()
         {
@@ -48,7 +51,8 @@ namespace Vehicle
         private void OnEnable() => Subscribe();
 
         /// <summary>Configure before joining. Null prefab uses the code-built prototype car.</summary>
-        public bool Configure(RaceManager race, Transform[] grid, GameObject prefab = null, Camera backgroundCamera = null)
+        public bool Configure(RaceManager race, Transform[] grid, GameObject prefab = null, Camera backgroundCamera = null,
+            VisualStyleController visualStyleController = null)
         {
             if (players.Count != 0 || race == null || race.CurrentState != RaceManager.RaceState.Idle) return false;
             Unsubscribe();
@@ -56,6 +60,7 @@ namespace Vehicle
             spawnPoints = grid == null ? null : (Transform[])grid.Clone();
             playerVehiclePrefab = prefab;
             lobbyCamera = backgroundCamera;
+            visualStyle = visualStyleController;
             if (isActiveAndEnabled) Subscribe();
             return true;
         }
@@ -144,6 +149,15 @@ namespace Vehicle
                 return false;
             }
 
+            if (!TryRegisterVehicleRenderers(car, out string registrationError))
+            {
+                raceManager.UnregisterRacer(car);
+                car.SetActive(false);
+                Destroy(car);
+                Debug.LogError($"[VehicleManager] Car visual-style registration failed and was rolled back: {registrationError}", this);
+                return false;
+            }
+
             InputUser user = InputUser.PerformPairingWithDevice(device);
             InputHandler input = car.GetComponent<InputHandler>() ?? car.AddComponent<InputHandler>();
             input.Initialize(user, raceManager, racer);
@@ -159,6 +173,7 @@ namespace Vehicle
             camera.fieldOfView = 65f;
             camera.depth = 10 + index;
             AudioListener listener = cameraObject.AddComponent<AudioListener>();
+            listener.enabled = false;
             ChaseCamera chase = cameraObject.AddComponent<ChaseCamera>();
             chase.Initialize(car.transform);
             LocalPlayer joined = new LocalPlayer(index, user, vehicle, input, recovery, chase, listener, racer);
@@ -166,6 +181,7 @@ namespace Vehicle
             input.PauseRequested += () => PauseRequested?.Invoke(joined);
             input.ConfirmRequested += () => ConfirmRequested?.Invoke(joined);
             input.BackRequested += () => BackRequested?.Invoke(joined);
+            input.VisualStyleCycleRequested += () => VisualStyleCycleRequested?.Invoke(joined);
             input.HandlingModelCycleRequested += direction => TryCycleHandlingModel(joined.PlayerIndex, direction);
             input.LeaveRequested += () => TryLeavePlayer(joined.PlayerIndex);
             recovery.Recovered += chase.SnapToTarget;
@@ -311,9 +327,37 @@ namespace Vehicle
             VehicleController playerVehicle = player.Vehicle;
             if (playerVehicle != null)
             {
+                UnregisterVehicleRenderers(playerVehicle.gameObject);
                 playerVehicle.gameObject.SetActive(false);
                 Destroy(playerVehicle.gameObject);
             }
+        }
+
+        private bool TryRegisterVehicleRenderers(GameObject vehicle, out string error)
+        {
+            error = null;
+            if (visualStyle == null || vehicle == null) return true;
+            Renderer[] renderers = vehicle.GetComponentsInChildren<Renderer>(true);
+            try
+            {
+                for (int i = 0; i < renderers.Length; i++)
+                    visualStyle.RegisterRenderer(renderers[i], renderers[i] is MeshRenderer);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                // Registration is a transaction: remove both completed and partially attempted entries.
+                for (int i = 0; i < renderers.Length; i++) visualStyle.UnregisterRenderer(renderers[i]);
+                error = $"{exception.GetType().Name}: {exception.Message}";
+                return false;
+            }
+        }
+
+        private void UnregisterVehicleRenderers(GameObject vehicle)
+        {
+            if (visualStyle == null || vehicle == null) return;
+            Renderer[] renderers = vehicle.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++) visualStyle.UnregisterRenderer(renderers[i]);
         }
 
         private void OnDisable()

@@ -1,5 +1,66 @@
 # Handover — Stage 6 Switchable Visual Identity
 
+## Stage 6B accepted checkpoint — 2026-10-04
+
+Stage 6B is implemented and reconciled on top of `4733105`. The runtime now
+creates one session-wide visual-style authority before composition, registers
+the circuit, vehicles, pickups, weapons, oil, bursts, and disruption feedback,
+and exposes the global comparison in the lobby and manual-pause UI. Keyboard
+`V` and a paired controller's right-stick click cycle the mode through the
+existing per-player input ownership path. Countdown, active racing, disconnect
+pause, and results reject style changes; the selected mode survives race,
+results, rematch, and lobby return.
+
+Important lifecycle decisions:
+
+- Existing direct constructors keep optional style dependencies; no controller
+  remains exactly equivalent to Clean mode.
+- Flat roads, floor, route/grid/checkpoint markings, and coplanar details are
+  registered without outlines. Cars, barriers, raised props, pickup boxes, and
+  selected combat visuals are outline eligible.
+- Vehicle registration is transactional after car/racer validation and before
+  device pairing, camera creation, or roster insertion. A partial registration
+  failure unregisters every renderer and racer and destroys the rejected car.
+- Runtime prefab and code-built cars use the same registration/cleanup owner.
+- Pickup material refresh tracks its source reference, so unchanged
+  `FixedUpdate` calls do not reach the controller or allocate.
+- Live weapons, oil, bursts, disruption feedback, pickup trees, cars, and the
+  circuit explicitly unregister renderers before destruction. Duplicate cleanup
+  remains harmless.
+- Bootstrap rejects duplicate pre-existing `VisualStyleController` components
+  before composing any runtime content.
+- Presentation subscriptions are idempotent and pair enable/disable correctly.
+- Player camera listeners start disabled and viewport refresh selects exactly
+  one listener, avoiding transient listener-warning floods.
+
+Independent review initially found failed-join registration leaks, an
+unenforced duplicate-controller invariant, test listener-warning floods,
+missing lifecycle cases, and presentation disable subscriptions. The
+implementation agent corrected all five findings. The overseer reviewed the
+corrected transactional and subscription paths. A final read-only recheck was
+stopped when five-hour usage jumped to 89%; its remaining static verification
+is a Stage 6C first action, not a hidden passing claim.
+
+Final evidence before the cutoff:
+
+- Focused Stage 6B PlayMode: 6/6 passed —
+  `/private/tmp/stage6b-corrected-focused-final.xml` and `.log`.
+- Full EditMode: 72/72 passed —
+  `/private/tmp/stage6b-corrected-editmode.xml` and `.log`.
+- Functional non-capture PlayMode: 31/31 passed —
+  `/private/tmp/stage6b-corrected-functional.xml` and `.log`.
+- Isolated Stage 4 combat regression: 5/5 passed —
+  `/private/tmp/stage6b-corrected-stage4.xml` and `.log`.
+- Corrected logs are 35–74 KB and contain no audio-listener flood, unexpected
+  test failure, assertion, or unhandled exception. Expected negative-path logs
+  are asserted by their tests.
+- `git diff --check` passed and Unity-generated settings/solution noise was
+  restored before handoff.
+
+Still unvalidated: interactive visual quality, one- and four-camera frame time,
+visual screenshots, physical-controller runtime behavior for the new toggle,
+and macOS/Windows/WebGL shader builds. These are Stage 6C work.
+
 ## Stage 6A accepted checkpoint — 2026-10-04
 
 Stage 6A is implemented and reconciled on top of `d627730`. It adds the isolated
@@ -201,10 +262,11 @@ outlines on environment props while retaining cars, pickups, and hazards.
 
 ## Exact resume action
 
-Start a fresh bounded Stage 6B integration agent from the committed Stage 6A
-checkpoint. Before editing, confirm a clean worktree and that no Unity Editor
-owns the project. Integrate the accepted controller through the exact seams in
-the Stage 6B section, pair every transient renderer lifetime with explicit
-unregistration, keep controller parameters optional for existing tests, and add
-input/UI integration tests. Do not begin screenshot, platform-build, or tuning
-claims until the integrated runtime can switch all three modes reliably.
+Start with a fresh bounded read-only Stage 6B verification agent to complete the
+interrupted post-correction audit. If it finds no blocking defect, begin Stage
+6C with a separate validation agent: capture and inspect Clean/Lite/Full at one
+and four players, measure the four-camera cost, validate the manual lobby/pause
+toggle, and compile fresh macOS plus feasible Windows/WebGL shader builds. Do
+not alter shared URP assets. If Full Ink misses the frame/readability target,
+apply the documented outline fallback order and rerun evidence before accepting
+the visual mode.

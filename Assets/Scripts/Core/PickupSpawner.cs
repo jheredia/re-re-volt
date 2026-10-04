@@ -11,6 +11,7 @@ namespace Core
         private PickupCycle cycle;
         private Transform box;
         private Renderer boxRenderer;
+        private Material boxSourceMaterial;
         private Collider trigger;
 
         public bool IsAvailable => cycle != null && cycle.IsAvailable(owner.SimulationTime);
@@ -25,8 +26,9 @@ namespace Core
             volume.size = new Vector3(1.5f, 1.7f, 1.5f);
             trigger = volume;
             box = owner.CreateVisual(transform, "Pickup box", PrimitiveType.Cube,
-                Vector3.zero, Vector3.one * .85f, owner.BoltMaterial).transform;
+                Vector3.zero, Vector3.one * .85f, owner.BoltMaterial, true).transform;
             boxRenderer = box.GetComponent<Renderer>();
+            boxSourceMaterial = owner.BoltMaterial;
             owner.CreateVisual(box, "White band", PrimitiveType.Cube,
                 Vector3.zero, new Vector3(1.05f, .2f, 1.05f), owner.FeedbackMaterial);
             owner.CreateVisual(transform, "Pickup base", PrimitiveType.Cylinder,
@@ -61,10 +63,16 @@ namespace Core
             bool available = IsAvailable;
             box.gameObject.SetActive(available);
             trigger.enabled = available;
-            boxRenderer.sharedMaterial = Offering == WeaponKind.Bolt ? owner.BoltMaterial : owner.OilMaterial;
+            Material nextMaterial = Offering == WeaponKind.Bolt ? owner.BoltMaterial : owner.OilMaterial;
+            owner.UpdateVisualSourceMaterial(boxRenderer, nextMaterial, ref boxSourceMaterial);
         }
 
         private void OnTriggerEnter(Collider other) => owner?.TryCollect(this, other);
         private void OnTriggerStay(Collider other) => owner?.TryCollect(this, other);
+
+        private void OnDestroy()
+        {
+            if (owner != null) owner.UnregisterVisualTree(gameObject);
+        }
     }
 }

@@ -34,12 +34,18 @@ namespace Presentation
 
         public sealed class Result : IDisposable
         {
-            internal Result(GameObject root, Transform[] grid, RaceCheckpoint[] checkpoints, Material[] materials)
+            private readonly VisualStyleController visualStyle;
+            private readonly Renderer[] renderers;
+
+            internal Result(GameObject root, Transform[] grid, RaceCheckpoint[] checkpoints, Material[] materials,
+                VisualStyleController styleController, Renderer[] registeredRenderers)
             {
                 Root = root;
                 Grid = grid;
                 Checkpoints = checkpoints;
                 RuntimeMaterials = materials;
+                visualStyle = styleController;
+                renderers = registeredRenderers;
             }
 
             public GameObject Root { get; }
@@ -50,6 +56,9 @@ namespace Presentation
 
             public void Dispose()
             {
+                if (visualStyle != null && renderers != null)
+                    for (int i = 0; i < renderers.Length; i++)
+                        visualStyle.UnregisterRenderer(renderers[i]);
                 for (int i = 0; i < RuntimeMaterials.Length; i++)
                 {
                     if (RuntimeMaterials[i] == null) continue;
@@ -59,7 +68,8 @@ namespace Presentation
             }
         }
 
-        public static Result Build(RaceManager raceManager, Transform parent = null)
+        public static Result Build(RaceManager raceManager, Transform parent = null,
+            VisualStyleController visualStyle = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
 
@@ -85,9 +95,25 @@ namespace Presentation
 
             Transform[] grid = CreateGrid(root.transform, stripe);
             RaceCheckpoint[] checkpoints = CreateCheckpoints(root.transform, raceManager, stripe, barrier);
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            if (visualStyle != null)
+                for (int i = 0; i < renderers.Length; i++)
+                    visualStyle.RegisterRenderer(renderers[i], IsOutlineEligible(renderers[i].gameObject.name));
             return new Result(root, grid, checkpoints,
-                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite });
+                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite }, visualStyle, renderers);
         }
+
+        // Builder-owned categories make outline eligibility explicit without coupling the style controller to names.
+        private static bool IsOutlineEligible(string itemName) =>
+            itemName.StartsWith("Outer_", StringComparison.Ordinal) ||
+            itemName.StartsWith("Inner_", StringComparison.Ordinal) ||
+            itemName.StartsWith("StartArch_", StringComparison.Ordinal) ||
+            itemName.StartsWith("Cardboard", StringComparison.Ordinal) ||
+            itemName.StartsWith("PaintCan_", StringComparison.Ordinal) ||
+            itemName == "TapeRoll" ||
+            itemName == "Ruler" ||
+            itemName.StartsWith("Pencil_", StringComparison.Ordinal) ||
+            itemName.StartsWith("Cable_", StringComparison.Ordinal);
 
         public static Pose GetGridPose(int index)
         {
