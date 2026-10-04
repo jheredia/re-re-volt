@@ -9,7 +9,9 @@ Current physical evidence: a USB Xbox Series controller (`VID 0x045e`,
 Join/start, sustained driving and checkpoints, pause/resume, recovery,
 disconnect/reconnect ownership, rematch, results/lobby return, and CSV export
 passed. Multiple simultaneous physical controllers and Windows runtime remain
-to be tested.
+to be tested. On 2026-10-04, both packaged archives and all published hashes
+were revalidated, and a fresh extraction of the macOS ZIP passed lobby,
+keyboard join, race start, pause, and clean-exit smoke testing.
 
 ## Launch
 
@@ -92,7 +94,7 @@ driver has completed one full race with every model.
 The game logs the exact CSV destination with a `[HandlingBakeOff]` message.
 Default desktop locations are:
 
-- macOS CSV: `~/Library/Application Support/DefaultCompany/re-re-volt/HandlingBakeOff/`
+- macOS CSV: `~/Library/Application Support/com.Unity-Technologies.com.unity.template.urp-blank/HandlingBakeOff/`
 - macOS log: `~/Library/Logs/DefaultCompany/re-re-volt/Player.log`
 - Windows CSV: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\re-re-volt\HandlingBakeOff\`
 - Windows log: `%USERPROFILE%\AppData\LocalLow\DefaultCompany\re-re-volt\Player.log`

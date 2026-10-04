@@ -1,5 +1,32 @@
 # Handover — Stage 5 Integration, Polish, and Validation
 
+## Stage 5.1 packaged-artifact revalidation — 2026-10-04
+
+The committed source baseline remains clean on
+`codex/local-multiplayer-prototype` at `bbbc56a`. The ignored distribution
+bundle under `Builds/Stage51/` was revalidated after the previous temporary
+extraction had expired:
+
+- `shasum -a 256 -c SHA256SUMS.txt` passed for both ZIP archives and
+  `QUICK_START.txt`.
+- Complete `unzip -t` checks passed for the macOS and Windows archives.
+- A fresh extraction at `/private/tmp/stage51-acceptance.nn3CVt/` contains an
+  ARM64 Mach-O macOS executable and a PE32+ x86-64 Windows executable. The
+  macOS metadata reports Unity `6000.6.0f1`, version `0.1.0`, and minimum
+  macOS `12.0`.
+- The freshly extracted macOS app launched into the lobby. Keyboard join,
+  race start, pause, and clean exit were directly exercised. The resulting
+  Player log records `MainMenu -> Loading -> Playing -> Paused -> MainMenu`
+  and contains no exception, error, crash, fatal, assertion, or failed match.
+- Unity Editor was not running, the player was closed after validation, and
+  the Git worktree remained clean.
+
+This proves that the published macOS archive is independently extractable and
+runnable; it does not replace the earlier complete physical-controller races.
+No external gamepad was visible during this checkpoint. Final Stage 5.1
+acceptance still requires simultaneous physical controllers, physical combat,
+the blind A-D preference test, and Windows runtime execution.
+
 ## Stage 5.1 physical Xbox controller checkpoint — 2026-09-29
 
 The macOS ARM64 player passed a real-device single-player smoke test with a USB
