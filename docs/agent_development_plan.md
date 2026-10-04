@@ -122,6 +122,38 @@ adds one coordinator that exports a per-player CSV only after full race
 completion. Manual slalom and preference columns stay blank until a facilitator
 records them; automatic telemetry must never fabricate subjective evidence.
 
+Physical multi-controller comparison, physical combat validation, and Windows
+runtime validation remain deferred by user direction. They are acceptance work,
+not prerequisites for continuing the playable prototype.
+
+### Stage 6 — Switchable visual identity and basic vehicle silhouettes
+
+Stage 6 keeps the current clean 3D presentation as a real control condition and
+adds a global shader-driven comparison with three modes: `CLEAN 3D`, `INK LITE`,
+and `FULL INK`. The mode may be changed in the lobby or while manually paused,
+does not alter gameplay state, and applies to the whole local session rather
+than individual players. `CLEAN 3D` must restore the exact original material
+references. `INK LITE` adds banded cel lighting without outlines. `FULL INK`
+adds stronger contrast and selective geometry outlines while retaining the same
+underlying models and player colors.
+
+The selected target is the hand-inked 3D concept in
+`docs/art/stage6-inked-gameplay-target.png`, revised around a smaller,
+conventional RC touring-car silhouette. The shader establishes lighting,
+contrast, and contours; authored textures and decals will later provide chipped
+paint, brush marks, and wear. Early vehicle exploration stays bounded to four
+basic families—touring, buggy, RC truck, and drift—while special novelty
+vehicles remain a later content stage.
+
+Bounded deliverables are: an isolated mode/controller and shader-assets agent;
+a runtime-composition and input/UI integration agent; an independent visual,
+performance, test, and build validation agent; then overseer reconciliation.
+No renderer feature, package, shared URP asset, physics, handling, race-rule, or
+camera-layout change belongs in this stage. Gate: all three modes switch without
+allocating duplicate materials/outlines, player and pickup colors remain correct,
+one- and four-camera views remain readable, and returning to Clean exactly
+restores the baseline presentation.
+
 ## Integration rules
 
 - Each stage begins only after the previous stage is reviewed and reconciled.
