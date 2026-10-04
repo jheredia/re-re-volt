@@ -69,6 +69,62 @@ race starts.
       resumes ownership without another player taking control.
 - [ ] A completed race creates one handling CSV row per joined player.
 
+## Final Stage 5.1 acceptance session
+
+One friends session can close the remaining macOS hardware and handling
+evidence only when every item below passes. Use the controls above and the
+existing blind A–D rotation below; do not substitute keyboards, virtual
+devices, or automated input for the required physical gamepads.
+
+- [ ] Before joining, record the exact manufacturer, model, and connection
+      type of every controller, then join two, three, and four physical
+      gamepads in turn.
+- [ ] At each player count, have one driver operate at a time and confirm that
+      steering, throttle, brake/drift, pickup, pause, and recovery affect only
+      that driver's car and HUD.
+- [ ] Visually inspect the two-, three-, and four-player layouts: every
+      viewport is distinct, each HUD belongs to its car, and no essential HUD
+      text is clipped, hidden, or assigned to the wrong player.
+- [ ] In the four-player race, complete a projectile pass: one driver collects
+      a projectile, fires it, another driver visibly receives its effect, and
+      that recipient regains control and can use **Recover** afterward.
+- [ ] Complete the same collect/deploy/receive/control-restored/**Recover**
+      sequence with an oil pickup. Record a failure if either pickup cannot be
+      deliberately acquired, delivered, or recovered from.
+- [ ] Pause and resume from a gamepad, disconnect one joined gamepad, confirm
+      the interruption is visible, reconnect that same device, and verify it
+      retains its original car and HUD without stealing another player's
+      ownership.
+- [ ] Exercise manual recovery for every joined player, complete the
+      four-player race, choose rematch, verify roster/model/ownership
+      persistence, and complete the rematch.
+- [ ] Run the full blind A–D rotation below and collect every driver's ranking,
+      confidence score, and short reason before revealing telemetry.
+- [ ] Record the exact filename for every generated CSV and the copied
+      `Player.log`; scan the log for unexpected exceptions, errors, crashes,
+      fatal messages, assertions, or failures, and attach excerpts for every
+      hit that is not an already documented warning.
+
+## Windows runtime smoke (still pending)
+
+Do not report Windows runtime validation until this checklist has been
+performed on a Windows PC.
+
+- [ ] Freshly extract `ReReVolt-Stage51-Windows-x86_64.zip` and launch the
+      expected `ReReVolt.exe` with its adjacent `ReReVolt_Data`,
+      `MonoBleedingEdge`, and DLL files intact.
+- [ ] Record the Windows version, display resolution/scaling, and exact
+      controller model. Confirm the game opens in usable borderless fullscreen
+      at the desktop resolution, with no cropped lobby, viewport, or HUD.
+- [ ] Using the controls above, join and finish one keyboard race and one
+      physical-gamepad race; cover forward/reverse, steering, brake/drift,
+      pickup/fire, recovery, pause/resume, results, and rematch or lobby return.
+- [ ] Confirm the Windows CSV and `Player.log` paths listed below exist, record
+      their exact filenames, and verify the completed runs appear in the CSV.
+- [ ] Scan `Player.log` for unexpected exceptions, errors, crashes, fatal
+      messages, assertions, or failures; preserve the log and report every
+      unexplained match instead of treating launch alone as a pass.
+
 ## Four-person blind A–D bake-off
 
 Use the same build, circuit, lap count, vehicle, camera, and controller for all
