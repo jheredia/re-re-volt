@@ -13,6 +13,7 @@ namespace Vehicle
             PlayerIndex = index;
             User = user;
             Vehicle = vehicle;
+            FamilyVisual = vehicle != null ? vehicle.GetComponent<VehicleFamilyVisual>() : null;
             Input = input;
             Recovery = recovery;
             ChaseCamera = chaseCamera;
@@ -26,6 +27,7 @@ namespace Vehicle
         internal bool WasConnected { get; set; }
         public int PlayerIndex { get; }
         public VehicleController Vehicle { get; }
+        public VehicleFamilyVisual FamilyVisual { get; }
         public InputHandler Input { get; }
         public VehicleRecovery Recovery { get; }
         public ChaseCamera ChaseCamera { get; }

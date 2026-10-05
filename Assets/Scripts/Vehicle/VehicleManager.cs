@@ -40,6 +40,7 @@ namespace Vehicle
         public event Action<LocalPlayer> ConfirmRequested;
         public event Action<LocalPlayer> BackRequested;
         public event Action<LocalPlayer> HandlingModelChanged;
+        public event Action<LocalPlayer> VehicleFamilyChanged;
         public event Action<LocalPlayer> VisualStyleCycleRequested;
 
         private void Awake()
@@ -183,6 +184,7 @@ namespace Vehicle
             input.BackRequested += () => BackRequested?.Invoke(joined);
             input.VisualStyleCycleRequested += () => VisualStyleCycleRequested?.Invoke(joined);
             input.HandlingModelCycleRequested += direction => TryCycleHandlingModel(joined.PlayerIndex, direction);
+            input.VehicleFamilyCycleRequested += direction => TryCycleVehicleFamily(joined.PlayerIndex, direction);
             input.LeaveRequested += () => TryLeavePlayer(joined.PlayerIndex);
             recovery.Recovered += chase.SnapToTarget;
 
@@ -222,6 +224,66 @@ namespace Vehicle
             int wrapped = (current + step + count) % count;
             if (!player.Vehicle.TrySelectHandlingModel((HandlingModelId)(first + wrapped))) return false;
             HandlingModelChanged?.Invoke(player);
+            return true;
+        }
+
+        /// <summary>Replaces only one connected lobby player's generated silhouette.</summary>
+        public bool TryCycleVehicleFamily(int playerIndex, int direction)
+        {
+            if (raceManager == null || raceManager.CurrentState != RaceManager.RaceState.Idle || direction == 0)
+                return false;
+            for (int i = 0; i < players.Count; i++)
+                if (!players[i].IsConnected) return false;
+            LocalPlayer player = players.Find(candidate => candidate.PlayerIndex == playerIndex);
+            if (player == null || !player.IsConnected || player.FamilyVisual == null) return false;
+
+            VehicleFamilyVisual familyVisual = player.FamilyVisual;
+            VehicleFamilyId nextFamily = VehicleFamilyCatalog.Wrap(familyVisual.FamilyId, direction < 0 ? -1 : 1);
+            Renderer[] oldSourceRenderers = CopyRenderers(familyVisual.SourceRenderers);
+            MaterialPropertyBlock playerProperties = new MaterialPropertyBlock();
+            if (familyVisual.ColorableBodyRenderers.Count > 0)
+                familyVisual.ColorableBodyRenderers[0].GetPropertyBlock(playerProperties);
+
+            UnregisterRenderers(oldSourceRenderers);
+            VehicleFamilyVisualReplacement replacement;
+            try
+            {
+                replacement = PrototypeVehicleFactory.PrepareFamilyVisualReplacement(
+                    player.Vehicle.gameObject, nextFamily);
+            }
+            catch (Exception exception)
+            {
+                RestoreRendererRegistrations(oldSourceRenderers);
+                Debug.LogError($"[VehicleManager] Vehicle-family rebuild failed and was rolled back: " +
+                               $"{exception.GetType().Name}: {exception.Message}", this);
+                return false;
+            }
+
+            if (!TryRegisterRenderers(replacement.NewSourceRenderers, out string registrationError))
+            {
+                replacement.Dispose();
+                RestoreRendererRegistrations(oldSourceRenderers);
+                Debug.LogError($"[VehicleManager] Vehicle-family registration failed and was rolled back: " +
+                               registrationError, this);
+                return false;
+            }
+
+            try
+            {
+                replacement.Commit();
+            }
+            catch (Exception exception)
+            {
+                UnregisterRenderers(replacement.NewSourceRenderers);
+                replacement.Dispose();
+                RestoreRendererRegistrations(oldSourceRenderers);
+                Debug.LogError($"[VehicleManager] Vehicle-family commit failed and was rolled back: " +
+                               $"{exception.GetType().Name}: {exception.Message}", this);
+                return false;
+            }
+
+            ApplyPropertyBlock(replacement.NewColorableBodyRenderers, playerProperties);
+            VehicleFamilyChanged?.Invoke(player);
             return true;
         }
 
@@ -351,6 +413,50 @@ namespace Vehicle
                 error = $"{exception.GetType().Name}: {exception.Message}";
                 return false;
             }
+        }
+
+        private bool TryRegisterRenderers(IReadOnlyList<Renderer> renderers, out string error)
+        {
+            error = null;
+            if (visualStyle == null) return true;
+            try
+            {
+                for (int i = 0; i < renderers.Count; i++)
+                    visualStyle.RegisterRenderer(renderers[i], renderers[i] is MeshRenderer);
+                return true;
+            }
+            catch (Exception exception)
+            {
+                UnregisterRenderers(renderers);
+                error = $"{exception.GetType().Name}: {exception.Message}";
+                return false;
+            }
+        }
+
+        private void RestoreRendererRegistrations(IReadOnlyList<Renderer> renderers)
+        {
+            if (TryRegisterRenderers(renderers, out string error)) return;
+            Debug.LogError($"[VehicleManager] Vehicle-family rollback could not restore visual-style registration: {error}",
+                this);
+        }
+
+        private void UnregisterRenderers(IReadOnlyList<Renderer> renderers)
+        {
+            if (visualStyle == null) return;
+            for (int i = 0; i < renderers.Count; i++) visualStyle.UnregisterRenderer(renderers[i]);
+        }
+
+        private static Renderer[] CopyRenderers(IReadOnlyList<Renderer> renderers)
+        {
+            Renderer[] copy = new Renderer[renderers.Count];
+            for (int i = 0; i < renderers.Count; i++) copy[i] = renderers[i];
+            return copy;
+        }
+
+        private static void ApplyPropertyBlock(IReadOnlyList<Renderer> renderers, MaterialPropertyBlock properties)
+        {
+            for (int i = 0; i < renderers.Count; i++)
+                if (renderers[i] != null) renderers[i].SetPropertyBlock(properties);
         }
 
         private void UnregisterVehicleRenderers(GameObject vehicle)

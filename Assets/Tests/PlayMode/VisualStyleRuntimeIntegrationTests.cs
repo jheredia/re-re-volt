@@ -229,8 +229,9 @@ namespace Tests.PlayMode
                 "Spawner destruction must unregister box, band, and base renderers.");
 
             int beforeRosterDisable = style.RegisteredRendererCount;
+            int playerRendererCount = CountSourceRenderers(player.Vehicle.gameObject);
             roster.enabled = false;
-            Assert.That(style.RegisteredRendererCount, Is.EqualTo(beforeRosterDisable - 1));
+            Assert.That(style.RegisteredRendererCount, Is.EqualTo(beforeRosterDisable - playerRendererCount));
             Assert.That(InputUser.all.Count, Is.Zero);
         }
 
@@ -250,7 +251,8 @@ namespace Tests.PlayMode
 
             Gamepad first = InputSystem.AddDevice<Gamepad>();
             Assert.That(authoredRoster.TryJoinGamepad(first, out LocalPlayer firstPlayer), Is.True);
-            Assert.That(style.RegisteredRendererCount, Is.EqualTo(baseline + 1));
+            int firstRendererCount = CountSourceRenderers(firstPlayer.Vehicle.gameObject);
+            Assert.That(style.RegisteredRendererCount, Is.EqualTo(baseline + firstRendererCount));
             Renderer firstBody = firstPlayer.Vehicle.transform.Find("Body").GetComponent<Renderer>();
             Assert.That(firstBody.transform.Find("Body_InkOutline"), Is.Not.Null,
                 "A real authored MeshRenderer shell must remain outline eligible.");
@@ -259,8 +261,9 @@ namespace Tests.PlayMode
             Assert.That(InputUser.all.Count, Is.Zero);
 
             Gamepad second = InputSystem.AddDevice<Gamepad>();
-            Assert.That(authoredRoster.TryJoinGamepad(second, out _), Is.True);
-            Assert.That(style.RegisteredRendererCount, Is.EqualTo(baseline + 1));
+            Assert.That(authoredRoster.TryJoinGamepad(second, out LocalPlayer secondPlayer), Is.True);
+            Assert.That(style.RegisteredRendererCount,
+                Is.EqualTo(baseline + CountSourceRenderers(secondPlayer.Vehicle.gameObject)));
             authoredRoster.enabled = false;
             Assert.That(style.RegisteredRendererCount, Is.EqualTo(baseline));
             Assert.That(InputUser.all.Count, Is.Zero);
@@ -415,6 +418,15 @@ namespace Tests.PlayMode
         {
             player.Vehicle.Teleport(new Pose(position, Quaternion.Euler(0f, yaw, 0f)));
             Physics.SyncTransforms();
+        }
+
+        private static int CountSourceRenderers(GameObject owner)
+        {
+            int count = 0;
+            Renderer[] renderers = owner.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+                if (!renderers[i].gameObject.name.EndsWith("_InkOutline")) count++;
+            return count;
         }
 
         private IEnumerator Press(params Key[] keys)

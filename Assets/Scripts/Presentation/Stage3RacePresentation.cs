@@ -84,6 +84,7 @@ namespace Presentation
             vehicles.ConfirmRequested += OnConfirmRequested;
             vehicles.BackRequested += OnBackRequested;
             vehicles.HandlingModelChanged += OnHandlingModelChanged;
+            vehicles.VehicleFamilyChanged += OnVehicleFamilyChanged;
             vehicles.VisualStyleCycleRequested += OnVisualStyleCycleRequested;
             vehicles.ControllerConnectionChanged += OnControllerConnectionChanged;
             if (visualStyle != null) visualStyle.StyleChanged += OnVisualStyleChanged;
@@ -107,6 +108,7 @@ namespace Presentation
                 vehicles.ConfirmRequested -= OnConfirmRequested;
                 vehicles.BackRequested -= OnBackRequested;
                 vehicles.HandlingModelChanged -= OnHandlingModelChanged;
+                vehicles.VehicleFamilyChanged -= OnVehicleFamilyChanged;
                 vehicles.VisualStyleCycleRequested -= OnVisualStyleCycleRequested;
                 vehicles.ControllerConnectionChanged -= OnControllerConnectionChanged;
             }
@@ -155,6 +157,12 @@ namespace Presentation
         }
 
         private void OnHandlingModelChanged(LocalPlayer player)
+        {
+            RefreshLobbyText();
+            RefreshHudText();
+        }
+
+        private void OnVehicleFamilyChanged(LocalPlayer player)
         {
             RefreshLobbyText();
             RefreshHudText();
@@ -401,6 +409,7 @@ namespace Presentation
                     ? weaponName
                     : "--";
                 label.text = $"P{player.PlayerIndex + 1}   {HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)}   " +
+                             $"{GetVehicleFamilyLabel(player)}   " +
                              $"{racer.CurrentPosition}/{total}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
                              $"{FormatTime(race.ElapsedTime)}   WPN [{weapon}]";
             }
@@ -423,7 +432,8 @@ namespace Presentation
                     builder.Append("P").Append(player.PlayerIndex + 1).Append("  ")
                         .Append(player.Input.IsKeyboardPlayer ? "KEYBOARD  " : "GAMEPAD  ")
                         .Append(HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)).Append("  ")
-                        .Append(player.IsConnected ? "READY" : "RECONNECT DEVICE").AppendLine();
+                        .Append(player.IsConnected ? "READY  " : "RECONNECT DEVICE  ")
+                        .Append(GetVehicleFamilyLabel(player)).AppendLine();
                 }
                 builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
@@ -433,10 +443,18 @@ namespace Presentation
             if (visualStyle != null)
                 builder.Append("VISUAL STYLE  ").Append(GetVisualStyleLabel(visualStyle.Mode))
                     .AppendLine("  [V / R3]");
-            builder.Append("LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
+            builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
+                           "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
                            "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
+        }
+
+        private static string GetVehicleFamilyLabel(LocalPlayer player)
+        {
+            return player?.FamilyVisual == null
+                ? "VEHICLE ?"
+                : VehicleFamilyCatalog.GetPublicLabel(player.FamilyVisual.FamilyId);
         }
 
         private static string GetVisualStyleLabel(VisualStyleMode mode) => mode switch

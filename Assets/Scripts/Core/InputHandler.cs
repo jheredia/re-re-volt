@@ -23,6 +23,7 @@ namespace Core
         public event Action ConfirmRequested;
         public event Action BackRequested;
         public event Action<int> HandlingModelCycleRequested;
+        public event Action<int> VehicleFamilyCycleRequested;
         public event Action VisualStyleCycleRequested;
         public bool GameplaySuspended { get; set; }
         public bool IsKeyboardPlayer { get; private set; }
@@ -101,8 +102,10 @@ namespace Core
             // Menu commands share the same ownership/events as driving. One press has one state-specific meaning.
             if (race.CurrentState == RaceManager.RaceState.Idle)
             {
+                int familyDirection = GetVehicleFamilyCycleDirection(keyboard, pad);
                 int modelDirection = GetHandlingModelCycleDirection(keyboard, pad);
-                if (modelDirection != 0) HandlingModelCycleRequested?.Invoke(modelDirection);
+                if (familyDirection != 0) VehicleFamilyCycleRequested?.Invoke(familyDirection);
+                else if (modelDirection != 0) HandlingModelCycleRequested?.Invoke(modelDirection);
                 else if (keyboard != null ? back : pad.selectButton.wasPressedThisFrame) LeaveRequested?.Invoke();
                 else if (confirm) ConfirmRequested?.Invoke();
                 return;
@@ -153,6 +156,17 @@ namespace Core
             bool next = keyboard != null
                 ? keyboard.rightArrowKey.wasPressedThisFrame || keyboard.eKey.wasPressedThisFrame
                 : pad.dpad.right.wasPressedThisFrame || pad.rightShoulder.wasPressedThisFrame;
+            return Axis(next, previous) > 0f ? 1 : Axis(next, previous) < 0f ? -1 : 0;
+        }
+
+        private static int GetVehicleFamilyCycleDirection(Keyboard keyboard, Gamepad pad)
+        {
+            bool previous = keyboard != null
+                ? keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame
+                : pad.dpad.up.wasPressedThisFrame;
+            bool next = keyboard != null
+                ? keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame
+                : pad.dpad.down.wasPressedThisFrame;
             return Axis(next, previous) > 0f ? 1 : Axis(next, previous) < 0f ? -1 : 0;
         }
 

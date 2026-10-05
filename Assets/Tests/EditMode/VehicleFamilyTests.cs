@@ -77,8 +77,15 @@ namespace Tests.EditMode
 
                 Assert.That(visual, Is.Not.Null);
                 Assert.That(visual.FamilyId, Is.EqualTo(definition.Id));
+                Assert.That(visual.SourceRenderers.Count, Is.GreaterThan(visual.ColorableBodyRenderers.Count));
                 Assert.That(visual.ColorableBodyRenderers.Count, Is.GreaterThanOrEqualTo(2));
                 Assert.That(vehicle.transform.Find("Body"), Is.Not.Null);
+                foreach (Renderer source in visual.SourceRenderers)
+                {
+                    CollectionAssert.Contains(allRenderers, source);
+                    Assert.That(source.name, Does.Not.StartWith("WheelVisual"));
+                    Assert.That(source, Is.TypeOf<MeshRenderer>());
+                }
                 foreach (Renderer colorable in visual.ColorableBodyRenderers)
                 {
                     Assert.That(colorable.name, Does.StartWith("Body"));
@@ -124,6 +131,55 @@ namespace Tests.EditMode
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() =>
                 PrototypeVehicleFactory.Create(default, (VehicleFamilyId)99));
+        }
+
+        [Test]
+        public void StagedReplacementRollsBackWithoutTouchingCurrentVehicle()
+        {
+            GameObject vehicle = Track(PrototypeVehicleFactory.Create(default, VehicleFamilyId.Touring));
+            VehicleFamilyVisual visual = vehicle.GetComponent<VehicleFamilyVisual>();
+            Renderer originalBody = vehicle.transform.Find("Body").GetComponent<Renderer>();
+            int originalChildCount = vehicle.transform.childCount;
+
+            VehicleFamilyVisualReplacement replacement =
+                PrototypeVehicleFactory.PrepareFamilyVisualReplacement(vehicle, VehicleFamilyId.Buggy);
+
+            Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.Touring));
+            Assert.That(vehicle.transform.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
+            Assert.That(replacement.NewSourceRenderers, Has.Count.GreaterThan(visual.SourceRenderers.Count));
+            foreach (Renderer staged in replacement.NewSourceRenderers)
+                Assert.That(staged.gameObject.activeSelf, Is.False);
+
+            replacement.Dispose();
+
+            Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.Touring));
+            Assert.That(vehicle.transform.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
+            Assert.That(vehicle.transform.childCount, Is.EqualTo(originalChildCount));
+        }
+
+        [Test]
+        public void CommittedReplacementPreservesRootPhysicsWheelsAndController()
+        {
+            GameObject vehicle = Track(PrototypeVehicleFactory.Create(default, VehicleFamilyId.Touring));
+            Rigidbody body = vehicle.GetComponent<Rigidbody>();
+            BoxCollider chassis = vehicle.GetComponent<BoxCollider>();
+            VehicleController controller = vehicle.GetComponent<VehicleController>();
+            WheelCollider[] wheels = GetOrderedWheels(vehicle);
+            VehicleFamilyVisual visual = vehicle.GetComponent<VehicleFamilyVisual>();
+
+            VehicleFamilyVisualReplacement replacement =
+                PrototypeVehicleFactory.PrepareFamilyVisualReplacement(vehicle, VehicleFamilyId.RcTruck);
+            replacement.Commit();
+
+            Assert.That(vehicle.GetComponent<Rigidbody>(), Is.SameAs(body));
+            Assert.That(vehicle.GetComponent<BoxCollider>(), Is.SameAs(chassis));
+            Assert.That(vehicle.GetComponent<VehicleController>(), Is.SameAs(controller));
+            Assert.That(vehicle.GetComponent<VehicleFamilyVisual>(), Is.SameAs(visual));
+            Assert.That(GetOrderedWheels(vehicle), Is.EqualTo(wheels));
+            Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.RcTruck));
+            Assert.That(vehicle.transform.Find("Body_TruckCab"), Is.Not.Null);
+            Assert.That(vehicle.transform.Find("Body_TouringCabin"), Is.Null);
+            Assert.That(vehicle.GetComponentsInChildren<Collider>(true), Has.Length.EqualTo(5));
         }
 
         private GameObject Track(GameObject gameObject)

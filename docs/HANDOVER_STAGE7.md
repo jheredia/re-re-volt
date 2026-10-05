@@ -79,6 +79,14 @@ platform builds, broad suites, screenshot matrices, or performance validation.
 
 ## Validation cadence and deferred work
 
+Stage 7B keeps one deliberate P3 test gap: the visual-style
+registration-failure rollback path is implemented defensively but is not forced
+through a test-only injection seam. Adding a fake/failable rendering service
+solely for that low-severity path would broaden the prototype architecture. The
+consolidated acceptance pass should retain static review of that rollback and
+validate normal registration/count cleanup; a real observed failure should
+justify a narrower reproducible test seam.
+
 The user explicitly requested implementation-first development to avoid token
 and usage spend on repeated builds. The next stages therefore use narrow static
 or compile checks only when necessary. After implementation freezes in Stage 9,

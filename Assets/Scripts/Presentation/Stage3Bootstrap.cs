@@ -11,6 +11,13 @@ namespace Presentation
     public sealed class Stage3Bootstrap : MonoBehaviour
     {
         public const string PrototypeSceneName = "SampleScene";
+        private static readonly Color[] PlayerColors =
+        {
+            new(.95f, .2f, .12f),
+            new(.1f, .52f, .95f),
+            new(.98f, .72f, .08f),
+            new(.3f, .86f, .4f)
+        };
 
         private PrototypeCircuitBuilder.Result circuit;
         private bool initialized;
@@ -71,6 +78,7 @@ namespace Presentation
             }
 
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
+            VehicleManager.VehicleFamilyChanged += ApplyPlayerColor;
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
             Presentation.Configure(RaceManager, VehicleManager, VisualStyle);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
@@ -146,20 +154,33 @@ namespace Presentation
         private void ConfigureJoinedPlayer(LocalPlayer player)
         {
             player.Recovery.ConfigureGroundMask(circuit.DrivableMask);
-            Renderer body = player.Vehicle.transform.Find("Body")?.GetComponent<Renderer>();
-            if (body == null) return;
-            Color[] colors =
-            {
-                new Color(.95f, .2f, .12f),
-                new Color(.1f, .52f, .95f),
-                new Color(.98f, .72f, .08f),
-                new Color(.3f, .86f, .4f)
-            };
+            ApplyPlayerColor(player);
+        }
+
+        private static void ApplyPlayerColor(LocalPlayer player)
+        {
+            if (player == null || player.PlayerIndex < 0 || player.PlayerIndex >= PlayerColors.Length) return;
+            VehicleFamilyVisual familyVisual = player.FamilyVisual;
             MaterialPropertyBlock properties = new MaterialPropertyBlock();
-            body.GetPropertyBlock(properties);
-            properties.SetColor("_BaseColor", colors[player.PlayerIndex]);
-            properties.SetColor("_Color", colors[player.PlayerIndex]);
-            body.SetPropertyBlock(properties);
+            if (familyVisual != null && familyVisual.ColorableBodyRenderers.Count > 0)
+            {
+                for (int i = 0; i < familyVisual.ColorableBodyRenderers.Count; i++)
+                    ApplyPlayerColor(familyVisual.ColorableBodyRenderers[i], PlayerColors[player.PlayerIndex], properties);
+                return;
+            }
+
+            // Authored and legacy prefabs may predate VehicleFamilyVisual. Preserve their established Body seam.
+            Renderer body = player.Vehicle.transform.Find("Body")?.GetComponent<Renderer>();
+            if (body != null) ApplyPlayerColor(body, PlayerColors[player.PlayerIndex], properties);
+        }
+
+        private static void ApplyPlayerColor(Renderer renderer, Color color, MaterialPropertyBlock properties)
+        {
+            properties.Clear();
+            renderer.GetPropertyBlock(properties);
+            properties.SetColor("_BaseColor", color);
+            properties.SetColor("_Color", color);
+            renderer.SetPropertyBlock(properties);
         }
 
         private void ConfigureGameManager()
@@ -179,7 +200,11 @@ namespace Presentation
 
         private void OnDestroy()
         {
-            if (VehicleManager != null) VehicleManager.PlayerJoined -= ConfigureJoinedPlayer;
+            if (VehicleManager != null)
+            {
+                VehicleManager.PlayerJoined -= ConfigureJoinedPlayer;
+                VehicleManager.VehicleFamilyChanged -= ApplyPlayerColor;
+            }
             circuit?.Dispose();
         }
     }
