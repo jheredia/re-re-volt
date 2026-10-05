@@ -19,8 +19,10 @@ on a single machine using controllers and automatic split-screen cameras.
 - Controller navigation from join/setup through results and rematch.
 - Reproducible macOS and Windows desktop builds with a documented control scheme.
 
-Online multiplayer, progression, vehicle selection, content unlocks, and a
-large content library are explicitly outside this vertical slice.
+Online multiplayer, progression, content unlocks, and a large content library
+are explicitly outside this vertical slice. A small four-family vehicle roster
+and lobby selection are now included so the prototype can test distinct RC
+silhouettes without turning the vertical slice into a content-production game.
 
 ## Stages and ownership
 
@@ -153,6 +155,58 @@ camera-layout change belongs in this stage. Gate: all three modes switch without
 allocating duplicate materials/outlines, player and pickup colors remain correct,
 one- and four-camera views remain readable, and returning to Clean exactly
 restores the baseline presentation.
+
+### Stage 7 — Basic vehicle roster and lobby selection
+
+An implementation agent introduces a data-driven four-family roster: touring,
+buggy, RC truck, and drift. Each family receives an original, readable prototype
+silhouette and an independent lobby selection that is visibly separate from the
+existing `MODEL A`–`MODEL D` handling bake-off. The first pass keeps competitive
+performance equivalent so visual preference and handling-model feedback are not
+silently confounded; family-specific stats remain an explicit later tuning step.
+Selections persist through race, results, rematch, and lobby return, and every
+family supports all three visual-style modes. Gate: one to four players can pick
+families independently, spawn the correct vehicle, retain player colors, and
+complete the existing race/combat loop without ownership leakage.
+
+### Stage 8 — RC-club identity, characters, track art, and audio
+
+Bounded content agents replace the most visible placeholders with an original
+South American RC-club presentation: a coherent club venue, authored surface
+textures and decals, readable pickup/combat effects, a small cast of stylized
+drivers, menu/HUD art, and a basic audio mix. The ink shader remains optional,
+so authored assets must also read in Clean 3D. Character work follows the lively
+ensemble spirit of classic comedic racers without copying protected characters
+or designs. Gate: the complete race loop communicates state without developer
+geometry or silent interactions, and the visual identity remains readable in
+one- and four-player layouts.
+
+### Stage 9 — Demo flow, settings, resilience, and final acceptance
+
+Implementation agents complete the player-facing demo flow: title/setup,
+vehicle and handling selection, pause/settings, results/rematch, safe device
+join/leave, saved local preferences, and clear recovery/error messaging. After
+implementation freezes, one independent acceptance stage runs the consolidated
+full test, screenshot, performance, platform-build, and launch matrix. Repeated
+cross-platform builds and broad validation are intentionally deferred until
+this freeze; implementation stages use only narrow checks needed to avoid
+compounding broken code. Windows runtime and physical multi-controller checks
+remain deferred until the user re-enables them.
+
+### Stage 10 — Online multiplayer (future expansion)
+
+Online multiplayer is a post-demo expansion, not part of the local-prototype
+acceptance gate. It requires a separately approved networking architecture,
+authority and prediction model, lobby/invite flow, synchronization rules,
+disconnect recovery, security review, and platform testing. Local split-screen
+must remain functional and must not be retrofitted around an unproven network
+transport.
+
+### Deferred optional systems
+
+The block-based track editor and the single lore-driven modular/randomized track
+remain on hold. They are worthwhile later stages, but neither should displace
+learning fixed tracks, shortcuts, vehicle feel, and the core race/combat loop.
 
 ### Post-prototype deliverable — Reproducible implementation tutorial
 

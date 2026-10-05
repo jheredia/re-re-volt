@@ -1,5 +1,28 @@
 # Handover — Stage 6 Switchable Visual Identity
 
+## Stage 6C visual/runtime checkpoint — 2026-10-05
+
+The independent visual/runtime portion is accepted with documented capture
+limitations at commit `cbdbf46`. A disposable PlayMode harness produced six
+distinct 1920x1080 Clean/Lite/Full captures at one and four players; the harness
+and its metadata were removed afterward. The existing focused input/state test
+also passed. Evidence is under `/private/tmp/stage6c-visual`, including
+`REPORT.md`, XML results, logs, screenshots, and the four-camera comparison.
+
+On Apple M4/Metal, the synchronized four-camera offscreen comparison measured
+Clean at 4.364 ms median / 5.453 ms p95, Ink Lite at 3.735 / 4.814, and Full Ink
+at 3.892 / 5.122. These are relative Editor render timings, not standalone FPS
+proof. The temporary ScreenSpaceCamera UI clone clipped some HUD badges in some
+captures; the four-player Ink Lite capture shows all four, and focused runtime
+coverage independently proves labels and mode-state gating. No physical input
+or platform-runtime claim was added.
+
+By user direction, fresh platform builds, broad test reruns, screenshot matrices,
+and final performance validation are now consolidated into the final acceptance
+stage after the remaining implementation work. Stage 6C therefore does not need
+another intermediate macOS/WebGL/Windows build pass. Windows and physical
+multi-controller work remain deferred until explicitly re-enabled.
+
 ## Stage 6B accepted checkpoint — 2026-10-04
 
 Stage 6B is implemented and reconciled on top of `4733105`. The runtime now
