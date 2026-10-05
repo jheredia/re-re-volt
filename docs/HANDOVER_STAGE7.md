@@ -1,5 +1,37 @@
 # Handover — Stage 7 Basic Vehicle Roster
 
+## Accepted checkpoint — Stage 7B selection integration
+
+Stage 7B is committed at `81878b3`. Each connected local player can now cycle
+Touring, Buggy, RC Truck, and Drift independently while the race is idle. The
+keyboard uses W/S or Up/Down; a paired gamepad uses d-pad Up/Down. These inputs
+are distinct from the existing A–D handling-model controls. Family identity is
+stored on the persistent player vehicle and therefore survives countdown, race,
+results, rematch, and lobby return.
+
+The swap stages a new silhouette, registers only its explicit family-owned
+source renderers, commits it onto the existing vehicle root, and retires the old
+sources. Rigidbody, collider, WheelColliders, `VehicleController`, `InputUser`,
+racer, recovery, camera, player index, and selected handling model remain the
+same objects. Wheel visuals stay registered throughout, so controller-owned ink
+outline children are never mistaken for new source renderers. Registration or
+commit failure restores the previous sources and does not emit a family-change
+event.
+
+`Stage3Bootstrap` colors every generated family panel and retains the legacy
+direct `Body` fallback for markerless/authored prefabs. Lobby and HUD text show
+both the public vehicle-family label and the neutral handling label. Family
+changes are rejected when any roster device is disconnected or when the race is
+outside Idle.
+
+Focused EditMode and PlayMode coverage was authored for catalog/factory
+invariants, successful commit and local disposal rollback, input ownership,
+state gates, disconnect gating, registration/outline counts, wheel-outline
+identity, property-block colors, markerless prefab compatibility, UI labels,
+and rematch/lobby persistence. Per the implementation-first cadence, Unity has
+not compiled or executed these new tests yet; that evidence remains deferred to
+the consolidated acceptance stage.
+
 ## Accepted checkpoint — Stage 7A foundation
 
 Stage 7A is committed at `d6e7b88` on `codex/local-multiplayer-prototype`.
