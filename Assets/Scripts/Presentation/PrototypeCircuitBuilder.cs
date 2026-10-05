@@ -10,6 +10,8 @@ namespace Presentation
         public const int OrderedCheckpointCount = 8;
         public const int GridCount = 4;
         public const int DrivableLayer = 8;
+        public const int VenueRendererBudget = RcClubVenueBuilder.RendererBudget;
+        public const float VenueInfieldSafetyExtent = RcClubVenueBuilder.InfieldSafetyExtent;
 
         private const float RoadHalfExtent = 15f;
         private const float RoadWidth = 7f;
@@ -38,7 +40,8 @@ namespace Presentation
             private readonly Renderer[] renderers;
 
             internal Result(GameObject root, Transform[] grid, RaceCheckpoint[] checkpoints, Material[] materials,
-                VisualStyleController styleController, Renderer[] registeredRenderers)
+                VisualStyleController styleController, Renderer[] registeredRenderers,
+                RcClubVenueBuilder.Result venue)
             {
                 Root = root;
                 Grid = grid;
@@ -46,13 +49,27 @@ namespace Presentation
                 RuntimeMaterials = materials;
                 visualStyle = styleController;
                 renderers = registeredRenderers;
+                VenueRoot = venue.Root;
+                VenueRendererCount = venue.Renderers.Length;
+                VenueOutlineEligibleRendererCount = venue.OutlineEligibleRendererCount;
             }
 
             public GameObject Root { get; }
             public Transform[] Grid { get; }
             public RaceCheckpoint[] Checkpoints { get; }
             public LayerMask DrivableMask => 1 << DrivableLayer;
+            public GameObject VenueRoot { get; }
+            public int VenueRendererCount { get; }
+            public int VenueOutlineEligibleRendererCount { get; }
+            public int RuntimeMaterialCount => RuntimeMaterials.Length;
             internal Material[] RuntimeMaterials { get; }
+
+            public bool OwnsRuntimeMaterial(Material candidate)
+            {
+                for (int i = 0; i < RuntimeMaterials.Length; i++)
+                    if (ReferenceEquals(RuntimeMaterials[i], candidate)) return true;
+                return false;
+            }
 
             public void Dispose()
             {
@@ -95,12 +112,22 @@ namespace Presentation
 
             Transform[] grid = CreateGrid(root.transform, stripe);
             RaceCheckpoint[] checkpoints = CreateCheckpoints(root.transform, raceManager, stripe, barrier);
-            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            Renderer[] circuitRenderers = root.GetComponentsInChildren<Renderer>(true);
+            RcClubVenueBuilder.Result venue = RcClubVenueBuilder.Build(root.transform,
+                new RcClubVenueBuilder.Palette(barrier, stripe, red, blue, cardboard, metal, graphite));
+            Renderer[] renderers = new Renderer[circuitRenderers.Length + venue.Renderers.Length];
+            Array.Copy(circuitRenderers, renderers, circuitRenderers.Length);
+            Array.Copy(venue.Renderers, 0, renderers, circuitRenderers.Length, venue.Renderers.Length);
             if (visualStyle != null)
-                for (int i = 0; i < renderers.Length; i++)
-                    visualStyle.RegisterRenderer(renderers[i], IsOutlineEligible(renderers[i].gameObject.name));
+            {
+                for (int i = 0; i < circuitRenderers.Length; i++)
+                    visualStyle.RegisterRenderer(circuitRenderers[i], IsOutlineEligible(circuitRenderers[i].gameObject.name));
+                for (int i = 0; i < venue.Renderers.Length; i++)
+                    visualStyle.RegisterRenderer(venue.Renderers[i], venue.IsOutlineEligible(venue.Renderers[i]));
+            }
             return new Result(root, grid, checkpoints,
-                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite }, visualStyle, renderers);
+                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite }, visualStyle, renderers,
+                venue);
         }
 
         // Builder-owned categories make outline eligibility explicit without coupling the style controller to names.
