@@ -64,6 +64,9 @@ namespace Weapons
         public IReadOnlyList<PickupSpawner> Pickups => spawnerView ??= spawners.AsReadOnly();
         public IReadOnlyList<LiveCombatWeapon> LiveWeapons => weaponView ??= liveWeapons.AsReadOnly();
         public int FeedbackCount => bursts.Count;
+        public event Action<LocalPlayer, WeaponKind> WeaponCollected;
+        public event Action<LocalPlayer, WeaponKind> WeaponFired;
+        public event Action<LocalPlayer, WeaponKind> WeaponHit;
         internal Material BoltMaterial { get; private set; }
         internal Material OilMaterial { get; private set; }
         internal Material FeedbackMaterial { get; private set; }
@@ -184,6 +187,7 @@ namespace Weapons
             if (!CanParticipate(state) || SimulationTime < state.SafeUntil || !spawner.TryCollect(state.Inventory)) return;
             PublishSlot(state);
             ShowBurst(spawner.transform.position, state.Inventory.Held);
+            WeaponCollected?.Invoke(player, state.Inventory.Held);
         }
 
         private void OnFireRequested(LocalPlayer player)
@@ -230,6 +234,7 @@ namespace Weapons
                     new Vector3(.55f, .025f, .12f), OilMaterial, true);
             }
             PublishSlot(state);
+            WeaponFired?.Invoke(player, kind);
         }
 
         private void FixedUpdate()
@@ -303,6 +308,7 @@ namespace Weapons
                     source.Kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial, true);
             }
             ShowBurst(target.Vehicle.transform.position + Vector3.up * .7f, source.Kind);
+            WeaponHit?.Invoke(target, source.Kind);
             return true;
         }
 

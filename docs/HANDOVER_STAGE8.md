@@ -1,5 +1,43 @@
 # Handover — Stage 8 RC-Club Identity
 
+## Accepted checkpoint — Stage 8B audio foundation
+
+Stage 8B adds `RcAudioPresentation`, a session-owned central 2D mix that uses
+the project's existing single-listener split-screen policy. It creates no
+listeners and does not change input, physics, race rules, handling, or weapon
+authority. `Stage3Bootstrap` composes it after the combat manager is ready.
+
+`ProceduralAudioBank` generates and caches eight original mono clips at 22.05
+kHz: engine, countdown, go, finish, UI confirmation, pickup, weapon fire, and
+impact. The fixed runtime budget is six one-shot voices, four engine voices,
+and at most four vehicle impact adapters. Generated audio totals 42,447 mono
+samples (about 166 KiB raw PCM). One-shot overflow is dropped, while race-state
+cues may replace the voice that would finish first. Per-player impacts use an
+impulse threshold and 0.14-second cooldown.
+
+The engine mix responds to existing speed and throttle state without modifying
+them. Combat authority now emits presentation events only after successful
+pickup, fire, and hit operations. Audio owns its sources, clips, subscriptions,
+and any collision adapters it creates, and cleans each of them up explicitly.
+Failure to create procedural clips leaves gameplay operational without audio.
+
+Focused PlayMode coverage was authored for the four-player voice/emitter caps,
+single enabled listener, countdown/go/finish event cues, pool overflow,
+per-player impact cooldown, disable/re-enable behavior, explicit cleanup,
+procedural clip caching/disposal, and preservation of vehicle mass and handling
+selection. Unity compilation, audible evaluation, test execution, output-device
+behavior, combat playback, and WebGL audio remain intentionally unverified
+until the consolidated acceptance stage.
+
+### Files in the Stage 8B commit
+
+- `Assets/Scripts/Audio/ProceduralAudioBank.cs` and `.meta`
+- `Assets/Scripts/Audio/RcAudioPresentation.cs` and `.meta`
+- `Assets/Scripts/Audio/VehicleImpactAudioEmitter.cs` and `.meta`
+- `Assets/Scripts/Presentation/Stage3Bootstrap.cs`
+- `Assets/Scripts/Weapons/WeaponManager.cs`
+- `Assets/Tests/PlayMode/Stage8AudioIntegrationTests.cs` and `.meta`
+
 ## Accepted checkpoint — Stage 8A venue foundation
 
 Stage 8A adds a lightweight neighborhood RC-club venue to the existing

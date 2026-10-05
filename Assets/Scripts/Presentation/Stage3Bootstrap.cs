@@ -1,4 +1,5 @@
 using Core;
+using AudioPresentation;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Vehicle;
@@ -27,6 +28,7 @@ namespace Presentation
         public Stage3RacePresentation Presentation { get; private set; }
         public WeaponManager WeaponManager { get; private set; }
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
+        public RcAudioPresentation AudioPresentation { get; private set; }
         public VisualStyleController VisualStyle { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
@@ -84,6 +86,8 @@ namespace Presentation
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
+            AudioPresentation = gameObject.AddComponent<RcAudioPresentation>();
+            AudioPresentation.Configure(RaceManager, VehicleManager, WeaponManager);
             HandlingBakeOff = gameObject.AddComponent<HandlingBakeOffCoordinator>();
             HandlingBakeOff.Configure(RaceManager, VehicleManager);
             ConfigureGameManager();
