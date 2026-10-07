@@ -160,7 +160,51 @@ be staged.
 
 ## Next implementation seam
 
-Stage 8 can continue with a separately bounded deliverable for authored surface
-textures/decals and clearer pickup/combat presentation. Keep the work unrelated
-to quarantined feedback, avoid platform builds and broad validation, and add
-focused tests or seams for the final acceptance stage to execute later.
+Split the remaining Stage 8 work into two fresh-agent deliverables. Do not
+combine them: texture integration and combat readability touch different
+owners and need separate review.
+
+### Stage 8D — authored surface texture and decal layer
+
+Create a small original bitmap set that adds wear and club identity without
+changing circuit geometry: one seamless cutting-mat/road surface, one subtle
+workbench surface, and one transparent decal sheet containing tape repairs,
+paint scuffs, tire marks, geometric club motifs, and lane-wear shapes. Avoid
+words, flags, national emblems, brands, copied racing liveries, and protected
+logos. Preserve source prompts and high-resolution source art under `docs/art`;
+ship optimized runtime textures under one stable Resources art path with
+explicit Unity 6000.6 import metadata.
+
+Integrate the two tiling textures into the existing road and floor materials
+before renderer registration. `VisualStyleController.CopySurfaceProperties`
+already copies base maps, scale, and offset, so both Clean 3D and ink modes
+must use the same authored surfaces. Add decals as a presentation-only child of
+the circuit using one shared transparent material, explicit renderer ownership,
+no colliders, no drivable-layer changes, no checkpoint/grid changes, no outline
+eligibility, and a documented renderer/material budget. Keep decals clear of
+the racing camera's most important lane markings and avoid z-fighting.
+
+Author focused tests for real resource loading, shared texture/material
+references, exact renderer budget, collider absence, bounds, unchanged grid and
+checkpoint poses, unchanged drivable mask, visual-style registration/cleanup,
+and preservation of base-map tiling across all three visual modes. Defer Unity
+execution, screenshot review, profiling, and builds to consolidated acceptance.
+
+### Stage 8E — pickup and combat readability
+
+After 8D is reconciled, use a different agent to improve existing Stage 4
+presentation without changing combat authority or balance. Bolt and oil must be
+distinguishable before pickup, while held, when fired, and on hit in both Clean
+3D and ink modes. Prefer explicit shape/color/icon language and bounded pooled
+or short-lived feedback over more particles or screen-filling effects. Retain
+the single-slot inventory, current spawn points, cooldowns, durations,
+modifiers, projectile physics, and per-player HUD ownership.
+
+Author tests for pickup identity, HUD identity, fire/hit event ordering,
+four-player ownership, effect caps, cleanup, pause/disconnect gates, and no
+gameplay-rule mutation. Audible and rendered quality remain final-acceptance
+checks.
+
+Both stages must remain unrelated to quarantined feedback, preserve the user's
+uncommitted `InputHandler.cs` edit, avoid generated IDE/Unity noise, and skip
+platform builds and broad test runs during implementation.
