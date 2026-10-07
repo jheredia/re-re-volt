@@ -201,6 +201,33 @@ this freeze; implementation stages use only narrow checks needed to avoid
 compounding broken code. Windows runtime and physical multi-controller checks
 remain deferred until the user re-enables them.
 
+#### Stage 9A — AI-controlled test opponents
+
+Before final acceptance, a bounded implementation agent may turn the existing
+AI scaffolding into deterministic test opponents. The current
+`AIDriverController` and `AIManager` are placeholders only: the driver tick has
+no navigation or control logic, and no runtime composition currently spawns or
+registers AI racers. They must not be described as an implemented feature.
+
+The first useful slice lets a solo tester add zero to three AI cars to fill a
+four-racer grid without pairing extra input devices. Bots follow authored track
+guidance, obey the same checkpoints, laps, race states, collision physics,
+handling-model contract, recovery rules, and pause gates as human racers. They
+do not claim local-player slots, input devices, split-screen viewports, or human
+HUD panels. Setup exposes an explicit bot count and neutral difficulty/control
+parameters; removing or restarting bots must cleanly release every registration
+and spawned object. Weapon use is a separate opt-in increment after reliable
+driving and recovery, not a prerequisite for the navigation test harness.
+
+Focused evidence must cover deterministic spawn identity, zero-to-three bot
+counts, waypoint or racing-line progress, ordered checkpoint and finish
+compliance, stuck/off-track recovery, pause and results behavior, collisions
+with human racers, rematch cleanup, and absence of input or viewport ownership
+leaks. Gate: one human can repeatedly run representative four-car races for
+handling, combat, presentation, and resilience testing without the bots
+silently changing authoritative race rules. This testing support does not
+replace eventual physical four-controller acceptance.
+
 ### Stage 10 — Online multiplayer (future expansion)
 
 Online multiplayer is a post-demo expansion, not part of the local-prototype
