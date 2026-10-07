@@ -210,6 +210,34 @@ disconnect recovery, security review, and platform testing. Local split-screen
 must remain functional and must not be retrofitted around an unproven network
 transport.
 
+### Stage 11 — Post-development visual-style review
+
+After the playable game and its core content pipeline are stable, a dedicated
+art-direction stage will review the complete visual language in context. The
+current driver portraits are accepted as-is and remain the approachable,
+polished comic baseline until that review; they should not be regenerated or
+progressively pushed toward another reference during normal implementation.
+
+The review will compare the baseline against more elastic 1990s comic-cartoon
+directions, including the energetic ink, distorted anatomy, expressive posing,
+facial asymmetry, unusual palettes, and deliberately rough line character
+associated with touchstones such as *Earthworm Jim* and *Ren & Stimpy*, without
+copying their characters, protected designs, or exact house styles. It must
+evaluate the relevant art levers independently: portraits and menu art, vehicle
+and character proportions, facial rigs and animation timing, surface textures,
+the optional ink shader, impact frames, and combat effects. A shader-only pass
+must not be treated as proof that a shape- and animation-dependent direction
+works.
+
+The stage begins with side-by-side in-game targets and a small representative
+asset set rather than a wholesale conversion. The existing clean and ink modes
+remain available as controls, and the accepted outcome may keep the current
+portrait style while applying stronger caricature only to motion, reactions,
+effects, or selected characters. Gate: an original, internally consistent
+direction is chosen from play-context comparisons, its production cost and
+readability are documented for one- and four-player views, and no irreversible
+asset migration occurs before user approval.
+
 ### Deferred optional systems
 
 The block-based track editor and the single lore-driven modular/randomized track
