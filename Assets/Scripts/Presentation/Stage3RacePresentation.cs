@@ -21,12 +21,15 @@ namespace Presentation
         }
 
         private readonly Dictionary<int, TextMeshProUGUI> hudLabels = new();
+        private readonly Dictionary<int, RawImage> hudPortraits = new();
+        private readonly List<RawImage> lobbyPortraits = new();
         private readonly Dictionary<int, string> weaponLabels = new();
         private RaceManager race;
         private VehicleManager vehicles;
         private VisualStyleController visualStyle;
         private Canvas canvas;
         private GameObject lobbyPanel;
+        private GameObject lobbyPortraitRoot;
         private TextMeshProUGUI lobbyPlayers;
         private GameObject hudRoot;
         private TextMeshProUGUI countdownLabel;
@@ -40,8 +43,13 @@ namespace Presentation
         private float countdownHideAt = -1f;
         private bool configured;
         private bool subscribed;
+        private DriverPortraitAtlas portraitAtlas;
 
         public int HudCount => hudLabels.Count;
+        public int HudPortraitCount => hudPortraits.Count;
+        public int LobbyPortraitCount => lobbyPortraits.Count;
+        public bool PortraitAtlasAvailable =>
+            portraitAtlas?.GetTexture(DriverPortraitSheet.Founders) != null;
         public bool LobbyVisible => lobbyPanel != null && lobbyPanel.activeSelf;
         public bool ModalVisible => modalPanel != null && modalPanel.activeSelf;
         public bool IsPaused => pauseReason != PauseReason.None;
@@ -56,7 +64,7 @@ namespace Presentation
         }
 
         public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
-            VisualStyleController visualStyleController = null)
+            VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -65,6 +73,7 @@ namespace Presentation
             race = raceManager;
             vehicles = vehicleManager;
             visualStyle = visualStyleController;
+            portraitAtlas = portraitAtlasSource;
             BuildInterface();
             configured = true;
             Subscribe();
@@ -363,6 +372,7 @@ namespace Presentation
             foreach (TextMeshProUGUI label in hudLabels.Values)
                 if (label != null) Destroy(label.transform.parent.parent.gameObject);
             hudLabels.Clear();
+            hudPortraits.Clear();
 
             for (int displayIndex = 0; displayIndex < vehicles.Players.Count; displayIndex++)
             {
@@ -382,15 +392,34 @@ namespace Presentation
                 badgeRect.anchorMax = new Vector2(0f, 1f);
                 badgeRect.pivot = new Vector2(0f, 1f);
                 badgeRect.anchoredPosition = new Vector2(18f, -18f);
-                badgeRect.sizeDelta = new Vector2(390f, 92f);
-                TextMeshProUGUI label = CreateText("RaceData", badge.transform, 28f, Color.white,
+                badgeRect.sizeDelta = new Vector2(430f, 108f);
+
+                float textInset = 16f;
+                DriverPersonaDefinition persona = DriverPersonaCatalog.GetForPlayerSlot(player.PlayerIndex);
+                Texture portraitTexture = GetPortraitTexture(persona);
+                if (portraitTexture != null)
+                {
+                    RawImage portrait = CreatePortrait($"HudPortrait_P{player.PlayerIndex + 1}", badge.transform,
+                        portraitTexture, persona.PortraitUv);
+                    RectTransform portraitRect = portrait.rectTransform;
+                    portraitRect.anchorMin = new Vector2(0f, 1f);
+                    portraitRect.anchorMax = new Vector2(0f, 1f);
+                    portraitRect.pivot = new Vector2(0f, 1f);
+                    portraitRect.anchoredPosition = new Vector2(10f, -10f);
+                    portraitRect.sizeDelta = new Vector2(88f, 88f);
+                    hudPortraits[player.PlayerIndex] = portrait;
+                    textInset = 108f;
+                }
+
+                TextMeshProUGUI label = CreateText("RaceData", badge.transform, 22f, Color.white,
                     TextAlignmentOptions.TopLeft, FontStyles.Bold);
                 RectTransform textRect = label.rectTransform;
                 Stretch(textRect);
-                textRect.offsetMin = new Vector2(16f, 10f);
+                textRect.offsetMin = new Vector2(textInset, 8f);
                 textRect.offsetMax = new Vector2(-12f, -9f);
                 hudLabels[player.PlayerIndex] = label;
             }
+            RebuildLobbyPortraits();
             RefreshHudText();
             RefreshLobbyText();
         }
@@ -408,9 +437,11 @@ namespace Presentation
                 string weapon = weaponLabels.TryGetValue(player.PlayerIndex, out string weaponName)
                     ? weaponName
                     : "--";
+                DriverPersonaDefinition persona = DriverPersonaCatalog.GetForPlayerSlot(player.PlayerIndex);
                 label.text = $"P{player.PlayerIndex + 1}   {HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)}   " +
                              $"{GetVehicleFamilyLabel(player)}   " +
-                             $"{racer.CurrentPosition}/{total}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
+                             $"{racer.CurrentPosition}/{total}\n" +
+                             $"{persona.Callsign}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
                              $"{FormatTime(race.ElapsedTime)}   WPN [{weapon}]";
             }
         }
@@ -429,11 +460,14 @@ namespace Presentation
                 for (int i = 0; i < vehicles.Players.Count; i++)
                 {
                     LocalPlayer player = vehicles.Players[i];
+                    DriverPersonaDefinition persona = DriverPersonaCatalog.GetForPlayerSlot(player.PlayerIndex);
+                    if (GetPortraitTexture(persona) != null) builder.Append("    ");
                     builder.Append("P").Append(player.PlayerIndex + 1).Append("  ")
                         .Append(player.Input.IsKeyboardPlayer ? "KEYBOARD  " : "GAMEPAD  ")
                         .Append(HandlingModelCatalog.GetPublicLabel(player.Vehicle.SelectedHandlingModel)).Append("  ")
                         .Append(player.IsConnected ? "READY  " : "RECONNECT DEVICE  ")
-                        .Append(GetVehicleFamilyLabel(player)).AppendLine();
+                        .Append(GetVehicleFamilyLabel(player)).Append("   ")
+                        .Append(persona.Callsign).AppendLine();
                 }
                 builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
@@ -448,6 +482,38 @@ namespace Presentation
                            "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
+        }
+
+        private void RebuildLobbyPortraits()
+        {
+            for (int i = 0; i < lobbyPortraits.Count; i++)
+                if (lobbyPortraits[i] != null) Destroy(lobbyPortraits[i].gameObject);
+            lobbyPortraits.Clear();
+            if (portraitAtlas == null || lobbyPortraitRoot == null || vehicles == null) return;
+
+            for (int i = 0; i < vehicles.Players.Count; i++)
+            {
+                LocalPlayer player = vehicles.Players[i];
+                DriverPersonaDefinition persona = DriverPersonaCatalog.GetForPlayerSlot(player.PlayerIndex);
+                Texture portraitTexture = GetPortraitTexture(persona);
+                if (portraitTexture == null) continue;
+                RawImage portrait = CreatePortrait($"LobbyPortrait_P{player.PlayerIndex + 1}",
+                    lobbyPortraitRoot.transform, portraitTexture, persona.PortraitUv);
+                RectTransform portraitRect = portrait.rectTransform;
+                portraitRect.anchorMin = new Vector2(0f, 1f);
+                portraitRect.anchorMax = new Vector2(0f, 1f);
+                portraitRect.pivot = new Vector2(0f, 1f);
+                portraitRect.anchoredPosition = new Vector2(0f, -i * 35f);
+                portraitRect.sizeDelta = new Vector2(32f, 32f);
+                lobbyPortraits.Add(portrait);
+            }
+        }
+
+        private Texture GetPortraitTexture(DriverPersonaDefinition persona)
+        {
+            return persona == null || portraitAtlas == null
+                ? null
+                : portraitAtlas.GetTexture(persona.PortraitSheet);
         }
 
         private static string GetVehicleFamilyLabel(LocalPlayer player)
@@ -534,6 +600,13 @@ namespace Presentation
             lobbyPlayers.rectTransform.offsetMin = new Vector2(58f, 10f);
             lobbyPlayers.rectTransform.offsetMax = new Vector2(-45f, -10f);
 
+            lobbyPortraitRoot = CreateUiObject("LobbyPortraits", lobbyPanel.transform);
+            RectTransform lobbyPortraitRect = lobbyPortraitRoot.GetComponent<RectTransform>();
+            lobbyPortraitRect.anchorMin = new Vector2(0f, .08f);
+            lobbyPortraitRect.anchorMax = new Vector2(1f, .66f);
+            lobbyPortraitRect.offsetMin = new Vector2(58f, 10f);
+            lobbyPortraitRect.offsetMax = new Vector2(-45f, -10f);
+
             countdownLabel = CreateText("Countdown", canvas.transform, 142f, new Color(.98f, .7f, .12f),
                 TextAlignmentOptions.Center, FontStyles.Bold);
             countdownLabel.rectTransform.anchorMin = new Vector2(.3f, .32f);
@@ -602,6 +675,18 @@ namespace Presentation
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             return text;
+        }
+
+        private static RawImage CreatePortrait(string name, Transform parent, Texture texture, Rect uvRect)
+        {
+            GameObject item = new GameObject(name, typeof(RectTransform), typeof(RawImage));
+            item.transform.SetParent(parent, false);
+            RawImage portrait = item.GetComponent<RawImage>();
+            portrait.texture = texture;
+            portrait.uvRect = uvRect;
+            portrait.color = Color.white;
+            portrait.raycastTarget = false;
+            return portrait;
         }
 
         private static void CreateTapeStrip(Transform parent, Color color)

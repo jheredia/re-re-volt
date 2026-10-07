@@ -82,7 +82,7 @@ namespace Presentation
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
             VehicleManager.VehicleFamilyChanged += ApplyPlayerColor;
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
-            Presentation.Configure(RaceManager, VehicleManager, VisualStyle);
+            Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);

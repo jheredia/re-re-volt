@@ -181,6 +181,14 @@ or designs. Gate: the complete race loop communicates state without developer
 geometry or silent interactions, and the visual identity remains readable in
 one- and four-player layouts.
 
+South America is the club's cultural home, not a boundary around who may join
+it. Cast expansion should remain deliberately heterogeneous across age, skin
+tone, ancestry and nationality, gender expression, body type, family role, and
+ability. Characters should have specific personalities and believable reasons
+to be at the club rather than serving as tokens or stereotypes; local members,
+mixed families, immigrants, visitors, and international RC enthusiasts can all
+belong. The first ensemble establishes a tone, not a closed demographic mold.
+
 ### Stage 9 — Demo flow, settings, resilience, and final acceptance
 
 Implementation agents complete the player-facing demo flow: title/setup,
