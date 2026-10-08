@@ -12,6 +12,12 @@ namespace Presentation
         public const int DrivableLayer = 8;
         public const int VenueRendererBudget = RcClubVenueBuilder.RendererBudget;
         public const float VenueInfieldSafetyExtent = RcClubVenueBuilder.InfieldSafetyExtent;
+        public const int SurfaceDecalRendererBudget = Stage8SurfaceArtBuilder.RendererBudget;
+        public const int SurfaceDecalMaterialBudget = Stage8SurfaceArtBuilder.MaterialBudget;
+        public const float SurfaceDecalClearance = Stage8SurfaceArtBuilder.SurfaceClearance;
+        public const string RoadTextureResource = Stage8SurfaceArtBuilder.RoadTextureResource;
+        public const string WorkbenchTextureResource = Stage8SurfaceArtBuilder.WorkbenchTextureResource;
+        public const string SurfaceDecalTextureResource = Stage8SurfaceArtBuilder.DecalTextureResource;
 
         private const float RoadHalfExtent = 15f;
         private const float RoadWidth = 7f;
@@ -38,10 +44,11 @@ namespace Presentation
         {
             private readonly VisualStyleController visualStyle;
             private readonly Renderer[] renderers;
+            private readonly Stage8SurfaceArtBuilder.Result surfaceArt;
 
             internal Result(GameObject root, Transform[] grid, RaceCheckpoint[] checkpoints, Material[] materials,
                 VisualStyleController styleController, Renderer[] registeredRenderers,
-                RcClubVenueBuilder.Result venue)
+                RcClubVenueBuilder.Result venue, Stage8SurfaceArtBuilder.Result stage8SurfaceArt)
             {
                 Root = root;
                 Grid = grid;
@@ -52,6 +59,13 @@ namespace Presentation
                 VenueRoot = venue.Root;
                 VenueRendererCount = venue.Renderers.Length;
                 VenueOutlineEligibleRendererCount = venue.OutlineEligibleRendererCount;
+                surfaceArt = stage8SurfaceArt;
+                SurfaceDecalRoot = stage8SurfaceArt.Root;
+                SurfaceDecalRendererCount = stage8SurfaceArt.Renderers.Length;
+                SurfaceDecalMaterial = stage8SurfaceArt.DecalMaterial;
+                RoadTexture = stage8SurfaceArt.RoadTexture;
+                WorkbenchTexture = stage8SurfaceArt.WorkbenchTexture;
+                SurfaceDecalTexture = stage8SurfaceArt.DecalTexture;
             }
 
             public GameObject Root { get; }
@@ -61,6 +75,12 @@ namespace Presentation
             public GameObject VenueRoot { get; }
             public int VenueRendererCount { get; }
             public int VenueOutlineEligibleRendererCount { get; }
+            public GameObject SurfaceDecalRoot { get; }
+            public int SurfaceDecalRendererCount { get; }
+            public Material SurfaceDecalMaterial { get; }
+            public Texture2D RoadTexture { get; }
+            public Texture2D WorkbenchTexture { get; }
+            public Texture2D SurfaceDecalTexture { get; }
             public int RuntimeMaterialCount => RuntimeMaterials.Length;
             internal Material[] RuntimeMaterials { get; }
 
@@ -76,6 +96,7 @@ namespace Presentation
                 if (visualStyle != null && renderers != null)
                     for (int i = 0; i < renderers.Length; i++)
                         visualStyle.UnregisterRenderer(renderers[i]);
+                surfaceArt?.DisposeMeshes();
                 for (int i = 0; i < RuntimeMaterials.Length; i++)
                 {
                     if (RuntimeMaterials[i] == null) continue;
@@ -113,21 +134,28 @@ namespace Presentation
             Transform[] grid = CreateGrid(root.transform, stripe);
             RaceCheckpoint[] checkpoints = CreateCheckpoints(root.transform, raceManager, stripe, barrier);
             Renderer[] circuitRenderers = root.GetComponentsInChildren<Renderer>(true);
+            Stage8SurfaceArtBuilder.Result surfaceArt = Stage8SurfaceArtBuilder.Build(root.transform, road, floor);
             RcClubVenueBuilder.Result venue = RcClubVenueBuilder.Build(root.transform,
                 new RcClubVenueBuilder.Palette(barrier, stripe, red, blue, cardboard, metal, graphite));
-            Renderer[] renderers = new Renderer[circuitRenderers.Length + venue.Renderers.Length];
+            Renderer[] renderers = new Renderer[
+                circuitRenderers.Length + surfaceArt.Renderers.Length + venue.Renderers.Length];
             Array.Copy(circuitRenderers, renderers, circuitRenderers.Length);
-            Array.Copy(venue.Renderers, 0, renderers, circuitRenderers.Length, venue.Renderers.Length);
+            Array.Copy(surfaceArt.Renderers, 0, renderers, circuitRenderers.Length, surfaceArt.Renderers.Length);
+            Array.Copy(venue.Renderers, 0, renderers, circuitRenderers.Length + surfaceArt.Renderers.Length,
+                venue.Renderers.Length);
             if (visualStyle != null)
             {
                 for (int i = 0; i < circuitRenderers.Length; i++)
-                    visualStyle.RegisterRenderer(circuitRenderers[i], IsOutlineEligible(circuitRenderers[i].gameObject.name));
+                    visualStyle.RegisterRenderer(circuitRenderers[i],
+                        IsOutlineEligible(circuitRenderers[i].gameObject.name));
+                for (int i = 0; i < surfaceArt.Renderers.Length; i++)
+                    visualStyle.RegisterRenderer(surfaceArt.Renderers[i], false, true);
                 for (int i = 0; i < venue.Renderers.Length; i++)
                     visualStyle.RegisterRenderer(venue.Renderers[i], venue.IsOutlineEligible(venue.Renderers[i]));
             }
             return new Result(root, grid, checkpoints,
-                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite }, visualStyle, renderers,
-                venue);
+                new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite, surfaceArt.DecalMaterial },
+                visualStyle, renderers, venue, surfaceArt);
         }
 
         // Builder-owned categories make outline eligibility explicit without coupling the style controller to names.

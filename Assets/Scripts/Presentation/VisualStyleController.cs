@@ -59,6 +59,7 @@ namespace Presentation
             public Material[] SourceMaterials;
             public Material[] InkMaterials;
             public bool OutlineEligible;
+            public bool PreserveSourceMaterial;
             public GameObject OutlineObject;
             public Renderer OutlineRenderer;
         }
@@ -86,8 +87,10 @@ namespace Presentation
         /// Registers a renderer and remembers its current shared material references as the Clean source.
         /// Re-registering is idempotent and never treats a controller-owned ink material as a new source.
         /// Outlined registration currently supports MeshRenderer only; skinned renderers may register without outlines.
+        /// Presentation-only transparent surfaces can preserve their source material while remaining explicitly
+        /// registered.
         /// </summary>
-        public bool RegisterRenderer(Renderer renderer, bool outlineEligible)
+        public bool RegisterRenderer(Renderer renderer, bool outlineEligible, bool preserveSourceMaterial = false)
         {
             if (renderer == null) throw new ArgumentNullException(nameof(renderer));
             ValidateOutlineSupport(renderer, outlineEligible);
@@ -95,6 +98,13 @@ namespace Presentation
             if (registrations.TryGetValue(renderer, out Registration existing))
             {
                 existing.OutlineEligible = outlineEligible;
+                if (existing.PreserveSourceMaterial != preserveSourceMaterial)
+                {
+                    existing.PreserveSourceMaterial = preserveSourceMaterial;
+                    existing.InkMaterials = preserveSourceMaterial
+                        ? existing.SourceMaterials
+                        : GetInkMaterials(existing.SourceMaterials);
+                }
                 EnsureOutline(existing);
                 ApplyRegistration(existing);
                 return false;
@@ -104,9 +114,12 @@ namespace Presentation
             {
                 Renderer = renderer,
                 SourceMaterials = renderer.sharedMaterials,
-                OutlineEligible = outlineEligible
+                OutlineEligible = outlineEligible,
+                PreserveSourceMaterial = preserveSourceMaterial
             };
-            registration.InkMaterials = GetInkMaterials(registration.SourceMaterials);
+            registration.InkMaterials = preserveSourceMaterial
+                ? registration.SourceMaterials
+                : GetInkMaterials(registration.SourceMaterials);
             EnsureOutline(registration);
             registrations.Add(renderer, registration);
             ApplyRegistration(registration);
@@ -211,7 +224,7 @@ namespace Presentation
         {
             if (registration.Renderer == null) return;
 
-            if (mode == VisualStyleMode.Clean3D)
+            if (mode == VisualStyleMode.Clean3D || registration.PreserveSourceMaterial)
                 RestoreClean(registration);
             else
                 registration.Renderer.sharedMaterials = registration.InkMaterials;
@@ -250,7 +263,9 @@ namespace Presentation
         private void ReplaceSourceMaterials(Registration registration, Material[] sourceMaterials)
         {
             registration.SourceMaterials = (Material[])sourceMaterials.Clone();
-            registration.InkMaterials = GetInkMaterials(registration.SourceMaterials);
+            registration.InkMaterials = registration.PreserveSourceMaterial
+                ? registration.SourceMaterials
+                : GetInkMaterials(registration.SourceMaterials);
             SetOutlineMaterials(registration);
             ApplyRegistration(registration);
         }

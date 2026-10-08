@@ -45,9 +45,10 @@ namespace Tests.PlayMode
             Assert.That(circuit.VenueRendererCount, Is.EqualTo(39));
             Assert.That(circuit.VenueRendererCount, Is.LessThanOrEqualTo(PrototypeCircuitBuilder.VenueRendererBudget));
             Assert.That(circuit.VenueOutlineEligibleRendererCount, Is.EqualTo(23));
-            Assert.That(circuit.RuntimeMaterialCount, Is.EqualTo(9));
-            Assert.That(style.InkMaterialCount, Is.EqualTo(circuit.RuntimeMaterialCount),
-                "Shared venue colors must not expand the controller's source-material cache.");
+            Assert.That(circuit.RuntimeMaterialCount, Is.EqualTo(10));
+            Assert.That(style.InkMaterialCount, Is.EqualTo(circuit.RuntimeMaterialCount -
+                PrototypeCircuitBuilder.SurfaceDecalMaterialBudget),
+                "Shared venue colors and style-preserved decals must not expand the ink-material cache.");
 
             Renderer[] renderers = SourceRenderers(circuit.VenueRoot);
             Assert.That(renderers, Has.Length.EqualTo(circuit.VenueRendererCount));

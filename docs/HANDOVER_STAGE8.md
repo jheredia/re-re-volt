@@ -1,5 +1,64 @@
 # Handover — Stage 8 RC-Club Identity
 
+## Accepted checkpoint — Stage 8D authored surface art
+
+Stage 8D replaces the two largest flat-color surfaces with original authored
+bitmap art and adds a bounded presentation-only decal layer. The road uses a
+worn teal cutting-mat texture at 4×4 material tiling; the surrounding floor uses
+a quieter warm workbench texture at 8×8. Both retained textures are loaded once
+from stable `Resources/Art/Stage8/*` keys and are assigned before renderers are
+registered, so `VisualStyleController` carries the same base maps, scale, and
+offset into Clean 3D, Ink Lite, and Full Ink.
+
+The generated source images are not falsely described as pixel-periodic. Their
+measured opposite-edge RMS discontinuities are recorded in
+`docs/art/stage8-surface-art-prompts.md`. Runtime import uses mirrored wrapping
+on every surface axis, making integer tile boundaries color-continuous while
+retaining the authored 4×4 and 8×8 repetition. Reflection cusps and perceived
+repetition remain deferred rendered-QA risks rather than hidden claims.
+
+`Stage8SurfaceArtBuilder` owns exactly eight small quad meshes and one shared
+transparent URP material for repair tape, painter tape, paint scuff, tire arcs,
+two open geometric motifs, lane wear, and twin skid marks. Decals have no
+colliders, never use the drivable layer, never receive outlines, cast no
+shadows, and are lifted by 0.015 units from the receiving surface. The generated
+atlas did not achieve the prompt's requested 12% transparent padding, so the
+runtime atlas disables mipmaps and every quad UV is inset by exactly one runtime
+pixel inside its 4×2 cell. The limitation and mitigation are documented
+explicitly rather than altering source provenance.
+
+The transparent material uses explicit RGB and alpha blend factors, disables
+Z-write, alpha clipping, ShadowCaster, and DepthOnly passes, and is preserved
+unchanged when the global ink style switches. Circuit disposal unregisters all
+source renderers, destroys all eight owned meshes, and destroys the tenth
+circuit-owned runtime material. Retained textures remain Resources-owned.
+
+Focused PlayMode coverage was authored for real Resources loads and importer
+behavior, shared references, exact renderer/material/mesh budgets, atlas UV
+containment, collider and layer absence, bounds and route-mark separation,
+literal pre-8D grid/checkpoint/recovery/drivable baselines, all three visual
+modes, and material/mesh cleanup. An independent static audit found the
+reconciled implementation ready with no likely compile/API blocker. Unity
+import, compilation, test execution, rendered seam/transparency review,
+profiling, and builds were intentionally deferred to consolidated acceptance.
+
+### Files in the Stage 8D implementation
+
+- `Assets/Scripts/Presentation/PrototypeCircuitBuilder.cs`
+- `Assets/Scripts/Presentation/VisualStyleController.cs`
+- `Assets/Scripts/Presentation/Stage8SurfaceArtBuilder.cs` and `.meta`
+- `Assets/Tests/PlayMode/Stage8SurfaceArtIntegrationTests.cs` and `.meta`
+- `Assets/Tests/PlayMode/RcClubVenueIntegrationTests.cs`
+- `Assets/Resources/Art.meta`
+- `Assets/Resources/Art/Stage8.meta`
+- `Assets/Resources/Art/Stage8/CuttingMatRoad.png` and `.meta`
+- `Assets/Resources/Art/Stage8/WorkbenchSurface.png` and `.meta`
+- `Assets/Resources/Art/Stage8/SurfaceDecals.png` and `.meta`
+- `docs/art/stage8-cutting-mat-road-source.png`
+- `docs/art/stage8-workbench-surface-source.png`
+- `docs/art/stage8-surface-decals-source.png`
+- `docs/art/stage8-surface-art-prompts.md`
+
 ## Accepted checkpoint — Stage 8C driver identity and portraits
 
 Stage 8C defines an original, read-only seven-person `DriverPersonaCatalog` for
@@ -160,11 +219,11 @@ be staged.
 
 ## Next implementation seam
 
-Split the remaining Stage 8 work into two fresh-agent deliverables. Do not
-combine them: texture integration and combat readability touch different
-owners and need separate review.
+Stage 8D is reconciled. Continue Stage 8 with a different fresh agent for
+pickup and combat readability so texture ownership remains separate from combat
+presentation ownership.
 
-### Stage 8D — authored surface texture and decal layer
+### Stage 8D contract — completed
 
 Create a small original bitmap set that adds wear and club identity without
 changing circuit geometry: one seamless cutting-mat/road surface, one subtle
