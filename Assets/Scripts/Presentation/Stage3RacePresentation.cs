@@ -13,6 +13,14 @@ namespace Presentation
     [DisallowMultipleComponent]
     public sealed class Stage3RacePresentation : MonoBehaviour
     {
+        public enum DemoFlowPage
+        {
+            Title,
+            Setup,
+            Race,
+            Results
+        }
+
         private sealed class WeaponHudIdentity
         {
             internal GameObject BoltIcon;
@@ -42,6 +50,8 @@ namespace Presentation
         private Canvas canvas;
         private GameObject lobbyPanel;
         private GameObject lobbyPortraitRoot;
+        private TextMeshProUGUI lobbyTitle;
+        private TextMeshProUGUI lobbySubtitle;
         private TextMeshProUGUI lobbyPlayers;
         private GameObject hudRoot;
         private TextMeshProUGUI countdownLabel;
@@ -53,9 +63,12 @@ namespace Presentation
         private int pauseInputFrame = -1;
         private float nextHudRefresh;
         private float countdownHideAt = -1f;
+        private string latestResultsBody;
         private bool configured;
         private bool subscribed;
         private DriverPortraitAtlas portraitAtlas;
+        private DemoFlowPreferences preferences;
+        private bool applyingPreferences;
 
         public int HudCount => hudLabels.Count;
         public int HudPortraitCount => hudPortraits.Count;
@@ -66,6 +79,13 @@ namespace Presentation
         public bool ModalVisible => modalPanel != null && modalPanel.activeSelf;
         public bool IsPaused => pauseReason != PauseReason.None;
         public Canvas PresentationCanvas => canvas;
+        public DemoFlowPage CurrentPage { get; private set; } = DemoFlowPage.Title;
+        public string TitleText => lobbyTitle != null ? lobbyTitle.text : string.Empty;
+        public string LobbyText => lobbyPlayers != null ? lobbyPlayers.text : string.Empty;
+        public string ModalHeadingText => modalHeading != null ? modalHeading.text : string.Empty;
+        public string ModalBodyText => modalBody != null ? modalBody.text : string.Empty;
+        public string ModalFooterText => modalFooter != null ? modalFooter.text : string.Empty;
+        public string PreferenceRecoveryMessage => preferences?.RecoveryMessage ?? string.Empty;
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -77,7 +97,8 @@ namespace Presentation
         }
 
         public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
-            VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null)
+            VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null,
+            DemoFlowPreferences preferenceSource = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -87,6 +108,8 @@ namespace Presentation
             vehicles = vehicleManager;
             visualStyle = visualStyleController;
             portraitAtlas = portraitAtlasSource;
+            preferences = preferenceSource;
+            ApplySavedVisualStyle();
             BuildInterface();
             configured = true;
             Subscribe();
@@ -180,12 +203,14 @@ namespace Presentation
 
         private void OnHandlingModelChanged(LocalPlayer player)
         {
+            SavePlayerPreferences(player);
             RefreshLobbyText();
             RefreshHudText();
         }
 
         private void OnVehicleFamilyChanged(LocalPlayer player)
         {
+            SavePlayerPreferences(player);
             RefreshLobbyText();
             RefreshHudText();
         }
@@ -201,6 +226,7 @@ namespace Presentation
 
         private void OnVisualStyleChanged(VisualStyleMode mode)
         {
+            if (!applyingPreferences && preferences != null) preferences.SetVisualStyle(mode);
             RefreshLobbyText();
             if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
         }
@@ -215,6 +241,7 @@ namespace Presentation
 
         private void StartRematch()
         {
+            latestResultsBody = null;
             pauseReason = PauseReason.None;
             Time.timeScale = 1f;
             race.ResetRace();
@@ -223,6 +250,7 @@ namespace Presentation
 
         private void ResetToLobby()
         {
+            latestResultsBody = null;
             pauseReason = PauseReason.None;
             Time.timeScale = 1f;
             race.ResetRace();
@@ -230,6 +258,7 @@ namespace Presentation
 
         private void OnPlayerJoined(LocalPlayer player)
         {
+            ApplySavedPlayerPreferences(player);
             RefreshPlayerPresentation();
         }
 
@@ -268,15 +297,24 @@ namespace Presentation
             string styleLine = visualStyle == null
                 ? string.Empty
                 : $"\nVISUAL STYLE  {GetVisualStyleLabel(visualStyle.Mode)}  [V / R3]";
-            ShowModal("RACE PAUSED", "The workshop clock has stopped." + styleLine,
-                "ESC / MENU / START   RESUME");
+            string recoveryLine = string.IsNullOrEmpty(PreferenceRecoveryMessage)
+                ? string.Empty
+                : $"\nNOTICE  {PreferenceRecoveryMessage}";
+            ShowModal("RACE PAUSED / SETTINGS",
+                "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + recoveryLine,
+                "V / R3   CHANGE DISPLAY STYLE\nESC / MENU / START   RESUME");
         }
 
         private void OnControllerConnectionChanged(LocalPlayer player)
         {
             if (player.IsConnected)
             {
-                if (!AnyPlayerDisconnected())
+                if (AnyPlayerDisconnected())
+                {
+                    ShowDisconnectPrompt();
+                    if (race.CurrentState == RaceManager.RaceState.Idle) RefreshLobbyText();
+                }
+                else
                 {
                     if (pauseReason == PauseReason.Disconnect && race.CurrentState == RaceManager.RaceState.Racing)
                     {
@@ -291,6 +329,11 @@ namespace Presentation
                         pauseReason = PauseReason.None;
                         HideModal();
                         RefreshLobbyText();
+                    }
+                    else if (race.CurrentState == RaceManager.RaceState.Finished)
+                    {
+                        pauseReason = PauseReason.None;
+                        ShowResultsModal();
                     }
                 }
                 return;
@@ -324,6 +367,8 @@ namespace Presentation
             switch (state)
             {
                 case RaceManager.RaceState.Idle:
+                    latestResultsBody = null;
+                    CurrentPage = vehicles.Players.Count == 0 ? DemoFlowPage.Title : DemoFlowPage.Setup;
                     vehicles.AllowControllerJoining = true;
                     vehicles.SetAllVehiclesEnabled(true);
                     lobbyPanel.SetActive(true);
@@ -333,18 +378,21 @@ namespace Presentation
                     RefreshLobbyText();
                     break;
                 case RaceManager.RaceState.Countdown:
+                    CurrentPage = DemoFlowPage.Race;
                     vehicles.AllowControllerJoining = false;
                     lobbyPanel.SetActive(false);
                     hudRoot.SetActive(true);
                     HideModal();
                     break;
                 case RaceManager.RaceState.Racing:
+                    CurrentPage = DemoFlowPage.Race;
                     vehicles.AllowControllerJoining = false;
                     lobbyPanel.SetActive(false);
                     hudRoot.SetActive(true);
                     if (pauseReason == PauseReason.None) vehicles.SetAllVehiclesEnabled(true);
                     break;
                 case RaceManager.RaceState.Finished:
+                    CurrentPage = DemoFlowPage.Results;
                     vehicles.AllowControllerJoining = false;
                     vehicles.SetAllVehiclesEnabled(false);
                     Time.timeScale = 0f;
@@ -368,6 +416,7 @@ namespace Presentation
         private void OnRaceCompleted(IReadOnlyList<RacerState> standings)
         {
             pauseReason = PauseReason.None;
+            CurrentPage = DemoFlowPage.Results;
             RefreshHudText();
             StringBuilder results = new StringBuilder(160);
             for (int i = 0; i < standings.Count; i++)
@@ -376,7 +425,14 @@ namespace Presentation
                 results.Append(i + 1).Append("  ").Append(racer.DisplayName.ToUpperInvariant())
                     .Append("      ").Append(FormatTime(racer.FinishTime)).AppendLine();
             }
-            ShowModal("FINAL BOARD", results.ToString(), "ENTER / A   REMATCH     ESC / B   LOBBY");
+            latestResultsBody = results.ToString();
+            ShowResultsModal();
+        }
+
+        private void ShowResultsModal()
+        {
+            if (string.IsNullOrEmpty(latestResultsBody)) return;
+            ShowModal("FINAL BOARD", latestResultsBody, "ENTER / A   REMATCH     ESC / B   LOBBY");
         }
 
         private void RefreshPlayerPresentation()
@@ -538,11 +594,24 @@ namespace Presentation
         private void RefreshLobbyText()
         {
             if (lobbyPlayers == null || vehicles == null) return;
+            bool titlePage = vehicles.Players.Count == 0;
+            if (race.CurrentState == RaceManager.RaceState.Idle)
+                CurrentPage = titlePage ? DemoFlowPage.Title : DemoFlowPage.Setup;
+            lobbyTitle.text = titlePage ? "AFTER-HOURS RC CLUB" : "SET UP YOUR TEST RUN";
+            lobbySubtitle.text = titlePage
+                ? "WORKBENCH CIRCUIT  /  1–4 LOCAL DRIVERS"
+                : "CHOOSE EACH DRIVER'S CAR AND HANDLING  /  3 LAPS";
             StringBuilder builder = new StringBuilder(240);
-            if (vehicles.Players.Count == 0)
+            if (!string.IsNullOrEmpty(PreferenceRecoveryMessage))
+                builder.Append("NOTICE: ").AppendLine(PreferenceRecoveryMessage).AppendLine();
+            if (titlePage)
             {
-                builder.AppendLine("NO DRIVERS PAIRED");
-                builder.AppendLine("ENTER: JOIN KEYBOARD   MENU / START: JOIN GAMEPAD");
+                builder.AppendLine("A NEIGHBORHOOD TEST NIGHT IS READY.");
+                builder.AppendLine("ENTER   JOIN WITH KEYBOARD");
+                builder.AppendLine("MENU / START   JOIN WITH A GAMEPAD");
+                builder.AppendLine("ADD UP TO FOUR LOCAL DRIVERS, THEN PICK A CAR AND HANDLING MODEL.");
+                lobbyPlayers.text = builder.ToString();
+                return;
             }
             else
             {
@@ -666,21 +735,21 @@ namespace Presentation
             lobbyRect.offsetMax = Vector2.zero;
             CreateTapeStrip(lobbyPanel.transform, new Color(.96f, .64f, .08f, 1f));
 
-            TextMeshProUGUI title = CreateText("Title", lobbyPanel.transform, 62f, new Color(.98f, .7f, .12f),
+            lobbyTitle = CreateText("Title", lobbyPanel.transform, 62f, new Color(.98f, .7f, .12f),
                 TextAlignmentOptions.TopLeft, FontStyles.Bold);
-            title.text = "AFTER-HOURS RC TEST RUN";
-            title.rectTransform.anchorMin = new Vector2(0f, .76f);
-            title.rectTransform.anchorMax = new Vector2(1f, .98f);
-            title.rectTransform.offsetMin = new Vector2(55f, 0f);
-            title.rectTransform.offsetMax = new Vector2(-40f, 0f);
+            lobbyTitle.text = "AFTER-HOURS RC CLUB";
+            lobbyTitle.rectTransform.anchorMin = new Vector2(0f, .76f);
+            lobbyTitle.rectTransform.anchorMax = new Vector2(1f, .98f);
+            lobbyTitle.rectTransform.offsetMin = new Vector2(55f, 0f);
+            lobbyTitle.rectTransform.offsetMax = new Vector2(-40f, 0f);
 
-            TextMeshProUGUI subtitle = CreateText("Subtitle", lobbyPanel.transform, 25f, new Color(.72f, .84f, .82f),
+            lobbySubtitle = CreateText("Subtitle", lobbyPanel.transform, 25f, new Color(.72f, .84f, .82f),
                 TextAlignmentOptions.TopLeft, FontStyles.Bold);
-            subtitle.text = "WORKBENCH CIRCUIT  /  3 LAPS  /  1–4 LOCAL DRIVERS";
-            subtitle.rectTransform.anchorMin = new Vector2(0f, .68f);
-            subtitle.rectTransform.anchorMax = new Vector2(1f, .78f);
-            subtitle.rectTransform.offsetMin = new Vector2(58f, 0f);
-            subtitle.rectTransform.offsetMax = new Vector2(-40f, 0f);
+            lobbySubtitle.text = "WORKBENCH CIRCUIT  /  1–4 LOCAL DRIVERS";
+            lobbySubtitle.rectTransform.anchorMin = new Vector2(0f, .68f);
+            lobbySubtitle.rectTransform.anchorMax = new Vector2(1f, .78f);
+            lobbySubtitle.rectTransform.offsetMin = new Vector2(58f, 0f);
+            lobbySubtitle.rectTransform.offsetMax = new Vector2(-40f, 0f);
 
             lobbyPlayers = CreateText("PlayersAndControls", lobbyPanel.transform, 29f, Color.white,
                 TextAlignmentOptions.TopLeft, FontStyles.Bold);
@@ -802,6 +871,57 @@ namespace Presentation
             seconds = Mathf.Max(0f, seconds);
             int minutes = Mathf.FloorToInt(seconds / 60f);
             return $"{minutes:00}:{seconds % 60f:00.00}";
+        }
+
+        private void ApplySavedVisualStyle()
+        {
+            if (preferences == null || visualStyle == null || visualStyle.Mode == preferences.VisualStyle) return;
+            applyingPreferences = true;
+            try
+            {
+                visualStyle.SetMode(preferences.VisualStyle);
+            }
+            catch (InvalidOperationException)
+            {
+                preferences.ReportRecovery("SAVED DISPLAY STYLE WAS UNAVAILABLE — CLEAN 3D IS ACTIVE");
+                if (visualStyle.Mode != VisualStyleMode.Clean3D) visualStyle.SetMode(VisualStyleMode.Clean3D);
+            }
+            finally
+            {
+                applyingPreferences = false;
+            }
+        }
+
+        private void ApplySavedPlayerPreferences(LocalPlayer player)
+        {
+            if (preferences == null || player == null) return;
+            applyingPreferences = true;
+            try
+            {
+                HandlingModelId desiredHandling = preferences.GetHandlingModel(player.PlayerIndex);
+                for (int attempt = 0; attempt < 4 && player.Vehicle.SelectedHandlingModel != desiredHandling; attempt++)
+                    if (!vehicles.TryCycleHandlingModel(player.PlayerIndex, 1)) break;
+
+                VehicleFamilyId desiredFamily = preferences.GetVehicleFamily(player.PlayerIndex);
+                for (int attempt = 0; attempt < VehicleFamilyCatalog.Count &&
+                     player.FamilyVisual != null && player.FamilyVisual.FamilyId != desiredFamily; attempt++)
+                    if (!vehicles.TryCycleVehicleFamily(player.PlayerIndex, 1)) break;
+
+                if (player.Vehicle.SelectedHandlingModel != desiredHandling || player.FamilyVisual == null ||
+                    player.FamilyVisual.FamilyId != desiredFamily)
+                    preferences.ReportRecovery("A SAVED PLAYER SETUP COULD NOT BE RESTORED — CURRENT VALUES ARE ACTIVE");
+            }
+            finally
+            {
+                applyingPreferences = false;
+            }
+        }
+
+        private void SavePlayerPreferences(LocalPlayer player)
+        {
+            if (applyingPreferences || preferences == null || player?.FamilyVisual == null) return;
+            preferences.SetPlayerSelection(player.PlayerIndex, player.Vehicle.SelectedHandlingModel,
+                player.FamilyVisual.FamilyId);
         }
 
         private void OnDestroy()

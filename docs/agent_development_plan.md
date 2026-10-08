@@ -194,12 +194,14 @@ belong. The first ensemble establishes a tone, not a closed demographic mold.
 Implementation agents complete the player-facing demo flow: title/setup,
 vehicle and handling selection, pause/settings, results/rematch, safe device
 join/leave, saved local preferences, and clear recovery/error messaging. After
-implementation freezes, one independent acceptance stage runs the consolidated
-full test, screenshot, performance, platform-build, and launch matrix. Repeated
-cross-platform builds and broad validation are intentionally deferred until
-this freeze; implementation stages use only narrow checks needed to avoid
-compounding broken code. Windows runtime and physical multi-controller checks
-remain deferred until the user re-enables them.
+the demo flow, Stage 9A adds bounded AI test opponents and Stage 9B performs a
+dedicated game-feel and sensory-polish pass. Once those implementations freeze,
+one independent acceptance stage runs the consolidated full test, screenshot,
+performance, platform-build, and launch matrix. Repeated cross-platform builds
+and broad validation are intentionally deferred until this freeze;
+implementation stages use only narrow checks needed to avoid compounding broken
+code. Windows runtime and physical multi-controller checks remain deferred until
+the user re-enables them.
 
 #### Stage 9A — AI-controlled test opponents
 
@@ -227,6 +229,42 @@ leaks. Gate: one human can repeatedly run representative four-car races for
 handling, combat, presentation, and resilience testing without the bots
 silently changing authoritative race rules. This testing support does not
 replace eventual physical four-controller acceptance.
+
+#### Stage 9B — Game feel and sensory polish
+
+After reliable AI test opponents exist, use separate bounded agents for a
+reference audit, per-player camera and vehicle response, pooled visual effects,
+audio expansion, and an independent accessibility/performance audit. The goal
+is a consistent feedback language rather than indiscriminately adding effects:
+each important action should communicate anticipation, contact, and recovery at
+an intensity appropriate to a scrape, impact, or heavy crash.
+
+Translate common arcade-game-feel tools into RC-racing equivalents. Screen
+shake becomes player-local camera impulse, speed framing, restrained FOV change,
+and landing response. Kickback becomes presentation-only chassis recoil,
+suspension compression, steering lean, and body or antenna wobble without
+changing authoritative physics. Hit flash, directional collision sparks,
+surface-specific dust, skid smoke and marks, oil droplets, pickup motion, and UI
+micro-animation must remain readable in one- and four-player layouts. Background
+parallax becomes layered workshop motion and trackside scale references that
+sell RC speed. Bloom is restrained to emissive accents and must not wash out the
+ink modes.
+
+Extend the existing audio foundation rather than replace it: authored cue data,
+bounded pitch and volume variation, surface and tire feedback, distinct Bolt
+and Oil layers, club ambience, mixer priorities, and ducking should preserve
+crucial driving information in a dense local-multiplayer mix. Pool frequently
+repeated projectiles and short-lived effects only where churn justifies it;
+publish explicit capacities, overflow behavior, and cleanup ownership.
+
+All feedback must support Off, Reduced, and Full comparison settings where
+applicable. Camera shake, flashes, bloom, and eventual controller rumble require
+accessibility controls. Never use global hit-stop, global camera response, or a
+single player's effect across every split-screen viewport. Physical rumble
+remains deferred until controller validation is re-enabled. Gate: the same race
+events remain mechanically identical with feedback disabled, every effect is
+bounded and correctly player-routed, and representative one- and four-player
+races feel responsive without obscuring racing information.
 
 ### Stage 10 — Online multiplayer (future expansion)
 

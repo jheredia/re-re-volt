@@ -30,6 +30,7 @@ namespace Presentation
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
         public RcAudioPresentation AudioPresentation { get; private set; }
         public VisualStyleController VisualStyle { get; private set; }
+        public DemoFlowPreferences DemoPreferences { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
         public RaceCheckpoint[] Checkpoints => circuit?.Checkpoints;
@@ -81,8 +82,11 @@ namespace Presentation
 
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
             VehicleManager.VehicleFamilyChanged += ApplyPlayerColor;
+            DemoPreferences = new DemoFlowPreferences(new PlayerPrefsLocalPreferenceStore());
+            DemoPreferences.Load();
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
-            Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime);
+            Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime,
+                DemoPreferences);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
