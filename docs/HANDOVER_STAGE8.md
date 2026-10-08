@@ -1,5 +1,56 @@
 # Handover — Stage 8 RC-Club Identity
 
+## Accepted checkpoint — Stage 8E pickup and combat readability
+
+Stage 8E keeps Stage 4 combat authority and tuning intact while giving Bolt and
+Oil separate color, shape, text, and motion language at every presentation
+step. Alternating pickups now show an amber three-segment lightning mark or a
+violet drop-and-puddle mark in addition to their shell color. The single-slot
+HUD keeps its existing text and adds one per-player identity card showing BOLT,
+OIL, or EMPTY with matching geometry. The four-player portrait-backed badge is
+now 540×108, retaining 320 pixels for the existing race data while remaining
+inside each 960-pixel reference viewport.
+
+Live Bolts use an arrow, white crossbar, luminous tail, and chevrons; deployed
+Oil uses a warning ring, dark puddle, violet glint, and drop marker. Bolt hits
+use three shock rays, while Oil hits use three skid drops. Short-lived impact
+pulses use three source renderers of their own weapon-specific silhouette. All
+primitive colliders are disabled, every renderer remains owned by the existing
+`VisualStyleController`, and the same identities carry through Clean 3D, Ink
+Lite, and Full Ink.
+
+Presentation budgets are explicit: five pickup-identity source renderers per
+pickup, five per live Bolt, four per live Oil, three per disruption, and three
+per short-lived pulse. Existing caps remain 16 live weapons and 16 pulse groups;
+the worst-case source-renderer ceilings are therefore 80 for live weapons and
+60 for combined transient feedback (48 pulse renderers plus 12 disruption
+renderers across four players). The existing 0.45-second pulse
+lifetime, cleanup paths, single-slot inventory, spawn poses, cooldowns,
+durations, modifiers, projectile physics, event order, pause/disconnect gates,
+and race rules were not changed.
+
+Focused PlayMode coverage was authored for pickup, HUD, live-weapon, and hit
+identity; alternating respawns; all three visual modes; four-player HUD
+ownership and portrait-backed bounds; fire/hit ordering; collider absence;
+pause/disconnect gates; exact Stage 4 tuning; and cleanup. The pulse-cap test
+fills all 16 groups, verifies 48 registered source renderers, rejects a 17th
+group without registration growth, and verifies timed cleanup back to the
+baseline. An independent static audit found the reconciled implementation
+ready with no P1/P2 findings.
+
+Per the implementation-first cadence, Unity compilation, test execution,
+rendered TMP fit and silhouette review, Full Ink overdraw review, profiling,
+and builds remain deferred to the consolidated Stage 9 acceptance pass.
+
+### Files in the Stage 8E implementation
+
+- `Assets/Scripts/Core/PickupSpawner.cs`
+- `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
+- `Assets/Scripts/Weapons/WeaponManager.cs`
+- `Assets/Tests/PlayMode/DriverPersonaPresentationIntegrationTests.cs`
+- `Assets/Tests/PlayMode/VisualStyleRuntimeIntegrationTests.cs`
+- `Assets/Tests/PlayMode/Stage8CombatReadabilityIntegrationTests.cs` and `.meta`
+
 ## Accepted checkpoint — Stage 8D authored surface art
 
 Stage 8D replaces the two largest flat-color surfaces with original authored
@@ -219,9 +270,15 @@ be staged.
 
 ## Next implementation seam
 
-Stage 8D is reconciled. Continue Stage 8 with a different fresh agent for
-pickup and combat readability so texture ownership remains separate from combat
-presentation ownership.
+Stage 8 is reconciled through 8E. Continue with a fresh bounded Stage 9 agent
+for the player-facing demo flow: title/setup, vehicle and handling selection,
+pause/settings, results/rematch, safe join/leave, saved local preferences, and
+clear recovery/error messaging. Keep Stage 9A AI test opponents as a separate
+bounded deliverable before the implementation freeze. After those changes are
+reconciled, use an independent acceptance agent for the single consolidated
+compile, full test, screenshot, performance, platform-build, and launch matrix.
+Windows runtime and physical multi-controller checks remain deferred until the
+user explicitly re-enables them.
 
 ### Stage 8D contract — completed
 
@@ -249,7 +306,7 @@ checkpoint poses, unchanged drivable mask, visual-style registration/cleanup,
 and preservation of base-map tiling across all three visual modes. Defer Unity
 execution, screenshot review, profiling, and builds to consolidated acceptance.
 
-### Stage 8E — pickup and combat readability
+### Stage 8E — pickup and combat readability — completed
 
 After 8D is reconciled, use a different agent to improve existing Stage 4
 presentation without changing combat authority or balance. Bolt and oil must be

@@ -10,6 +10,13 @@ namespace Weapons
     /// <summary>Only combat authority: inventory, active simulation time, weapons, effects, and cleanup.</summary>
     public sealed class WeaponManager : MonoBehaviour
     {
+        // Source-renderer budgets exclude controller-owned Full Ink outline renderers.
+        public const int BoltLiveRendererBudget = 5;
+        public const int OilLiveRendererBudget = 4;
+        public const int BoltDisruptionRendererBudget = 3;
+        public const int OilDisruptionRendererBudget = 3;
+        public const int BurstRendererBudget = 3;
+
         [SerializeField, Min(0f)] private float fireCooldown = .35f;
         [SerializeField, Min(.1f)] private float projectileSpeed = 32f;
         [SerializeField, Min(.1f)] private float projectileLifetime = 3f;
@@ -64,6 +71,23 @@ namespace Weapons
         public IReadOnlyList<PickupSpawner> Pickups => spawnerView ??= spawners.AsReadOnly();
         public IReadOnlyList<LiveCombatWeapon> LiveWeapons => weaponView ??= liveWeapons.AsReadOnly();
         public int FeedbackCount => bursts.Count;
+        public int FeedbackCapacity => maximumFeedbackEffects;
+        public int LiveWeaponCapacity => maximumLiveWeapons;
+        public int FeedbackSourceRendererCapacity =>
+            maximumFeedbackEffects * BurstRendererBudget +
+            LocalPlayerRules.MaximumPlayers * BoltDisruptionRendererBudget;
+        public int LiveWeaponSourceRendererCapacity => maximumLiveWeapons * BoltLiveRendererBudget;
+        public float FeedbackLifetime => feedbackLifetime;
+        public int DisruptionFeedbackCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < players.Length; i++)
+                    if (players[i]?.Feedback != null) count++;
+                return count;
+            }
+        }
         public event Action<LocalPlayer, WeaponKind> WeaponCollected;
         public event Action<LocalPlayer, WeaponKind> WeaponFired;
         public event Action<LocalPlayer, WeaponKind> WeaponHit;
@@ -215,26 +239,39 @@ namespace Weapons
             weapon.Initialize(this, player, kind, forward, projectileSpeed, projectileRadius,
                 kind == WeaponKind.Bolt ? projectileLifetime : oilLifetime, oilRadius, oilArmingDelay, oilShooterGrace);
             liveWeapons.Add(weapon);
-            if (kind == WeaponKind.Bolt)
-            {
-                CreateVisual(weapon.transform, "Bolt core", PrimitiveType.Sphere, Vector3.zero,
-                    new Vector3(.48f, .48f, 1.2f), BoltMaterial, true);
-                CreateVisual(weapon.transform, "Bolt fins", PrimitiveType.Cube, Vector3.back * .32f,
-                    new Vector3(.9f, .13f, .4f), FeedbackMaterial, true);
-                CreateVisual(weapon.transform, "Bolt tail", PrimitiveType.Sphere, Vector3.back * .8f,
-                    new Vector3(.24f, .24f, .8f), BoltMaterial, true);
-            }
-            else
-            {
-                CreateVisual(weapon.transform, "Oil warning rim", PrimitiveType.Cylinder, Vector3.zero,
-                    new Vector3(oilRadius * 2f, .018f, oilRadius * 2f), OilMaterial, true);
-                CreateVisual(weapon.transform, "Oil surface", PrimitiveType.Cylinder, Vector3.up * .025f,
-                    new Vector3(oilRadius * 1.8f, .02f, oilRadius * 1.8f), darkOilMaterial);
-                CreateVisual(weapon.transform, "Oil glint", PrimitiveType.Cube, new Vector3(.3f, .055f, .2f),
-                    new Vector3(.55f, .025f, .12f), OilMaterial, true);
-            }
+            BuildLiveWeaponVisual(weapon, kind);
             PublishSlot(state);
             WeaponFired?.Invoke(player, kind);
+        }
+
+        private void BuildLiveWeaponVisual(LiveCombatWeapon weapon, WeaponKind kind)
+        {
+            if (kind == WeaponKind.Bolt)
+            {
+                CreateVisual(weapon.transform, "Bolt arrow core", PrimitiveType.Sphere, Vector3.zero,
+                    new Vector3(.48f, .48f, 1.2f), BoltMaterial, true);
+                CreateVisual(weapon.transform, "Bolt white crossbar", PrimitiveType.Cube, Vector3.back * .32f,
+                    new Vector3(.9f, .13f, .4f), FeedbackMaterial, true);
+                CreateVisual(weapon.transform, "Bolt luminous tail", PrimitiveType.Sphere, Vector3.back * .8f,
+                    new Vector3(.24f, .24f, .8f), BoltMaterial, true);
+                GameObject leftRail = CreateVisual(weapon.transform, "Bolt left chevron", PrimitiveType.Cube,
+                    new Vector3(-.32f, 0f, .08f), new Vector3(.12f, .12f, .72f), FeedbackMaterial, true);
+                leftRail.transform.localRotation = Quaternion.Euler(0f, 28f, 0f);
+                GameObject rightRail = CreateVisual(weapon.transform, "Bolt right chevron", PrimitiveType.Cube,
+                    new Vector3(.32f, 0f, .08f), new Vector3(.12f, .12f, .72f), FeedbackMaterial, true);
+                rightRail.transform.localRotation = Quaternion.Euler(0f, -28f, 0f);
+                return;
+            }
+
+            CreateVisual(weapon.transform, "Oil warning ring", PrimitiveType.Cylinder, Vector3.zero,
+                new Vector3(oilRadius * 2f, .018f, oilRadius * 2f), OilMaterial, true);
+            CreateVisual(weapon.transform, "Oil dark puddle", PrimitiveType.Cylinder, Vector3.up * .025f,
+                new Vector3(oilRadius * 1.8f, .02f, oilRadius * 1.8f), darkOilMaterial);
+            CreateVisual(weapon.transform, "Oil violet glint", PrimitiveType.Cube, new Vector3(.3f, .055f, .2f),
+                new Vector3(.55f, .025f, .12f), OilMaterial, true);
+            GameObject drop = CreateVisual(weapon.transform, "Oil drop marker", PrimitiveType.Sphere,
+                Vector3.up * .22f, new Vector3(.38f, .5f, .38f), OilMaterial, true);
+            drop.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
         }
 
         private void FixedUpdate()
@@ -300,25 +337,74 @@ namespace Weapons
             }
             state.Feedback = new GameObject("Combat disruption feedback");
             state.Feedback.transform.SetParent(target.Vehicle.transform, false);
-            for (int i = 0; i < 3; i++)
-            {
-                float angle = i * Mathf.PI * 2f / 3f;
-                CreateVisual(state.Feedback.transform, "Disruption spark", PrimitiveType.Cube,
-                    new Vector3(Mathf.Cos(angle) * .8f, 1.05f, Mathf.Sin(angle) * .8f), Vector3.one * .2f,
-                    source.Kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial, true);
-            }
+            BuildDisruptionFeedback(state.Feedback.transform, source.Kind);
             ShowBurst(target.Vehicle.transform.position + Vector3.up * .7f, source.Kind);
             WeaponHit?.Invoke(target, source.Kind);
             return true;
         }
 
+        private void BuildDisruptionFeedback(Transform parent, WeaponKind kind)
+        {
+            if (kind == WeaponKind.Bolt)
+            {
+                for (int i = 0; i < BoltDisruptionRendererBudget; i++)
+                {
+                    float angle = i * 120f;
+                    float radians = angle * Mathf.Deg2Rad;
+                    GameObject arc = CreateVisual(parent, $"Bolt shock ray {i + 1}", PrimitiveType.Cube,
+                        new Vector3(Mathf.Cos(radians) * .82f, 1.08f, Mathf.Sin(radians) * .82f),
+                        new Vector3(.14f, .14f, .72f), i % 2 == 0 ? BoltMaterial : FeedbackMaterial, true);
+                    arc.transform.localRotation = Quaternion.Euler(0f, -angle, i % 2 == 0 ? 24f : -24f);
+                }
+                return;
+            }
+
+            for (int i = 0; i < OilDisruptionRendererBudget; i++)
+            {
+                float angle = i * 120f;
+                float radians = angle * Mathf.Deg2Rad;
+                GameObject drop = CreateVisual(parent, $"Oil skid drop {i + 1}", PrimitiveType.Sphere,
+                    new Vector3(Mathf.Cos(radians) * .76f, .72f + i * .1f, Mathf.Sin(radians) * .76f),
+                    new Vector3(.34f, .5f, .2f), OilMaterial, true);
+                drop.transform.localRotation = Quaternion.Euler(0f, -angle, 45f);
+            }
+        }
+
         internal void ShowBurst(Vector3 position, WeaponKind kind)
         {
             if (bursts.Count >= maximumFeedbackEffects) return;
-            GameObject visual = CreateVisual(combatRoot.transform, "Combat pulse", PrimitiveType.Sphere,
-                Vector3.zero, Vector3.one * .3f, kind == WeaponKind.Bolt ? BoltMaterial : OilMaterial, true);
+            GameObject visual = new GameObject(kind == WeaponKind.Bolt ? "Bolt impact pulse" : "Oil impact pulse");
+            visual.transform.SetParent(combatRoot.transform, false);
+            visual.transform.localScale = Vector3.one * .3f;
             visual.transform.position = position;
+            BuildBurstVisual(visual.transform, kind);
             bursts.Add(new Burst { Visual = visual, Until = SimulationTime + feedbackLifetime });
+        }
+
+        private void BuildBurstVisual(Transform parent, WeaponKind kind)
+        {
+            if (kind == WeaponKind.Bolt)
+            {
+                for (int i = 0; i < BurstRendererBudget; i++)
+                {
+                    float angle = i * 120f;
+                    GameObject ray = CreateVisual(parent, $"Bolt pulse ray {i + 1}", PrimitiveType.Cube,
+                        Quaternion.Euler(0f, angle, 0f) * Vector3.forward * .36f,
+                        new Vector3(.1f, .1f, .72f), i == 1 ? FeedbackMaterial : BoltMaterial, true);
+                    ray.transform.localRotation = Quaternion.Euler(0f, angle, 0f);
+                }
+                return;
+            }
+
+            CreateVisual(parent, "Oil pulse ring", PrimitiveType.Cylinder, Vector3.zero,
+                new Vector3(.85f, .035f, .85f), OilMaterial, true);
+            for (int i = 0; i < BurstRendererBudget - 1; i++)
+            {
+                float side = i == 0 ? -1f : 1f;
+                GameObject drop = CreateVisual(parent, $"Oil pulse drop {i + 1}", PrimitiveType.Sphere,
+                    new Vector3(side * .34f, .2f, .1f), new Vector3(.22f, .38f, .18f), FeedbackMaterial, true);
+                drop.transform.localRotation = Quaternion.Euler(0f, 0f, side * 35f);
+            }
         }
 
         private void PublishSlot(PlayerCombat state)

@@ -201,7 +201,7 @@ namespace Tests.PlayMode
                 Assert.That(viewport.anchorMin, Is.EqualTo(new Vector2(expected.X, expected.Y)));
                 Assert.That(viewport.anchorMax,
                     Is.EqualTo(new Vector2(expected.X + expected.Width, expected.Y + expected.Height)));
-                Assert.That(badge.sizeDelta, Is.EqualTo(new Vector2(430f, 108f)));
+                Assert.That(badge.sizeDelta, Is.EqualTo(new Vector2(540f, 108f)));
                 Assert.That(badge.anchoredPosition.x + badge.sizeDelta.x,
                     Is.LessThan(expected.Width * 1920f), "HUD badge must stay inside its viewport width.");
                 Assert.That(-badge.anchoredPosition.y + badge.sizeDelta.y,

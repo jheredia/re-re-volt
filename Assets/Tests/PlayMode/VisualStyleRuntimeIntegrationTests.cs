@@ -225,8 +225,9 @@ namespace Tests.PlayMode
             int beforeSpawnerDestroy = style.RegisteredRendererCount;
             Object.Destroy(destroyedSpawner.gameObject);
             yield return null;
-            Assert.That(style.RegisteredRendererCount, Is.EqualTo(beforeSpawnerDestroy - 3),
-                "Spawner destruction must unregister box, band, and base renderers.");
+            Assert.That(style.RegisteredRendererCount,
+                Is.EqualTo(beforeSpawnerDestroy - 3 - PickupSpawner.IdentityRendererBudget),
+                "Spawner destruction must unregister box, band, base, and both identity icons.");
 
             int beforeRosterDisable = style.RegisteredRendererCount;
             int playerRendererCount = CountSourceRenderers(player.Vehicle.gameObject);
