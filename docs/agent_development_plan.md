@@ -238,6 +238,15 @@ is a consistent feedback language rather than indiscriminately adding effects:
 each important action should communicate anticipation, contact, and recovery at
 an intensity appropriate to a scrape, impact, or heavy crash.
 
+The reference-audit checkpoint is documented in
+`docs/STAGE9B_GAME_FEEL_REFERENCE_AND_IMPLEMENTATION_SPEC.md`. It is
+documentation-only and fixes the implementation order: per-player camera/vehicle
+presentation first, then pooled VFX, then audio expansion, then an independent
+accessibility/performance audit. The first implementation gate requires
+player-index-local routing, no writes to mechanics authority, explicit
+Off/Reduced/Full behavior, and lifecycle cleanup evidence before later effects
+are introduced.
+
 Translate common arcade-game-feel tools into RC-racing equivalents. Screen
 shake becomes player-local camera impulse, speed framing, restrained FOV change,
 and landing response. Kickback becomes presentation-only chassis recoil,

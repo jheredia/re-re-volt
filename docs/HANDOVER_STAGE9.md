@@ -120,8 +120,17 @@ stage `.DS_Store`, `ProjectSettings/ProjectAuditorSettings.asset`,
 
 ## Next implementation seams
 
-Stage 9B is now the next implementation stage: the dedicated game-feel and
-sensory-polish pass requested by the user. Its reference, camera/vehicle response,
-pooled VFX, audio, and independent accessibility/performance work must remain
-separate bounded deliverables. Only after 9A and 9B freeze should the project run
-the single consolidated validation matrix.
+The Stage 9B reference audit is complete in
+`docs/STAGE9B_GAME_FEEL_REFERENCE_AND_IMPLEMENTATION_SPEC.md`. It records the
+authoritative race, vehicle, recovery, combat, camera, visual-style, UI, and audio
+seams; maps player-local recipient routing and bounded cleanup; distinguishes its
+external sources from RC-racer design inference; and preserves the prohibition on
+authority changes, global hit-stop/camera response, cross-viewport feedback, and
+rumble while physical controller work is deferred.
+
+The next bounded implementation deliverable is per-player camera and vehicle
+presentation only. It must establish the documented visual-pivot and
+collision-payload seam, Off/Reduced/Full controls, local routing, and lifecycle
+cleanup before pooled VFX, audio expansion, then an independent
+accessibility/performance audit. Only after 9A and those separate 9B slices freeze
+should the project run the single consolidated validation matrix.
