@@ -47,9 +47,12 @@ namespace Presentation
             public int visualStyle;
             public int[] handlingModels;
             public int[] vehicleFamilies;
+            public int cameraMotion;
+            public int vehicleMotion;
+            public bool hasPresentationResponseSettings;
         }
 
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
         public const string StorageKey = "re-re-volt.demo-flow.preferences";
 
         private readonly ILocalPreferenceStore store;
@@ -64,6 +67,8 @@ namespace Presentation
         }
 
         public VisualStyleMode VisualStyle { get; private set; }
+        public PresentationResponseLevel CameraMotion { get; private set; }
+        public PresentationResponseLevel VehicleMotion { get; private set; }
         public string RecoveryMessage { get; private set; } = string.Empty;
 
         public void Load()
@@ -95,7 +100,7 @@ namespace Presentation
                 return;
             }
 
-            if (payload == null || payload.version != CurrentVersion)
+            if (payload == null || (payload.version != 1 && payload.version != CurrentVersion))
             {
                 ReportRecovery("LOCAL SETTINGS VERSION WAS NOT RECOGNIZED — SAFE DEFAULTS ARE ACTIVE");
                 return;
@@ -121,6 +126,16 @@ namespace Presentation
                 else
                     repaired = true;
             }
+
+            if (payload.version == CurrentVersion && payload.hasPresentationResponseSettings)
+            {
+                if (IsPresentationLevel(payload.cameraMotion)) CameraMotion = (PresentationResponseLevel)payload.cameraMotion;
+                else repaired = true;
+                if (IsPresentationLevel(payload.vehicleMotion)) VehicleMotion = (PresentationResponseLevel)payload.vehicleMotion;
+                else repaired = true;
+            }
+            else if (payload.version == CurrentVersion)
+                repaired = true;
 
             if (repaired)
                 ReportRecovery("SOME LOCAL SETTINGS WERE INVALID — SAFE DEFAULTS FILLED THE GAPS");
@@ -164,6 +179,18 @@ namespace Presentation
             return Save();
         }
 
+        public bool SetPresentationResponseLevels(PresentationResponseLevel cameraMotion,
+            PresentationResponseLevel vehicleMotion)
+        {
+            if (!IsPresentationLevel((int)cameraMotion)) throw new ArgumentOutOfRangeException(nameof(cameraMotion));
+            if (!IsPresentationLevel((int)vehicleMotion)) throw new ArgumentOutOfRangeException(nameof(vehicleMotion));
+            if (CameraMotion == cameraMotion && VehicleMotion == vehicleMotion) return !dirty || Save();
+            CameraMotion = cameraMotion;
+            VehicleMotion = vehicleMotion;
+            dirty = true;
+            return Save();
+        }
+
         internal void ReportRecovery(string message)
         {
             RecoveryMessage = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
@@ -176,7 +203,10 @@ namespace Presentation
                 version = CurrentVersion,
                 visualStyle = (int)VisualStyle,
                 handlingModels = new int[LocalPlayerRules.MaximumPlayers],
-                vehicleFamilies = new int[LocalPlayerRules.MaximumPlayers]
+                vehicleFamilies = new int[LocalPlayerRules.MaximumPlayers],
+                cameraMotion = (int)CameraMotion,
+                vehicleMotion = (int)VehicleMotion,
+                hasPresentationResponseSettings = true
             };
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
@@ -202,6 +232,8 @@ namespace Presentation
         private void ResetToDefaults()
         {
             VisualStyle = VisualStyleMode.Clean3D;
+            CameraMotion = PresentationResponseLevel.Full;
+            VehicleMotion = PresentationResponseLevel.Full;
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
                 handlingModels[i] = HandlingModelId.A;
@@ -214,5 +246,8 @@ namespace Presentation
             if (playerIndex < 0 || playerIndex >= LocalPlayerRules.MaximumPlayers)
                 throw new ArgumentOutOfRangeException(nameof(playerIndex));
         }
+
+        private static bool IsPresentationLevel(int value) =>
+            Enum.IsDefined(typeof(PresentationResponseLevel), value);
     }
 }

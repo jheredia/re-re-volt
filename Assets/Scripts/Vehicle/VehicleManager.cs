@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Users;
 using Presentation;
+using AudioPresentation;
 
 namespace Vehicle
 {
@@ -27,11 +28,15 @@ namespace Vehicle
         private bool gameplaySuspended;
         private bool subscribed;
         private VisualStyleController visualStyle;
+        private PresentationResponseLevel cameraMotionLevel = PresentationResponseLevel.Full;
+        private PresentationResponseLevel vehicleMotionLevel = PresentationResponseLevel.Full;
 
         public IReadOnlyList<LocalPlayer> Players => playersView ??= players.AsReadOnly();
         public IReadOnlyList<VehicleController> AllVehicles => vehiclesView ??= allVehicles.AsReadOnly();
         public VehicleController PlayerVehicle => players.Count > 0 ? players[0].Vehicle : null;
         public bool AllowControllerJoining { get => allowControllerJoining; set => allowControllerJoining = value; }
+        public PresentationResponseLevel CameraMotionLevel => cameraMotionLevel;
+        public PresentationResponseLevel VehicleMotionLevel => vehicleMotionLevel;
         public event Action<LocalPlayer> PlayerJoined;
         public event Action<int> PlayerLeft;
         public event Action<LocalPlayer> ControllerConnectionChanged;
@@ -90,6 +95,8 @@ namespace Vehicle
                 if (connected == player.WasConnected) continue;
                 player.WasConnected = connected;
                 if (!connected) player.Vehicle.SetInputEnabled(false);
+                if (!connected) player.PresentationResponse?.ClearResponse();
+                player.PresentationResponse?.SetSuspended(!connected || gameplaySuspended);
                 ControllerConnectionChanged?.Invoke(player);
             }
 
@@ -166,6 +173,9 @@ namespace Vehicle
             input.enabled = true;
             VehicleRecovery recovery = car.GetComponent<VehicleRecovery>() ?? car.AddComponent<VehicleRecovery>();
             recovery.Initialize(spawn, raceManager);
+            VehicleImpactAudioEmitter impactEmitter = car.GetComponent<VehicleImpactAudioEmitter>() ??
+                                                     car.AddComponent<VehicleImpactAudioEmitter>();
+            impactEmitter.Configure(index, 0f);
 
             GameObject cameraObject = new GameObject($"PlayerCamera_{index + 1}");
             Camera camera = cameraObject.AddComponent<Camera>();
@@ -177,7 +187,11 @@ namespace Vehicle
             listener.enabled = false;
             ChaseCamera chase = cameraObject.AddComponent<ChaseCamera>();
             chase.Initialize(car.transform);
-            LocalPlayer joined = new LocalPlayer(index, user, vehicle, input, recovery, chase, listener, racer);
+            VehiclePresentationResponseOwner response = cameraObject.AddComponent<VehiclePresentationResponseOwner>();
+            response.Initialize(index, chase, vehicle, recovery, raceManager, impactEmitter);
+            response.SetLevels(cameraMotionLevel, vehicleMotionLevel);
+            response.SetSuspended(gameplaySuspended);
+            LocalPlayer joined = new LocalPlayer(index, user, vehicle, input, recovery, chase, listener, racer, response);
             input.FireRequested += () => FireRequested?.Invoke(joined);
             input.PauseRequested += () => PauseRequested?.Invoke(joined);
             input.ConfirmRequested += () => ConfirmRequested?.Invoke(joined);
@@ -297,6 +311,7 @@ namespace Vehicle
             InputUser.PerformPairingWithDevice(replacement, player.User);
             player.Input.Initialize(player.User, raceManager, player.Racer);
             player.WasConnected = true;
+            player.PresentationResponse?.SetSuspended(gameplaySuspended);
             ControllerConnectionChanged?.Invoke(player);
             return true;
         }
@@ -308,6 +323,7 @@ namespace Vehicle
             {
                 player.Input.GameplaySuspended = !enabled;
                 if (!enabled) player.Vehicle.SetInputEnabled(false);
+                player.PresentationResponse?.SetSuspended(!enabled);
             }
         }
 
@@ -316,8 +332,22 @@ namespace Vehicle
             foreach (LocalPlayer player in players)
             {
                 player.Recovery.ResetToGrid(GetSpawnPose(player.PlayerIndex));
+                player.PresentationResponse?.ClearResponse();
                 player.ChaseCamera.SnapToTarget();
             }
+        }
+
+        /// <summary>Explicit settings seam; no duplicate global input polling is introduced for this optional response.</summary>
+        public void SetPresentationResponseLevels(PresentationResponseLevel cameraMotion,
+            PresentationResponseLevel vehicleMotion)
+        {
+            if (!System.Enum.IsDefined(typeof(PresentationResponseLevel), cameraMotion) ||
+                !System.Enum.IsDefined(typeof(PresentationResponseLevel), vehicleMotion))
+                throw new ArgumentOutOfRangeException();
+            cameraMotionLevel = cameraMotion;
+            vehicleMotionLevel = vehicleMotion;
+            foreach (LocalPlayer player in players)
+                player.PresentationResponse?.SetLevels(cameraMotionLevel, vehicleMotionLevel);
         }
 
         private int FindFreeSlot()
@@ -376,6 +406,7 @@ namespace Vehicle
 
         private void ReleasePlayer(LocalPlayer player)
         {
+            player.PresentationResponse?.ClearResponse();
             if (player.Input != null) player.Input.enabled = false;
             if (player.User.valid) player.User.UnpairDevicesAndRemoveUser();
             players.Remove(player);

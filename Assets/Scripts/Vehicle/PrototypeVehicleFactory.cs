@@ -47,7 +47,7 @@ namespace Vehicle
             try
             {
                 // Validate and publish the marker first. The remaining operations are local GameObject state changes.
-                target.Initialize(TargetFamilyId, newSourceRenderers, newColorableBodyRenderers);
+                target.Initialize(TargetFamilyId, newSourceRenderers, newColorableBodyRenderers, target.PresentationPivot);
                 for (int i = 0; i < oldSourceRenderers.Length; i++)
                 {
                     Renderer renderer = oldSourceRenderers[i];
@@ -70,7 +70,7 @@ namespace Vehicle
             }
             catch
             {
-                target.Initialize(oldFamilyId, oldSourceRenderers, oldColorableBodyRenderers);
+                target.Initialize(oldFamilyId, oldSourceRenderers, oldColorableBodyRenderers, target.PresentationPivot);
                 for (int i = 0; i < oldSourceRenderers.Length; i++)
                 {
                     Renderer renderer = oldSourceRenderers[i];
@@ -153,14 +153,15 @@ namespace Vehicle
 
             List<Renderer> sourceRenderers = new(10);
             List<Renderer> colorableBodyRenderers = new(8);
-            CreateSilhouette(car.transform, familyId, sourceRenderers, colorableBodyRenderers, string.Empty, true);
+            Transform visualPivot = CreatePresentationPivot(car.transform);
+            CreateSilhouette(visualPivot, familyId, sourceRenderers, colorableBodyRenderers, string.Empty, true);
 
             WheelCollider fl = CreateWheel(car.transform, "Wheel_FL", -.6f, .55f);
             WheelCollider fr = CreateWheel(car.transform, "Wheel_FR", .6f, .55f);
             WheelCollider rl = CreateWheel(car.transform, "Wheel_RL", -.6f, -.55f);
             WheelCollider rr = CreateWheel(car.transform, "Wheel_RR", .6f, -.55f);
             car.AddComponent<VehicleController>().ConfigureWheels(fl, fr, rl, rr);
-            car.AddComponent<VehicleFamilyVisual>().Initialize(familyId, sourceRenderers, colorableBodyRenderers);
+            car.AddComponent<VehicleFamilyVisual>().Initialize(familyId, sourceRenderers, colorableBodyRenderers, visualPivot);
             return car;
         }
 
@@ -190,19 +191,27 @@ namespace Vehicle
             List<Renderer> stagedColorable = new(8);
             try
             {
-                CreateSilhouette(vehicle.transform, familyId, stagedSources, stagedColorable, StagedPartPrefix, false);
+                CreateSilhouette(current.PresentationPivot, familyId, stagedSources, stagedColorable, StagedPartPrefix, false);
                 return new VehicleFamilyVisualReplacement(current, familyId, stagedSources, stagedColorable);
             }
             catch
             {
-                for (int i = vehicle.transform.childCount - 1; i >= 0; i--)
+                Transform pivot = current.PresentationPivot;
+                for (int i = pivot.childCount - 1; i >= 0; i--)
                 {
-                    GameObject child = vehicle.transform.GetChild(i).gameObject;
+                    GameObject child = pivot.GetChild(i).gameObject;
                     if (child.name.StartsWith(StagedPartPrefix, StringComparison.Ordinal))
                         DestroyGeneratedObject(child);
                 }
                 throw;
             }
+        }
+
+        private static Transform CreatePresentationPivot(Transform vehicleRoot)
+        {
+            GameObject pivot = new GameObject("PresentationVisualPivot");
+            pivot.transform.SetParent(vehicleRoot, false);
+            return pivot.transform;
         }
 
         private static void CreateSilhouette(Transform parent, VehicleFamilyId familyId,

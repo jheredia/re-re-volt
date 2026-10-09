@@ -159,6 +159,44 @@ namespace Tests.EditMode
         }
 
         [Test]
+        public void VersionOnePayloadMigratesWithFullMotionDefaultsAndVersionTwoRoundTrips()
+        {
+            MemoryStore store = new();
+            store.Seed("{\"version\":1,\"visualStyle\":0,\"handlingModels\":[0,0,0,0],\"vehicleFamilies\":[0,0,0,0]}");
+            DemoFlowPreferences preferences = new(store);
+            preferences.Load();
+
+            Assert.That(preferences.CameraMotion, Is.EqualTo(PresentationResponseLevel.Full));
+            Assert.That(preferences.VehicleMotion, Is.EqualTo(PresentationResponseLevel.Full));
+            Assert.That(preferences.SetPresentationResponseLevels(PresentationResponseLevel.Off,
+                PresentationResponseLevel.Reduced), Is.True);
+
+            DemoFlowPreferences reloaded = new(store);
+            reloaded.Load();
+            Assert.That(reloaded.CameraMotion, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(reloaded.VehicleMotion, Is.EqualTo(PresentationResponseLevel.Reduced));
+        }
+
+        [Test]
+        public void PartialOrFailedMotionSettingsStaySafeAndRetry()
+        {
+            MemoryStore partial = new();
+            partial.Seed("{\"version\":2,\"visualStyle\":0,\"handlingModels\":[0,0,0,0],\"vehicleFamilies\":[0,0,0,0]}");
+            DemoFlowPreferences repaired = new(partial);
+            repaired.Load();
+            Assert.That(repaired.CameraMotion, Is.EqualTo(PresentationResponseLevel.Full));
+            Assert.That(repaired.RecoveryMessage, Does.Contain("SAFE DEFAULTS"));
+
+            MemoryStore failing = new() { FailWrites = true };
+            DemoFlowPreferences preferences = new(failing);
+            Assert.That(preferences.SetPresentationResponseLevels(PresentationResponseLevel.Reduced,
+                PresentationResponseLevel.Off), Is.False);
+            failing.FailWrites = false;
+            Assert.That(preferences.SetPresentationResponseLevels(PresentationResponseLevel.Reduced,
+                PresentationResponseLevel.Off), Is.True);
+        }
+
+        [Test]
         public void InvalidSlotAndCatalogValuesAreRejected()
         {
             DemoFlowPreferences preferences = new(new MemoryStore());
@@ -169,6 +207,8 @@ namespace Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() =>
                 preferences.SetPlayerSelection(0, HandlingModelId.A, (VehicleFamilyId)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetVisualStyle((VisualStyleMode)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetPresentationResponseLevels(
+                (PresentationResponseLevel)99, PresentationResponseLevel.Full));
         }
     }
 }

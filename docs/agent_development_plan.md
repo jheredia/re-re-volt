@@ -247,6 +247,19 @@ player-index-local routing, no writes to mechanics authority, explicit
 Off/Reduced/Full behavior, and lifecycle cleanup evidence before later effects
 are introduced.
 
+The per-player camera/vehicle-response checkpoint is now implemented. Generated
+family silhouettes use a child-only presentation pivot, collisions publish a
+presentation payload alongside the unchanged audio event, and each human camera
+owns only its player-index-local impulse, normalized-speed framing, and visual
+chassis response. Persisted camera and vehicle motion levels support Off,
+Reduced, and Full with version-1 migration. Pause, recovery, reset, disconnect,
+controller replacement, race exit, release, disable, and destroy clear the
+response. A separate static audit identified and reconciliation fixed the
+controller-replacement suspension edge case; Unity execution remains deferred
+to the consolidated freeze. The next fresh-agent deliverable is pooled,
+surface-aware VFX, followed separately by audio expansion and the final
+accessibility/performance audit.
+
 Translate common arcade-game-feel tools into RC-racing equivalents. Screen
 shake becomes player-local camera impulse, speed framing, restrained FOV change,
 and landing response. Kickback becomes presentation-only chassis recoil,

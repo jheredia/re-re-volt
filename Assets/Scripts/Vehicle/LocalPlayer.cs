@@ -8,7 +8,8 @@ namespace Vehicle
     public sealed class LocalPlayer
     {
         internal LocalPlayer(int index, InputUser user, VehicleController vehicle, InputHandler input,
-            VehicleRecovery recovery, ChaseCamera chaseCamera, AudioListener listener, RacerState racer)
+            VehicleRecovery recovery, ChaseCamera chaseCamera, AudioListener listener, RacerState racer,
+            VehiclePresentationResponseOwner presentationResponse)
         {
             PlayerIndex = index;
             User = user;
@@ -19,6 +20,7 @@ namespace Vehicle
             ChaseCamera = chaseCamera;
             Listener = listener;
             Racer = racer;
+            PresentationResponse = presentationResponse;
             WasConnected = true;
         }
 
@@ -33,6 +35,7 @@ namespace Vehicle
         public ChaseCamera ChaseCamera { get; }
         public Camera Camera => ChaseCamera.Camera;
         public RacerState Racer { get; }
+        public VehiclePresentationResponseOwner PresentationResponse { get; }
         public bool IsConnected => Input != null && Input.IsConnected;
     }
 }

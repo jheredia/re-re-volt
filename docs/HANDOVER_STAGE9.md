@@ -134,3 +134,60 @@ collision-payload seam, Off/Reduced/Full controls, local routing, and lifecycle
 cleanup before pooled VFX, audio expansion, then an independent
 accessibility/performance audit. Only after 9A and those separate 9B slices freeze
 should the project run the single consolidated validation matrix.
+
+## Accepted checkpoint — Stage 9B per-player camera and vehicle response
+
+Generated vehicle silhouettes now live below a dedicated child-only
+`PresentationVisualPivot`; the authoritative vehicle root, Rigidbody,
+WheelColliders, and wheel visuals remain outside it. Family replacement retains
+that pivot and its transactional rollback cleans staged children from the new
+ownership boundary.
+
+`VehicleImpactAudioEmitter` retains its existing audio event and additionally
+publishes an immutable presentation payload with player identity, impulse,
+contact direction and point, other collider/layer, and relative velocity. One
+`VehiclePresentationResponseOwner` lives on each human player's camera. It
+routes only that player's impacts into bounded camera composition, normalized
+speed FOV, and child-pivot lean/recoil. Recovery, grid reset, pause, disconnect,
+controller replacement, race-state exit, player release, disable, and destroy
+clear or suspend the response without writing mechanics authority or another
+viewport.
+
+Camera and vehicle motion each support persisted `Off`, `Reduced`, and `Full`
+levels through the existing versioned preference boundary. Version 1 settings
+migrate to safe Full defaults; corrupt or partial version 2 values retain the
+existing recovery-message behavior. Setup and pause expose the active values,
+and an explicit settings API owns changes. Interactive rebinding remains
+deferred because no unused command can be added without competing with the
+protected `InputHandler` edit.
+
+Focused EditMode and PlayMode source covers preference migration/retry, one-to-
+four ownership, child-pivot invariants, family replacement, collision-payload
+context, pause, and grid-reset cleanup. A separate static audit found a P2 where
+replacement controllers left presentation suspended; reconciliation restores
+the response according to the existing gameplay-pause state. The overseer also
+fixed staged-family cleanup at the new pivot and rejected impacts while the
+owner is disabled or suspended. No broad Unity test, build, profile, or rendered
+matrix was run under the implementation-first cadence.
+
+### Additional files in this Stage 9B checkpoint
+
+- `Assets/Scripts/Audio/VehicleImpactAudioEmitter.cs`
+- `Assets/Scripts/Presentation/DemoFlowPreferences.cs`
+- `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
+- `Assets/Scripts/Vehicle/ChaseCamera.cs`
+- `Assets/Scripts/Vehicle/LocalPlayer.cs`
+- `Assets/Scripts/Vehicle/PresentationResponseLevel.cs` and `.meta`
+- `Assets/Scripts/Vehicle/PrototypeVehicleFactory.cs`
+- `Assets/Scripts/Vehicle/VehicleFamilyVisual.cs`
+- `Assets/Scripts/Vehicle/VehicleManager.cs`
+- `Assets/Scripts/Vehicle/VehiclePresentationResponseOwner.cs` and `.meta`
+- `Assets/Tests/EditMode/DemoFlowPreferencesTests.cs`
+- `Assets/Tests/PlayMode/Stage9BPresentationResponseIntegrationTests.cs` and `.meta`
+- `docs/agent_development_plan.md`
+- `docs/HANDOVER_STAGE9.md`
+
+The next separate Stage 9B deliverable is pooled, surface-aware visual effects.
+It must consume the accepted player-local event language without changing race,
+vehicle, recovery, pickup, or combat authority. Audio expansion and the final
+accessibility/performance audit remain later independent deliverables.

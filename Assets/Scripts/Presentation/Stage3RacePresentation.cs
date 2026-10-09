@@ -89,6 +89,8 @@ namespace Presentation
         public string ModalFooterText => modalFooter != null ? modalFooter.text : string.Empty;
         public string PreferenceRecoveryMessage => preferences?.RecoveryMessage ?? string.Empty;
         public int SelectedBotCount => ai?.SelectedBotCount ?? 0;
+        public PresentationResponseLevel CameraMotionSetting => preferences?.CameraMotion ?? PresentationResponseLevel.Full;
+        public PresentationResponseLevel VehicleMotionSetting => preferences?.VehicleMotion ?? PresentationResponseLevel.Full;
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -114,11 +116,33 @@ namespace Presentation
             portraitAtlas = portraitAtlasSource;
             preferences = preferenceSource;
             ApplySavedVisualStyle();
+            ApplyPresentationResponseSettings();
             BuildInterface();
             configured = true;
             Subscribe();
             RefreshPlayerPresentation();
             ApplyRaceState(race.CurrentState);
+        }
+
+        /// <summary>
+        /// Explicit accessibility settings seam for owned setup/pause UI and automated tests. Interactive binding is
+        /// intentionally deferred until an unused input action can be assigned without competing with InputHandler.
+        /// </summary>
+        public bool SetPresentationResponseSettings(PresentationResponseLevel cameraMotion,
+            PresentationResponseLevel vehicleMotion)
+        {
+            if (preferences == null) return false;
+            bool saved = preferences.SetPresentationResponseLevels(cameraMotion, vehicleMotion);
+            ApplyPresentationResponseSettings();
+            RefreshLobbyText();
+            if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
+            return saved;
+        }
+
+        private void ApplyPresentationResponseSettings()
+        {
+            if (vehicles == null) return;
+            vehicles.SetPresentationResponseLevels(CameraMotionSetting, VehicleMotionSetting);
         }
 
         private void Subscribe()
@@ -319,9 +343,10 @@ namespace Presentation
             string recoveryLine = string.IsNullOrEmpty(PreferenceRecoveryMessage)
                 ? string.Empty
                 : $"\nNOTICE  {PreferenceRecoveryMessage}";
+            string responseLine = $"\nCAMERA MOTION  {GetResponseLabel(CameraMotionSetting)}   VEHICLE MOTION  {GetResponseLabel(VehicleMotionSetting)}";
             ShowModal("RACE PAUSED / SETTINGS",
-                "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + recoveryLine,
-                "V / R3   CHANGE DISPLAY STYLE\nESC / MENU / START   RESUME");
+                "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + responseLine + recoveryLine,
+                "V / R3   CHANGE DISPLAY STYLE\nMOTION RESPONSE IS AVAILABLE THROUGH THE SETTINGS API\nESC / MENU / START   RESUME");
         }
 
         private void OnControllerConnectionChanged(LocalPlayer player)
@@ -662,6 +687,8 @@ namespace Presentation
             if (visualStyle != null)
                 builder.Append("VISUAL STYLE  ").Append(GetVisualStyleLabel(visualStyle.Mode))
                     .AppendLine("  [V / R3]");
+            builder.Append("CAMERA MOTION  ").Append(GetResponseLabel(CameraMotionSetting)).Append("   VEHICLE MOTION  ")
+                .Append(GetResponseLabel(VehicleMotionSetting)).AppendLine("  [SETTINGS API]");
             builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
                            "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
                            "AI TEST CARS: B   GAMEPAD L3\n" +
@@ -669,6 +696,13 @@ namespace Presentation
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();
         }
+
+        private static string GetResponseLabel(PresentationResponseLevel level) => level switch
+        {
+            PresentationResponseLevel.Off => "OFF",
+            PresentationResponseLevel.Reduced => "REDUCED",
+            _ => "FULL"
+        };
 
         private void RebuildLobbyPortraits()
         {
