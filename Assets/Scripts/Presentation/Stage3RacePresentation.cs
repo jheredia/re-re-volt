@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using AI;
 using Core;
 using TMPro;
 using UnityEngine;
@@ -46,6 +47,7 @@ namespace Presentation
         private readonly Dictionary<int, WeaponHudIdentity> weaponIdentities = new();
         private RaceManager race;
         private VehicleManager vehicles;
+        private AIManager ai;
         private VisualStyleController visualStyle;
         private Canvas canvas;
         private GameObject lobbyPanel;
@@ -86,6 +88,7 @@ namespace Presentation
         public string ModalBodyText => modalBody != null ? modalBody.text : string.Empty;
         public string ModalFooterText => modalFooter != null ? modalFooter.text : string.Empty;
         public string PreferenceRecoveryMessage => preferences?.RecoveryMessage ?? string.Empty;
+        public int SelectedBotCount => ai?.SelectedBotCount ?? 0;
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -98,7 +101,7 @@ namespace Presentation
 
         public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
             VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null,
-            DemoFlowPreferences preferenceSource = null)
+            DemoFlowPreferences preferenceSource = null, AIManager aiManager = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -107,6 +110,7 @@ namespace Presentation
             race = raceManager;
             vehicles = vehicleManager;
             visualStyle = visualStyleController;
+            ai = aiManager;
             portraitAtlas = portraitAtlasSource;
             preferences = preferenceSource;
             ApplySavedVisualStyle();
@@ -132,6 +136,7 @@ namespace Presentation
             vehicles.VehicleFamilyChanged += OnVehicleFamilyChanged;
             vehicles.VisualStyleCycleRequested += OnVisualStyleCycleRequested;
             vehicles.ControllerConnectionChanged += OnControllerConnectionChanged;
+            if (ai != null) ai.SelectedBotCountChanged += OnSelectedBotCountChanged;
             if (visualStyle != null) visualStyle.StyleChanged += OnVisualStyleChanged;
             subscribed = true;
         }
@@ -158,6 +163,7 @@ namespace Presentation
                 vehicles.ControllerConnectionChanged -= OnControllerConnectionChanged;
             }
             if (visualStyle != null) visualStyle.StyleChanged -= OnVisualStyleChanged;
+            if (ai != null) ai.SelectedBotCountChanged -= OnSelectedBotCountChanged;
             subscribed = false;
         }
 
@@ -234,9 +240,19 @@ namespace Presentation
         private void StartRaceFromLobby()
         {
             if (vehicles.Players.Count == 0 || AnyPlayerDisconnected()) return;
+            if (ai != null && !ai.PrepareRaceRoster())
+            {
+                RefreshLobbyText();
+                return;
+            }
             vehicles.AllowControllerJoining = false;
             vehicles.SetAllVehiclesEnabled(false);
-            race.StartRace();
+            if (!race.StartRace())
+            {
+                ai?.ReleaseBotsForLobby();
+                vehicles.AllowControllerJoining = true;
+                RefreshLobbyText();
+            }
         }
 
         private void StartRematch()
@@ -254,7 +270,10 @@ namespace Presentation
             pauseReason = PauseReason.None;
             Time.timeScale = 1f;
             race.ResetRace();
+            ai?.ReleaseBotsForLobby();
         }
+
+        private void OnSelectedBotCountChanged(int count) => RefreshLobbyText();
 
         private void OnPlayerJoined(LocalPlayer player)
         {
@@ -499,8 +518,8 @@ namespace Presentation
         private void RefreshHudText()
         {
             if (vehicles == null) return;
-            int total = vehicles.Players.Count;
-            for (int i = 0; i < total; i++)
+            int total = race?.Racers.Count ?? vehicles.Players.Count;
+            for (int i = 0; i < vehicles.Players.Count; i++)
             {
                 LocalPlayer player = vehicles.Players[i];
                 if (!hudLabels.TryGetValue(player.PlayerIndex, out TextMeshProUGUI label)) continue;
@@ -630,6 +649,14 @@ namespace Presentation
                 builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
                 else builder.Append("ENTER / A / CROSS   START 3-LAP RACE");
+                if (ai != null)
+                {
+                    builder.AppendLine().Append("AI TEST CARS  ").Append(ai.SelectedBotCount)
+                        .Append(" / ").Append(ai.MaximumSelectableBots)
+                        .Append("   [B / L3 CYCLE]");
+                    if (!string.IsNullOrEmpty(ai.LastRosterError))
+                        builder.AppendLine().Append("NOTICE: ").Append(ai.LastRosterError);
+                }
             }
             builder.AppendLine().AppendLine();
             if (visualStyle != null)
@@ -637,6 +664,7 @@ namespace Presentation
                     .AppendLine("  [V / R3]");
             builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
                            "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
+                           "AI TEST CARS: B   GAMEPAD L3\n" +
                            "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
                            "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
             lobbyPlayers.text = builder.ToString();

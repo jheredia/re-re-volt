@@ -56,6 +56,59 @@ Stage 9 implementation freeze.
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`
 
+## Accepted checkpoint — Stage 9A AI test opponents
+
+Stage 9A now has a separate AI-owned roster for zero to three deterministic,
+driving-only test opponents. After one human joins, the setup page cycles the
+requested count with `B` on the keyboard or `L3` on the first human gamepad.
+The default is zero, human joins clamp the request to the remaining capacity,
+and bots are not spawned until the race is submitted. Setup therefore retains
+all four human join slots and the authoritative race never exceeds four cars.
+
+Bots register directly with `RaceManager` as `bot-1` through `bot-3`, with
+`IsHuman == false` and no player index. They do not create an `InputUser`, pair
+a device, allocate a split-screen camera or audio listener, receive a human HUD,
+or enter the weapon roster. They drive through the same `VehicleController`
+physics command seam as humans and use the authored ordered checkpoint route,
+checkpoint triggers, laps, collisions, Model A handling, and `VehicleRecovery`.
+Stuck, off-track, and local geometric-progress watchdogs invoke the existing
+recovery authority without advancing race progress. Continuous segment progress
+is deliberately not written to `RaceSession`, because humans currently use
+checkpoint-only standings and bot-only projection would bias positions.
+
+Countdown, pause, disconnect pause, finish, rematch, and lobby-return gates are
+shared with the existing race flow. Rematches reset retained bot identities to
+their grid poses. Returning to setup, disabling the AI owner, or destroying the
+runtime releases each bot registration, generated vehicle, and visual-style
+registration. Weapon use remains outside this first AI slice.
+
+Focused test source covers zero-to-three selection, capacity clamping, stable
+non-human identities, no human ownership leaks, collision enablement, physics
+commands, off-track recovery, pause, cleanup, and rematch retention. A bounded
+three-lap PlayMode case directly finishes only its stationary human, then
+requires the AI-driven bot to cross all 24 checkpoint triggers in exact order,
+finish through the authoritative race rules, and release the Results gate. An
+independent static audit found and verified fixes for asymmetric bot-only
+segment progress and the earlier circular checkpoint test. No P1/P2 findings
+remain.
+
+Unity import/compilation and execution of the new 90-second bounded navigation
+case remain deferred to the implementation freeze. That run must establish
+actual driving-line reliability and timing. Actual bot-human impact response,
+explicit visual-style registration counts, and exact rematch object identity
+are useful P3 strengthening checks for the consolidated pass.
+
+### Additional files in the Stage 9A checkpoint
+
+- `Assets/Scripts/AI/AIDriverController.cs`
+- `Assets/Scripts/AI/AIManager.cs`
+- `Assets/Scripts/Presentation/Stage3Bootstrap.cs`
+- `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
+- `Assets/Tests/EditMode/AIDrivingPolicyTests.cs` and `.meta`
+- `Assets/Tests/PlayMode/Stage9AIOpponentIntegrationTests.cs` and `.meta`
+- `docs/agent_development_plan.md`
+- `docs/HANDOVER_STAGE9.md`
+
 ## Protected working-tree state
 
 `Assets/Scripts/Core/InputHandler.cs` contains the user's uncommitted edit and
@@ -67,13 +120,8 @@ stage `.DS_Store`, `ProjectSettings/ProjectAuditorSettings.asset`,
 
 ## Next implementation seams
 
-Use a fresh bounded agent for Stage 9A AI-controlled test opponents. The first
-slice is zero to three deterministic driving-only bots that fill a four-racer
-grid without owning input devices, local-player slots, split-screen viewports,
-or human HUD panels. Weapon use remains a later optional increment.
-
-After Stage 9A is reconciled, Stage 9B is the dedicated game-feel and sensory-
-polish pass requested by the user. Its reference, camera/vehicle response,
+Stage 9B is now the next implementation stage: the dedicated game-feel and
+sensory-polish pass requested by the user. Its reference, camera/vehicle response,
 pooled VFX, audio, and independent accessibility/performance work must remain
 separate bounded deliverables. Only after 9A and 9B freeze should the project run
 the single consolidated validation matrix.

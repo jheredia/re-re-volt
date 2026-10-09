@@ -1,5 +1,6 @@
 using Core;
 using AudioPresentation;
+using AI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Vehicle;
@@ -25,6 +26,7 @@ namespace Presentation
 
         public RaceManager RaceManager { get; private set; }
         public VehicleManager VehicleManager { get; private set; }
+        public AIManager AIManager { get; private set; }
         public Stage3RacePresentation Presentation { get; private set; }
         public WeaponManager WeaponManager { get; private set; }
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
@@ -84,9 +86,17 @@ namespace Presentation
             VehicleManager.VehicleFamilyChanged += ApplyPlayerColor;
             DemoPreferences = new DemoFlowPreferences(new PlayerPrefsLocalPreferenceStore());
             DemoPreferences.Load();
+            AIManager = FindAnyObjectByType<AIManager>();
+            if (AIManager == null) AIManager = CreateChild<AIManager>("AIManager");
+            if (!AIManager.Configure(RaceManager, VehicleManager, circuit.Grid, circuit.Checkpoints,
+                    circuit.DrivableMask, VisualStyle))
+            {
+                Debug.LogError("[Stage3] AIManager could not accept the generated grid and checkpoint guidance.", this);
+                return false;
+            }
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
             Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime,
-                DemoPreferences);
+                DemoPreferences, AIManager);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
@@ -201,6 +211,7 @@ namespace Presentation
             }
             manager.RaceManager = RaceManager;
             manager.VehicleManager = VehicleManager;
+            manager.AIManager = AIManager;
             manager.WeaponManager = WeaponManager;
             manager.UIManager = null;
             manager.ReturnToMainMenu();

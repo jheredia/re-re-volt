@@ -205,21 +205,20 @@ the user re-enables them.
 
 #### Stage 9A — AI-controlled test opponents
 
-Before final acceptance, a bounded implementation agent may turn the existing
-AI scaffolding into deterministic test opponents. The current
-`AIDriverController` and `AIManager` are placeholders only: the driver tick has
-no navigation or control logic, and no runtime composition currently spawns or
-registers AI racers. They must not be described as an implemented feature.
+Implementation checkpoint accepted after a separate static audit. Stage 9A now
+turns the former AI scaffolding into deterministic test opponents; Unity
+compilation and the authored bounded three-lap navigation case remain queued for
+the consolidated implementation-freeze validation pass.
 
 The first useful slice lets a solo tester add zero to three AI cars to fill a
 four-racer grid without pairing extra input devices. Bots follow authored track
 guidance, obey the same checkpoints, laps, race states, collision physics,
 handling-model contract, recovery rules, and pause gates as human racers. They
 do not claim local-player slots, input devices, split-screen viewports, or human
-HUD panels. Setup exposes an explicit bot count and neutral difficulty/control
-parameters; removing or restarting bots must cleanly release every registration
-and spawned object. Weapon use is a separate opt-in increment after reliable
-driving and recovery, not a prerequisite for the navigation test harness.
+HUD panels. Setup exposes an explicit bot count with neutral fixed driving
+parameters; removing or restarting bots cleanly releases every registration and
+spawned object. Weapon use is a separate opt-in increment after reliable driving
+and recovery, not a prerequisite for the navigation test harness.
 
 Focused evidence must cover deterministic spawn identity, zero-to-three bot
 counts, waypoint or racing-line progress, ordered checkpoint and finish
