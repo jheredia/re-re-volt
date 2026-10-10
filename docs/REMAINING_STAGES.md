@@ -44,8 +44,10 @@ Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-
      fixed, learnable tracks.
    - Add a controller/keyboard pre-race selector with preview, lap count, saved
      choice, rematch behavior, and explicit session track identity.
-   - Validate every track with AI, combat, checkpoints, recovery, split-screen,
-     visual modes, and performance before networking consumes the contract.
+   - Validate every track with selectable 0–3 AI opponents, combat,
+     checkpoints, recovery, split-screen, visual modes, and performance before
+     networking consumes the contract. AI competition is a prototype gate, not
+     optional test tooling.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
    - Start with a separate architecture decision; do not silently select a
@@ -77,7 +79,8 @@ Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-
 - Cosmetic car customization, club paint, and decals.
 - More vehicle families and original special/novelty cars.
 - Expanded selectable drivers and heterogeneous South American club stories.
-- AI weapon use and stronger opponent personalities.
+- AI weapon use and stronger opponent personalities; basic driving competition
+  is already required and implemented pending full Unity/all-track validation.
 - Progression, unlocks, challenges, and best-lap records.
 - Demo → Early Access → Full release packaging and later Steam-readiness work.
 - Reproducible step-by-step implementation tutorial.

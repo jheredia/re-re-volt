@@ -17,6 +17,8 @@ with friends.
 - Ordered checkpoints, lap counting, race positions, finish order, and rematch.
 - Pickup boxes and at least two usable weapons: a projectile and an oil hazard.
 - Per-player HUD showing position, lap, held weapon, and race state.
+- Zero to three selectable AI opponents that provide repeatable solo/local
+  competition and complete the same four tracks under authoritative race rules.
 - Controller navigation from join/setup through results and rematch.
 - Private host/join internet races for up to four racers, preserving the same
   track, race, vehicle, combat, results, and rematch rules as local play.
@@ -215,6 +217,12 @@ turns the former AI scaffolding into deterministic test opponents; Unity
 compilation and the authored bounded three-lap navigation case remain queued for
 the consolidated implementation-freeze validation pass.
 
+AI opponents are a prototype requirement, not optional tooling. The accepted
+driving-only slice must be carried across all four tracks and prove competitive
+race completion, ordered checkpoints/laps, recovery, collisions, pause,
+results, rematch, and clean ownership for zero to three bots. Weapon-using AI
+and richer personalities remain a later increment unless promoted separately.
+
 The first useful slice lets a solo tester add zero to three AI cars to fill a
 four-racer grid without pairing extra input devices. Bots follow authored track
 guidance, obey the same checkpoints, laps, race states, collision physics,
@@ -368,7 +376,8 @@ asset migration occurs before user approval.
 - Expanded selectable drivers, character presentation, and heterogeneous club
   stories grounded in South America without treating that culture as a cast
   restriction.
-- AI weapon use and richer opponent personalities after driving reliability.
+- AI weapon use and richer opponent personalities after driving reliability;
+  basic competitive driving AI is already a required prototype system.
 - Progression, unlocks, challenges, best-lap records, and demo/early-access/full
   release packaging once the repeatable race loop is stable.
 

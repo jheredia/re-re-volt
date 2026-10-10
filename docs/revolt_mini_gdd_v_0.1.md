@@ -49,7 +49,7 @@ Select Race → Drive → Collect Pickup → Use Weapon → Complete Laps → Fi
 - 4 fixed, learnable tracks with a pre-race track-selection menu
 - 4 selectable vehicle families
 - 2 Weapons
-- 3 AI Opponents
+- 0–3 selectable AI opponents for solo and local test competition
 - 1–4 player local split-screen, with optional keyboard ownership for solo testing
 - Internet friend sessions for up to 4 racers
 
