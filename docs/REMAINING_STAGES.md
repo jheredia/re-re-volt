@@ -1,17 +1,17 @@
 # Pinned Remaining Roadmap
 
-Status snapshot: `codex/local-multiplayer-prototype` at `d57737f` on 2026-10-10.
+Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-10.
 
 ## How much remains
 
-- **One core numbered stage remains for the playable local prototype:** finish Stage 9.
-- **Four bounded work packages remain inside Stage 9.** Each receives a fresh
-  implementation or audit agent and overseer reconciliation.
-- **Three numbered stages remain on the complete roadmap:** Stage 9, Stage 10,
-  and Stage 11. Stages 10 and 11 are post-prototype work and do not block the
-  local playable demo.
+- **Two core numbered stages remain for the expanded playable prototype:**
+  finish Stage 9, including the four-track roster, then complete Stage 10 online
+  friend play.
+- **Stage 11 remains a post-prototype visual-direction review.**
+- Every bounded implementation, content, architecture, and audit deliverable
+  receives a fresh agent/task and overseer reconciliation.
 
-## Required for the playable local prototype
+## Required for the expanded playable prototype
 
 1. **Stage 9B — Pooled, surface-aware VFX** — next
    - Pool bounded short-lived collision, dust, skid, pickup, and combat effects.
@@ -36,30 +36,56 @@ Status snapshot: `codex/local-multiplayer-prototype` at `d57737f` on 2026-10-10.
    - Capture the final screenshot/readability matrix and profile representative
      one- and four-player races.
    - Produce and launch the macOS test build; reassess Web feasibility.
-   - Run physical multi-controller and Windows build/runtime acceptance only
-     after the user explicitly re-enables those deferred checks. These checks
-     are ultimately required to claim the original local-controller goal.
+   - This becomes a local baseline gate before track/online work; final
+     integrated acceptance occurs after Stage 10.
 
-## Post-prototype numbered stages
+5. **Stage 9C — Four-track roster and selection menu**
+   - Keep the existing circuit as Track 1 and author three distinct original,
+     fixed, learnable tracks.
+   - Add a controller/keyboard pre-race selector with preview, lap count, saved
+     choice, rematch behavior, and explicit session track identity.
+   - Validate every track with AI, combat, checkpoints, recovery, split-screen,
+     visual modes, and performance before networking consumes the contract.
 
-5. **Stage 10 — Online multiplayer**
-   - Future expansion with a separately approved networking architecture.
-   - Not required for the local split-screen prototype.
+6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
+   - Start with a separate architecture decision; do not silently select a
+     transport, package, authority model, relay, or hybrid topology.
+   - Implement private host/join, ready and track selection, up-to-four-racer
+     race/combat synchronization, results/rematch, disconnect handling, and
+     actionable errors for internet friend tests.
+   - Preserve local split-screen as an independent first-class mode. Public
+     matchmaking, accounts, ranked play, and persistent servers are excluded.
 
-6. **Stage 11 — Post-development visual-style review**
+7. **Final integrated prototype acceptance**
+   - Run the consolidated test/build/profile/screenshot matrix after online
+     integration, covering local and internet friend sessions across all four
+     tracks.
+   - Physical multi-controller and Windows build/runtime checks remain deferred
+     until explicitly re-enabled, but are required for the final release claim.
+
+## Post-prototype numbered stage
+
+8. **Stage 11 — Post-development visual-style review**
    - Compare the accepted comic baseline with more elastic 1990s cartoon
      directions in actual play, while keeping Clean 3D and ink modes as controls.
    - No wholesale or irreversible art migration before user approval.
 
-## Deferred options — not counted above
+## Other ideas already discussed — not counted above
 
-- Block-based track editor.
-- One lore-driven modular/randomized track.
+- Re-Volt-like block-based track editor using curated pieces, not free-form geometry.
+- One lore-driven modular/randomized exhibition track; fixed tracks remain the norm.
+- Cosmetic car customization, club paint, and decals.
+- More vehicle families and original special/novelty cars.
+- Expanded selectable drivers and heterogeneous South American club stories.
+- AI weapon use and stronger opponent personalities.
+- Progression, unlocks, challenges, and best-lap records.
+- Demo → Early Access → Full release packaging and later Steam-readiness work.
 - Reproducible step-by-step implementation tutorial.
-- Broader car/character/content production beyond prototype acceptance.
+- Broader car, character, track, music, and club-content production.
 
 ## Current hold
 
-Stage 9B pooled VFX is paused at a clean commit because weekly Codex usage is
-near the user-defined 80% stop boundary. Resume only after the user explicitly
-signals continuation following a reset or authorizes a reset credit.
+Stage 9B pooled VFX remains paused at a clean commit because weekly Codex usage
+is beyond the user-defined 80% stop boundary. This scope update does not resume
+implementation. Resume only after the user explicitly signals continuation
+following a reset or authorizes a reset credit.

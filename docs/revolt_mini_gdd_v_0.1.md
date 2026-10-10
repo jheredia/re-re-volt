@@ -1,6 +1,6 @@
-# Re-Volt Remake — Mini GDD
+# Original RC-Combat Racer — Mini GDD
 
-**Version:** v0.1 MVP  
+**Version:** v0.2 Prototype
 **Author:** Joaquin Heredia  
 **Engine:** Unity  
 **Document Format:** Markdown (GitHub / VSCode Friendly)
@@ -45,11 +45,13 @@ Arcade-style RC racing game featuring weapon pickups, oversized environments, an
 ## Core Gameplay Loop
 Select Race → Drive → Collect Pickup → Use Weapon → Complete Laps → Finish Race → Repeat
 
-## MVP Scope
-- 1 Track
-- 1 Vehicle
+## Prototype Scope
+- 4 fixed, learnable tracks with a pre-race track-selection menu
+- 4 selectable vehicle families
 - 2 Weapons
 - 3 AI Opponents
+- 1–4 player local split-screen, with optional keyboard ownership for solo testing
+- Internet friend sessions for up to 4 racers
 
 ---
 
@@ -248,11 +250,15 @@ Future Modes:
 ## Local Multiplayer
 - Split-screen support
 
-## Online Multiplayer (Future)
-- Client-server model
-- Vehicle synchronization
+## Online Multiplayer (Prototype Requirement)
+- Host/join friend-session flow for up to four racers
+- Authoritative race, vehicle, combat, track-selection, results, and rematch synchronization
+- Disconnect, timeout, and host-loss behavior with explicit recovery messaging
+- Transport, authority topology, relay/discovery, and hybrid local-plus-online support require a dedicated architecture decision before implementation
 
-(MVP excludes multiplayer.)
+Local split-screen remains a first-class mode and must not be broken or rebuilt
+around the online transport. The first online acceptance target is a repeatable
+private friend race over the internet; public matchmaking is not required.
 
 ---
 
@@ -374,4 +380,3 @@ Playable race featuring:
 ---
 
 # End of Document
-

@@ -2,13 +2,14 @@
 
 ## Product goal
 
-Create an original, locally playable RC-combat racing prototype inspired by the
-feel of classic toy-car racers. The prototype supports one to four human players
-on a single machine using controllers and automatic split-screen cameras.
+Create an original RC-combat racing prototype inspired by the feel of classic
+toy-car racers. It supports one to four humans on one machine using controllers
+and automatic split-screen cameras, plus private internet sessions for testing
+with friends.
 
 ## Prototype contract
 
-- One complete three-lap race on an original toy-scale circuit.
+- Four complete, fixed, learnable toy-scale circuits and a pre-race track selector.
 - One to four local human racers: one optional keyboard-owned player and one
   independently paired controller for every remaining player.
 - Automatic one-, two-, three-, and four-player camera layouts.
@@ -17,11 +18,13 @@ on a single machine using controllers and automatic split-screen cameras.
 - Pickup boxes and at least two usable weapons: a projectile and an oil hazard.
 - Per-player HUD showing position, lap, held weapon, and race state.
 - Controller navigation from join/setup through results and rematch.
+- Private host/join internet races for up to four racers, preserving the same
+  track, race, vehicle, combat, results, and rematch rules as local play.
 - Reproducible macOS and Windows desktop builds with a documented control scheme.
 
-Online multiplayer, progression, content unlocks, and a large content library
-are explicitly outside this vertical slice. A small four-family vehicle roster
-and lobby selection are now included so the prototype can test distinct RC
+Progression, content unlocks, public matchmaking, backend accounts, and a large
+content library remain outside this vertical slice. A small four-family vehicle
+roster and lobby selection are included so the prototype can test distinct RC
 silhouettes without turning the vertical slice into a content-production game.
 
 ## Stages and ownership
@@ -189,16 +192,18 @@ to be at the club rather than serving as tokens or stereotypes; local members,
 mixed families, immigrants, visitors, and international RC enthusiasts can all
 belong. The first ensemble establishes a tone, not a closed demographic mold.
 
-### Stage 9 — Demo flow, settings, resilience, and final acceptance
+### Stage 9 — Demo flow, content, resilience, and local baseline acceptance
 
 Implementation agents complete the player-facing demo flow: title/setup,
 vehicle and handling selection, pause/settings, results/rematch, safe device
 join/leave, saved local preferences, and clear recovery/error messaging. After
-the demo flow, Stage 9A adds bounded AI test opponents and Stage 9B performs a
-dedicated game-feel and sensory-polish pass. Once those implementations freeze,
-one independent acceptance stage runs the consolidated full test, screenshot,
-performance, platform-build, and launch matrix. Repeated cross-platform builds
-and broad validation are intentionally deferred until this freeze;
+the demo flow, Stage 9A adds bounded AI test opponents, Stage 9B performs a
+dedicated game-feel and sensory-polish pass, and Stage 9C adds the four-track
+roster and selector. Once those implementations freeze, one independent local
+baseline gate runs the consolidated test, screenshot, performance, platform-
+build, and launch matrix. Final local-plus-online acceptance remains after
+Stage 10. Repeated cross-platform builds and broad validation are intentionally
+deferred until these freezes;
 implementation stages use only narrow checks needed to avoid compounding broken
 code. Windows runtime and physical multi-controller checks remain deferred until
 the user re-enables them.
@@ -287,14 +292,40 @@ events remain mechanically identical with feedback disabled, every effect is
 bounded and correctly player-routed, and representative one- and four-player
 races feel responsive without obscuring racing information.
 
-### Stage 10 — Online multiplayer (future expansion)
+#### Stage 9C — Four-track roster and track selection
 
-Online multiplayer is a post-demo expansion, not part of the local-prototype
-acceptance gate. It requires a separately approved networking architecture,
-authority and prediction model, lobby/invite flow, synchronization rules,
-disconnect recovery, security review, and platform testing. Local split-screen
-must remain functional and must not be retrofitted around an unproven network
-transport.
+Before networking integration, expand the existing circuit into a four-track
+prototype roster: retain the current club/workshop circuit and author three
+additional original tracks with distinct flow, scale references, shortcuts,
+surface mix, hazards, recovery lanes, and readable checkpoint order. Fixed track
+layouts remain the baseline because learning lines and shortcuts is central to
+the game. Every track must support AI navigation, one-to-four local cameras,
+combat, recovery, results, rematch, and all visual modes.
+
+Add a controller- and keyboard-navigable pre-race track selector with a clear
+name, thumbnail or readable preview, lap count, and persistence through rematch
+and lobby return. Track identity must become explicit session data so Stage 10
+can synchronize the same choice online. Use separate bounded agents for the
+selection/runtime contract, authored track content, and an independent race,
+AI, recovery, readability, and performance audit.
+
+### Stage 10 — Online multiplayer
+
+Online multiplayer is now a prototype acceptance requirement so the build can
+be tested with friends over the internet. Its first bounded deliverable is a
+documentation-only architecture decision covering transport, host/authority
+topology, prediction and reconciliation, relay/discovery, ownership, security,
+and whether mixed local-plus-online play belongs in the first slice. No package
+or networking authority is chosen implicitly.
+
+Implementation then adds private host/join and ready flow, synchronized track
+selection, deterministic race start, vehicles, checkpoints/laps, combat,
+recovery, results/rematch, graceful leave/timeout handling, and actionable error
+messages for up to four racers. Public matchmaking, accounts, ranked play,
+spectators, and persistent servers are excluded. Existing local split-screen
+remains a first-class offline mode and must not be retrofitted around an
+unproven transport. The final prototype acceptance matrix runs only after this
+stage and covers both offline local and online friend sessions.
 
 ### Stage 11 — Post-development visual-style review
 
@@ -324,11 +355,22 @@ direction is chosen from play-context comparisons, its production cost and
 readability are documented for one- and four-player views, and no irreversible
 asset migration occurs before user approval.
 
-### Deferred optional systems
+### Deferred optional systems and content
 
-The block-based track editor and the single lore-driven modular/randomized track
-remain on hold. They are worthwhile later stages, but neither should displace
-learning fixed tracks, shortcuts, vehicle feel, and the core race/combat loop.
+- A Re-Volt-like block-based track editor using a curated piece library rather
+  than free-form geometry.
+- One lore-driven modular/randomized exhibition track assembled from validated
+  pieces. It remains a singular novelty; the other tracks stay fixed and
+  learnable.
+- Cosmetic car customization and club paint/decal personalization.
+- Additional vehicle families and original novelty vehicles, including a
+  deliberately strange special-car tier rather than copies of existing games.
+- Expanded selectable drivers, character presentation, and heterogeneous club
+  stories grounded in South America without treating that culture as a cast
+  restriction.
+- AI weapon use and richer opponent personalities after driving reliability.
+- Progression, unlocks, challenges, best-lap records, and demo/early-access/full
+  release packaging once the repeatable race loop is stable.
 
 ### Post-prototype deliverable — Reproducible implementation tutorial
 
