@@ -1,7 +1,8 @@
 # Pinned Remaining Roadmap
 
-Status snapshot: `codex/local-multiplayer-prototype` after accepted VFX commit
-`971bd67`; Stage 9B audio is reconciled and awaits its own checkpoint commit.
+Status snapshot: `codex/local-multiplayer-prototype` after accepted Stage 9B
+audio commit `b1eadd2`; accessibility/performance static audit corrections are
+independently re-verified and reconciled with no remaining source-level P1/P2.
 
 ## How much remains
 
@@ -28,6 +29,9 @@ Status snapshot: `codex/local-multiplayer-prototype` after accepted VFX commit
    - Audit one- and four-player readability, response settings, effect bounds,
      pooling, allocations, cleanup, and cross-viewport isolation.
    - Reconcile every P1/P2 issue before implementation freeze.
+   - Static audit found two P2s: airborne chassis offset ignored Vehicle Motion,
+     and sensory settings were displayed without player interaction. Both now
+     have focused fixes/test source and passed independent static re-verification.
 
 4. **Stage 9 — Consolidated implementation-freeze acceptance**
    - Import and compile in Unity 6000.6.0f1.
@@ -89,7 +93,20 @@ Status snapshot: `codex/local-multiplayer-prototype` after accepted VFX commit
 
 ## Current implementation boundary
 
-The bounded Stage 9B audio slice is independently audited and reconciled with no
-remaining P1/P2 findings. The next separate deliverable is the accessibility and
-performance audit. Broad Unity tests, builds, profiling, and screenshot matrices
-remain deferred to the consolidated implementation-freeze gate.
+The bounded Stage 9B audio slice is accepted at `b1eadd2` with no remaining P1/P2
+findings. The independent accessibility/performance static audit's two P2s are
+corrected: all visual-child displacement respects Vehicle Motion, and the manual
+pause modal uses existing Confirm to cycle the selected saved Off/Reduced/Full
+setting and advance to the next row in one press. Fire stays suppressed during
+pause. Back shares Escape with Pause on keyboard, so it retains
+its existing behavior. Independent static re-verification found no remaining P1/P2.
+The intended order is Stage 9B audit → consolidated local baseline → Stage 9C
+tracks → Stage 10 online → final integrated acceptance. Broad Unity tests,
+builds, profiling, and screenshot matrices remain deferred to the local baseline.
+The exact deferred P3 runtime matrix and unmeasured performance risks are retained
+in `docs/HANDOVER_STAGE9.md`: camera lifecycle/routing/bounds, VFX real-event
+pool/cleanup/reference checks, four-recipient audio/probes/readability, the
+style/view/level matrix, and CPU/GPU/GC/material/source/listener counts with
+unchanged mechanics when feedback is Off. Grayscale/player-family identity is
+possible P3 only.
+Pause-footer fit at supported resolutions is also a deferred P3 screenshot check.

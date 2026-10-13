@@ -169,6 +169,149 @@ namespace Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator KeyboardPauseSettingsUseExistingOwnedCommandsAndPersist()
+        {
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            Assert.That(roster.TryJoinKeyboard(keyboard, out LocalPlayer player), Is.True);
+            yield return ExercisePauseSettings(player, keyboard);
+        }
+
+        [UnityTest]
+        public IEnumerator GamepadPauseSettingsUseExistingOwnedCommandsAndPersist()
+        {
+            Gamepad pad = InputSystem.AddDevice<Gamepad>();
+            Assert.That(roster.TryJoinGamepad(pad, out LocalPlayer player), Is.True);
+            yield return ExercisePauseSettings(player, pad);
+        }
+
+        private IEnumerator ExercisePauseSettings(LocalPlayer player, InputDevice device)
+        {
+            Gamepad outsider = InputSystem.AddDevice<Gamepad>();
+            Gamepad sibling = InputSystem.AddDevice<Gamepad>();
+            Assert.That(roster.TryJoinGamepad(sibling, out _), Is.True);
+            Assert.That(race.StartRace(), Is.True);
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!race.RaceRunning && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(race.RaceRunning, Is.True);
+            yield return SettingsCommand(device, Key.Escape, GamepadButton.Start);
+            Assert.That(presentation.IsPaused, Is.True);
+            Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
+            Assert.That(presentation.ModalFooterText, Does.Contain("ENTER / A / CROSS"));
+            Assert.That(presentation.ModalFooterText, Does.Contain("CYCLE VALUE, THEN NEXT ROW"));
+            Assert.That(presentation.ModalFooterText, Does.Contain("OFF / REDUCED / FULL"));
+            Assert.That(presentation.ModalFooterText, Does.Not.Contain("SPACE / X / SQUARE"));
+            Vector3 position = player.Vehicle.transform.position;
+            int laps = player.Racer.CompletedLaps;
+            HandlingModelId model = player.Vehicle.SelectedHandlingModel;
+            VehicleFamilyId family = player.FamilyVisual.FamilyId;
+
+            yield return PressAndRelease(outsider, GamepadButton.South);
+            yield return PressAndRelease(outsider, GamepadButton.West);
+            Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
+
+            int fireRequests = 0;
+            roster.FireRequested += _ => fireRequests++;
+            yield return SettingsCommand(device, Key.Space, GamepadButton.West);
+            Assert.That(fireRequests, Is.Zero, "Gameplay Fire remains suppressed during manual pause.");
+            Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
+            if (device is Gamepad pad)
+            {
+                yield return PressAndRelease(pad, GamepadButton.East);
+                Assert.That(presentation.IsPaused, Is.True, "Back retains its existing manual-pause behavior.");
+                Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
+            }
+
+            string[] rows = { "CAMERA MOTION", "VEHICLE MOTION", "VFX DENSITY" };
+            string[] levels = { "OFF", "REDUCED", "FULL", "OFF" };
+            PresentationResponseLevel[] responseLevels = { PresentationResponseLevel.Off,
+                PresentationResponseLevel.Reduced, PresentationResponseLevel.Full, PresentationResponseLevel.Off };
+            VfxDensityLevel[] densityLevels = { VfxDensityLevel.Off,
+                VfxDensityLevel.Reduced, VfxDensityLevel.Full, VfxDensityLevel.Off };
+            PresentationResponseLevel expectedCamera = PresentationResponseLevel.Full;
+            PresentationResponseLevel expectedVehicle = PresentationResponseLevel.Full;
+            VfxDensityLevel expectedVfx = VfxDensityLevel.Full;
+            for (int round = 0; round < levels.Length; round++)
+            {
+                for (int row = 0; row < rows.Length; row++)
+                {
+                    Assert.That(presentation.ModalBodyText, Does.Contain($"> {rows[row]}  "));
+                    yield return SettingsCommand(device, Key.Enter, GamepadButton.South);
+                    Assert.That(presentation.ModalBodyText, Does.Contain($"  {rows[row]}  {levels[round]}"));
+                    Assert.That(presentation.ModalBodyText, Does.Contain($"> {rows[(row + 1) % rows.Length]}  "));
+                    if (row == 0)
+                        expectedCamera = responseLevels[round];
+                    else if (row == 1)
+                        expectedVehicle = responseLevels[round];
+                    else
+                        expectedVfx = densityLevels[round];
+                    Assert.That(presentation.CameraMotionSetting, Is.EqualTo(expectedCamera));
+                    Assert.That(presentation.VehicleMotionSetting, Is.EqualTo(expectedVehicle));
+                    Assert.That(presentation.VfxDensitySetting, Is.EqualTo(expectedVfx));
+                    Assert.That(player.PresentationResponse.CameraLevel, Is.EqualTo(expectedCamera));
+                    Assert.That(player.PresentationResponse.VehicleLevel, Is.EqualTo(expectedVehicle));
+                    DemoFlowPreferences saved = new(store);
+                    saved.Load();
+                    Assert.That(saved.CameraMotion, Is.EqualTo(presentation.CameraMotionSetting));
+                    Assert.That(saved.VehicleMotion, Is.EqualTo(presentation.VehicleMotionSetting));
+                    Assert.That(saved.VfxDensity, Is.EqualTo(presentation.VfxDensitySetting));
+                    Assert.That(presentation.IsPaused, Is.True);
+                    Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));
+                    Assert.That(Time.timeScale, Is.Zero);
+                    Assert.That(player.Vehicle.transform.position, Is.EqualTo(position));
+                    Assert.That(player.Racer.CompletedLaps, Is.EqualTo(laps));
+                }
+            }
+            Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  OFF"), "Selection wraps.");
+            DemoFlowPreferences reloaded = new(store);
+            reloaded.Load();
+            Assert.That(reloaded.CameraMotion, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(reloaded.VehicleMotion, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(reloaded.VfxDensity, Is.EqualTo(VfxDensityLevel.Off));
+            Assert.That(player.PresentationResponse.CameraLevel, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(player.PresentationResponse.VehicleLevel, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(player.Vehicle.SelectedHandlingModel, Is.EqualTo(model));
+            Assert.That(player.FamilyVisual.FamilyId, Is.EqualTo(family));
+
+            yield return SettingsCommand(device, Key.Escape, GamepadButton.Start);
+            Assert.That(presentation.IsPaused, Is.False, "Escape remains resume, even though it also maps Back.");
+            yield return SettingsCommand(device, Key.Space, GamepadButton.West);
+            yield return SettingsCommand(device, Key.Enter, GamepadButton.South);
+            Assert.That(presentation.CameraMotionSetting, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(presentation.VehicleMotionSetting, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(presentation.VfxDensitySetting, Is.EqualTo(VfxDensityLevel.Off));
+
+            yield return SettingsCommand(device, Key.Escape, GamepadButton.Start);
+            InputSystem.RemoveDevice(sibling);
+            yield return Frames();
+            Assert.That(presentation.ModalHeadingText, Is.EqualTo("INPUT CHECK"));
+            yield return SettingsCommand(device, Key.Enter, GamepadButton.South);
+            yield return SettingsCommand(device, Key.Space, GamepadButton.West);
+            Assert.That(presentation.CameraMotionSetting, Is.EqualTo(PresentationResponseLevel.Off),
+                "Connected owners cannot edit while another player is disconnected.");
+            InputSystem.RemoveDevice(device);
+            yield return Frames();
+            Assert.That(presentation.ModalHeadingText, Is.EqualTo("INPUT CHECK"));
+            yield return PressAndRelease(outsider, GamepadButton.South);
+            yield return PressAndRelease(outsider, GamepadButton.West);
+            Assert.That(presentation.CameraMotionSetting, Is.EqualTo(PresentationResponseLevel.Off));
+            Assert.That(presentation.ModalHeadingText, Is.EqualTo("INPUT CHECK"));
+        }
+
+        private static IEnumerator SettingsCommand(InputDevice device, Key key, GamepadButton button)
+        {
+            if (device is Gamepad pad)
+            {
+                yield return PressAndRelease(pad, button);
+                yield break;
+            }
+            Keyboard keyboard = (Keyboard)device;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
+            yield return Frames();
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            yield return Frames();
+        }
+
+        [UnityTest]
         public IEnumerator ResultsConfirmationStartsOwnedRematchWithoutRejoining()
         {
             Gamepad pad = InputSystem.AddDevice<Gamepad>();

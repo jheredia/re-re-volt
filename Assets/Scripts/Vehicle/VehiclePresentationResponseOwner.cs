@@ -78,22 +78,28 @@ namespace Vehicle
                 return;
             }
 
-            CachePivotBaseline();
             float delta = Time.unscaledDeltaTime;
             impulse = Vector3.Lerp(impulse, Vector3.zero, 1f - Mathf.Exp(-11f * delta));
             float speed01 = Mathf.Clamp01(vehicle.SpeedMetersPerSecond / Mathf.Max(.01f, vehicle.MaximumSpeedMetersPerSecond));
             float cameraScale = Scale(cameraLevel);
-            float vehicleScale = Scale(vehicleLevel);
             Vector3 worldImpulse = vehicle.transform.TransformDirection(impulse) * cameraScale;
             chaseCamera.SetPresentationResponse(worldImpulse, worldImpulse * -.15f,
                 chaseCamera.BaselineFieldOfView + FullFovGain * speed01 * cameraScale);
 
+            ApplyVisualMotion(speed01, vehicle.SteerInput, vehicle.IsDrifting, vehicle.GroundedWheelCount);
+        }
+
+        /// <summary>Presentation-only sample seam; writes only the generated visual child, never vehicle authority.</summary>
+        public void ApplyVisualMotion(float speed01, float steer, bool isDrifting, int groundedWheelCount)
+        {
+            CachePivotBaseline();
             if (cachedPivot == null) return;
-            float drift = vehicle.IsDrifting ? 1f : 0f;
-            float airborne = vehicle.GroundedWheelCount == 0 ? 1f : 0f;
-            float lean = (-vehicle.SteerInput * (2f + 4f * speed01) - drift * vehicle.SteerInput * 2f) * vehicleScale;
+            float vehicleScale = Scale(vehicleLevel);
+            float drift = isDrifting ? 1f : 0f;
+            float airborne = groundedWheelCount == 0 ? 1f : 0f;
+            float lean = (-steer * (2f + 4f * speed01) - drift * steer * 2f) * vehicleScale;
             Vector3 recoil = impulse * vehicleScale;
-            cachedPivot.localPosition = pivotBasePosition + new Vector3(recoil.x, -airborne * .015f, recoil.z) * .35f;
+            cachedPivot.localPosition = pivotBasePosition + new Vector3(recoil.x, -airborne * .015f * vehicleScale, recoil.z) * .35f;
             cachedPivot.localRotation = pivotBaseRotation * Quaternion.Euler(recoil.z * 12f,
                 0f, Mathf.Clamp(lean + recoil.x * FullLeanDegrees, -FullLeanDegrees, FullLeanDegrees));
         }

@@ -200,12 +200,12 @@ Implementation agents complete the player-facing demo flow: title/setup,
 vehicle and handling selection, pause/settings, results/rematch, safe device
 join/leave, saved local preferences, and clear recovery/error messaging. After
 the demo flow, Stage 9A adds bounded AI test opponents, Stage 9B performs a
-dedicated game-feel and sensory-polish pass, and Stage 9C adds the four-track
-roster and selector. Once those implementations freeze, one independent local
-baseline gate runs the consolidated test, screenshot, performance, platform-
-build, and launch matrix. Final local-plus-online acceptance remains after
-Stage 10. Repeated cross-platform builds and broad validation are intentionally
-deferred until these freezes;
+dedicated game-feel and sensory-polish pass. After the Stage 9B audit closes,
+one consolidated local baseline gate runs the test, screenshot, performance,
+platform-build, and launch matrix before Stage 9C adds the four-track roster and
+selector. Stage 10 then adds online play, followed by final integrated
+local-plus-online acceptance. Repeated cross-platform builds and broad validation
+are intentionally deferred until those gates;
 implementation stages use only narrow checks needed to avoid compounding broken
 code. Windows runtime and physical multi-controller checks remain deferred until
 the user re-enables them.
@@ -288,8 +288,8 @@ lacked a classified presentation surface, and disabling the VFX owner left the
 legacy transient fallback suppressed. Unity execution and live capacity
 measurement remain deferred.
 
-The audio-expansion slice is accepted after a separate independent static audit
-and overseer reconciliation. It extends the existing central 2D owner with
+The audio-expansion slice is accepted at `b1eadd2` after a separate independent
+static audit and overseer reconciliation. It extends the existing central 2D owner with
 24 authored procedural cue records, seeded bounded variation, explicit surface
 tire/skid layers, light/heavy contact, distinct Bolt/Oil/pickup/recovery cues,
 sparse workshop ambience, and declared priority/steal/drop/duck diagnostics.
@@ -303,9 +303,29 @@ now bypasses pause suppression and survives the next Update cleanup edge. The
 auditor re-verified no remaining P1/P2 findings. Focused policy/integration test
 source is authored, while only scoped diff/source checks have run. See
 `docs/HANDOVER_STAGE9.md` for exact overflow, cleanup, evidence, and remaining
-listening/probe/readability risks. The final accessibility/performance audit
-remains a separate fresh-agent deliverable before consolidated implementation
-freeze.
+listening/probe/readability risks. The subsequent independent accessibility/
+performance static audit found two P2s: airborne visual-child displacement ignored
+Vehicle Motion scaling, and persisted sensory settings were not player-changeable.
+Both have focused corrections and PlayMode test source. The subsequent independent
+static re-verification found no remaining P1/P2, so this audit is source-level
+reconciled. Off now suppresses all chassis
+displacement and Reduced scales the airborne offset. In manual pause, existing
+Confirm (Enter / A / Cross) cycles the selected row's saved Off/Reduced/Full value
+and advances to the next row in one press; repeated rounds reach every value.
+Confirm remains available during gameplay suspension, while Fire stays suppressed
+and is not used for settings. Keyboard Back shares Escape with Pause; Pause
+resumes and V/R3 changes visual style.
+Connected roster ownership and disconnect gates protect edits; lobby/results
+Confirm/Back retain their behavior. The order is Stage 9B audit → consolidated
+local baseline → Stage 9C tracks → Stage 10 online → final integrated acceptance.
+The exact P3 runtime matrix and performance risks remain in
+`docs/HANDOVER_STAGE9.md`: camera lifecycle/routing/bounds, VFX event/pool/cleanup
+and reference-reset checks, audio events across four recipients and slope probes,
+style/view/level readability, and CPU/GPU/GC/material/source/listener counts with
+the same mechanics Off. The listed scans/probes/GetComponent/HUD strings and
+live weapon/disruption churn are unmeasured risks; grayscale/player-family
+identity remains a possible P3, not a confirmed defect.
+Pause-footer fit at supported resolutions remains a P3 screenshot/readability check.
 
 Translate common arcade-game-feel tools into RC-racing equivalents. Screen
 shake becomes player-local camera impulse, speed framing, restrained FOV change,

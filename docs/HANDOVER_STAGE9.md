@@ -56,6 +56,59 @@ Stage 9 implementation freeze.
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`
 
+## Stage 9B independent accessibility/performance static audit — corrections
+
+The independent audit confirmed no P1s and two P2s. First, the airborne chassis
+Y offset bypassed Vehicle Motion scaling. It now uses the same scale as recoil
+and lean: Off leaves the visual pivot at its baseline and Reduced applies 45%
+of Full. A narrow presentation-only sample seam supports grounded/airborne
+Off/Reduced/Full assertions plus unchanged root, Rigidbody, WheelColliders, and
+wheel-child transforms; it never writes gameplay authority.
+
+Second, Camera Motion, Vehicle Motion, and VFX Density were displayed but not
+player-changeable. The existing manual pause modal now shows a `>` selected row.
+Confirm (`Enter / A / Cross`) cycles that row's Off/Reduced/Full value through
+`DemoFlowPreferences`, then selects the next row in the same press. Repeated
+rounds reach every value on all three rows. Confirm remains available during
+gameplay suspension; Fire is suppressed during pause and is not used for settings.
+Keyboard Back already shares Escape with Pause.
+Pause still resumes, V/R3 still changes visual style, and lobby/results
+Confirm/Back are unchanged. Editing requires a connected roster-owned player,
+manual pause, and no disconnected player. The existing Confirm subscription is
+reused, and gameplay Fire remains suppressed during pause.
+
+Focused PlayMode source uses simulated keyboard/gamepad mappings to cover all
+three rows and levels, advance after each change, selection wrap, reload persistence
+after every edit, response-owner levels, suppressed gameplay Fire,
+unpaired input, disconnect rejection, resume, and unchanged race/vehicle
+selections. Independent static re-verification found no remaining P1/P2 issue, and
+scoped diff checks close the two source-level defects. The accessibility/performance
+audit is reconciled at source level. Unity import/compilation and test execution
+were not run. No new input
+action/package, physics/race/combat/recovery authority edit, VFX/audio retuning,
+listening, screenshot, build, or profiling was performed.
+
+### Exact P3 deferred runtime matrix and performance risks
+
+- Camera: real impact/wrong-recipient routing, recovery/disconnect/controller
+  replacement/rematch, and response-level bounds.
+- VFX: real-event wiring, per-family saturation/timed expiry/reuse, AI world-only,
+  recovery/leave/rematch cleanup, and retained-reference reset.
+- Audio: real pickup/Bolt/Oil/surface/skid events across four recipients,
+  timbre/duck intelligibility/drop rates, and slope-boundary probes.
+- Measure 60 warmed VFX entries/180 renderers, the 60-entry Update scan, up to
+  four per-frame 16-hit skid raycasts, audio nonalloc probes every .32–.365s,
+  per-frame `VehicleFamilyVisual` GetComponent, HUD strings at 10Hz, and live
+  weapon/disruption instantiate/destroy. These are risks, not measured regressions.
+- Runtime gate: Clean/Ink Lite/Full Ink × 1/4 views × feedback levels;
+  CPU/GPU/GC/material/source/listener counts; identical mechanics with feedback
+  Off. Grayscale/player-family identity is a possible P3, not a confirmed defect.
+- Confirm that the four-line pause footer remains fully readable without ellipsis
+  at every supported resolution; static review could not prove or disprove clipping.
+
+The intended order is Stage 9B audit → consolidated local baseline → Stage 9C
+tracks → Stage 10 online → final integrated acceptance.
+
 ## Accepted checkpoint — Stage 9A AI test opponents
 
 Stage 9A now has a separate AI-owned roster for zero to three deterministic,
@@ -130,10 +183,12 @@ rumble while physical controller work is deferred.
 
 The per-player camera/vehicle and pooled-VFX checkpoints below establish the
 documented visual-pivot, payload, surface, settings, routing, and cleanup seams.
-The audio-expansion implementation below is pending its independent static audit
-and overseer reconciliation. The separate accessibility/performance audit follows
-audio acceptance. Only after 9A and those separate 9B slices freeze should the
-project run the single consolidated validation matrix.
+The audio expansion below is independently audited and accepted at `b1eadd2`.
+The separate accessibility/performance audit follows audio acceptance. Its two
+P2 corrections are recorded in the audit section, independently re-verified, and
+reconciled with no remaining source-level P1/P2. After the Stage 9B audit closes,
+run the consolidated local baseline, then Stage 9C
+tracks, Stage 10 online, and final integrated acceptance.
 
 ## Accepted checkpoint — Stage 9B per-player camera and vehicle response
 
@@ -157,9 +212,9 @@ Camera and vehicle motion each support persisted `Off`, `Reduced`, and `Full`
 levels through the existing versioned preference boundary. Version 1 settings
 migrate to safe Full defaults; corrupt or partial version 2 values retain the
 existing recovery-message behavior. Setup and pause expose the active values,
-and an explicit settings API owns changes. Interactive rebinding remains
-deferred because no unused command can be added without competing with the
-protected `InputHandler` edit.
+and an explicit settings API owns changes. The accessibility audit correction
+adds player interaction through existing pause-time events, with no binding
+changes.
 
 Focused EditMode and PlayMode source covers preference migration/retry, one-to-
 four ownership, child-pivot invariants, family replacement, collision-payload
@@ -289,6 +344,8 @@ measurement.
 - `docs/HANDOVER_STAGE9.md`
 
 ## Accepted checkpoint — Stage 9B audio expansion
+
+Accepted at `b1eadd2` after independent static audit and reconciliation.
 
 The existing bootstrap-owned `RcAudioPresentation` now has 24 cached original
 procedural cues described by immutable authored records in `RcAudioCueData`.

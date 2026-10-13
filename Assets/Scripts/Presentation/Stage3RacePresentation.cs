@@ -63,6 +63,7 @@ namespace Presentation
         private TextMeshProUGUI modalFooter;
         private PauseReason pauseReason;
         private int pauseInputFrame = -1;
+        private int selectedSettingsRow;
         private float nextHudRefresh;
         private float countdownHideAt = -1f;
         private string latestResultsBody;
@@ -127,8 +128,7 @@ namespace Presentation
         }
 
         /// <summary>
-        /// Explicit accessibility settings seam for owned setup/pause UI and automated tests. Interactive binding is
-        /// intentionally deferred until an unused input action can be assigned without competing with InputHandler.
+        /// Explicit accessibility settings seam shared by the manual pause UI and automated tests.
         /// </summary>
         public bool SetPresentationResponseSettings(PresentationResponseLevel cameraMotion,
             PresentationResponseLevel vehicleMotion)
@@ -243,6 +243,14 @@ namespace Presentation
 
         private void OnConfirmRequested(LocalPlayer player)
         {
+            if (pauseReason == PauseReason.Manual)
+            {
+                if (!CanEditPausedSettings(player)) return;
+                CycleSelectedPausedSetting();
+                selectedSettingsRow = (selectedSettingsRow + 1) % 3;
+                ShowManualPauseModal();
+                return;
+            }
             if (AnyPlayerDisconnected()) return;
             if (race.CurrentState == RaceManager.RaceState.Idle) StartRaceFromLobby();
             else if (race.CurrentState == RaceManager.RaceState.Finished) StartRematch();
@@ -251,6 +259,34 @@ namespace Presentation
         private void OnBackRequested(LocalPlayer player)
         {
             if (race.CurrentState == RaceManager.RaceState.Finished) ResetToLobby();
+        }
+
+        private bool CanEditPausedSettings(LocalPlayer player)
+        {
+            if (!isActiveAndEnabled || preferences == null || player == null || !player.IsConnected ||
+                race.CurrentState != RaceManager.RaceState.Racing || pauseReason != PauseReason.Manual ||
+                AnyPlayerDisconnected()) return false;
+            for (int i = 0; i < vehicles.Players.Count; i++)
+                if (ReferenceEquals(vehicles.Players[i], player)) return true;
+            return false;
+        }
+
+        private void CycleSelectedPausedSetting()
+        {
+            switch (selectedSettingsRow)
+            {
+                case 0:
+                    SetPresentationResponseSettings((PresentationResponseLevel)(((int)CameraMotionSetting + 1) % 3),
+                        VehicleMotionSetting);
+                    break;
+                case 1:
+                    SetPresentationResponseSettings(CameraMotionSetting,
+                        (PresentationResponseLevel)(((int)VehicleMotionSetting + 1) % 3));
+                    break;
+                default:
+                    SetVfxDensitySetting((VfxDensityLevel)(((int)VfxDensitySetting + 1) % 3));
+                    break;
+            }
         }
 
         private void OnHandlingModelChanged(LocalPlayer player)
@@ -350,6 +386,7 @@ namespace Presentation
             else
             {
                 pauseReason = PauseReason.Manual;
+                selectedSettingsRow = 0;
                 vehicles.SetAllVehiclesEnabled(false);
                 if (GameManager.Instance != null) GameManager.Instance.PauseGame();
                 else Time.timeScale = 0f;
@@ -365,11 +402,12 @@ namespace Presentation
             string recoveryLine = string.IsNullOrEmpty(PreferenceRecoveryMessage)
                 ? string.Empty
                 : $"\nNOTICE  {PreferenceRecoveryMessage}";
-            string responseLine = $"\nCAMERA MOTION  {GetResponseLabel(CameraMotionSetting)}   VEHICLE MOTION  {GetResponseLabel(VehicleMotionSetting)}";
-            string vfxLine = $"\nVFX DENSITY  {GetVfxDensityLabel(VfxDensitySetting)}";
+            string responseLine = $"\n{(selectedSettingsRow == 0 ? "> " : "  ")}CAMERA MOTION  {GetResponseLabel(CameraMotionSetting)}" +
+                $"\n{(selectedSettingsRow == 1 ? "> " : "  ")}VEHICLE MOTION  {GetResponseLabel(VehicleMotionSetting)}";
+            string vfxLine = $"\n{(selectedSettingsRow == 2 ? "> " : "  ")}VFX DENSITY  {GetVfxDensityLabel(VfxDensitySetting)}";
             ShowModal("RACE PAUSED / SETTINGS",
                 "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + responseLine + vfxLine + recoveryLine,
-                "V / R3   CHANGE DISPLAY STYLE\nMOTION AND VFX DENSITY ARE AVAILABLE THROUGH THE SETTINGS API\nESC / MENU / START   RESUME");
+                "ENTER / A / CROSS   CYCLE VALUE, THEN NEXT ROW\nVALUES   OFF / REDUCED / FULL\nV / R3   CHANGE DISPLAY STYLE\nESC / MENU / START   RESUME");
         }
 
         private void OnControllerConnectionChanged(LocalPlayer player)
@@ -711,9 +749,9 @@ namespace Presentation
                 builder.Append("VISUAL STYLE  ").Append(GetVisualStyleLabel(visualStyle.Mode))
                     .AppendLine("  [V / R3]");
             builder.Append("CAMERA MOTION  ").Append(GetResponseLabel(CameraMotionSetting)).Append("   VEHICLE MOTION  ")
-                .Append(GetResponseLabel(VehicleMotionSetting)).AppendLine("  [SETTINGS API]");
+                .Append(GetResponseLabel(VehicleMotionSetting)).AppendLine("  [PAUSE TO CHANGE]");
             builder.Append("VFX DENSITY  ").Append(GetVfxDensityLabel(VfxDensitySetting))
-                .AppendLine("  [SETTINGS API]");
+                .AppendLine("  [PAUSE TO CHANGE]");
             builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
                            "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
                            "AI TEST CARS: B   GAMEPAD L3\n" +
