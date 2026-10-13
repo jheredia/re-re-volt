@@ -41,6 +41,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
    - Capture the final screenshot/readability matrix and profile representative
      one- and four-player races.
    - Produce and launch the macOS test build; reassess Web feasibility.
+   - Current evidence: import/compile passes and full EditMode passes 107/107
+     after correcting three stale vehicle-family hierarchy assertions. Targeted
+     PlayMode batch execution is blocked by a runner stall after domain reload;
+     investigate that infrastructure before claiming PlayMode coverage.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

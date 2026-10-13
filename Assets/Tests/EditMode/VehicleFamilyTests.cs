@@ -79,7 +79,7 @@ namespace Tests.EditMode
                 Assert.That(visual.FamilyId, Is.EqualTo(definition.Id));
                 Assert.That(visual.SourceRenderers.Count, Is.GreaterThan(visual.ColorableBodyRenderers.Count));
                 Assert.That(visual.ColorableBodyRenderers.Count, Is.GreaterThanOrEqualTo(2));
-                Assert.That(vehicle.transform.Find("Body"), Is.Not.Null);
+                Assert.That(GetFamilyPresentationPivot(vehicle).Find("Body"), Is.Not.Null);
                 foreach (Renderer source in visual.SourceRenderers)
                 {
                     CollectionAssert.Contains(allRenderers, source);
@@ -120,10 +120,13 @@ namespace Tests.EditMode
                         "Every prototype renderer must remain eligible for current visual-style discovery.");
             }
 
-            Assert.That(baseline.transform.Find("Body_TouringCabin"), Is.Not.Null);
-            Assert.That(FindFamily(VehicleFamilyId.Buggy).transform.Find("Body_BuggyCockpit"), Is.Not.Null);
-            Assert.That(FindFamily(VehicleFamilyId.RcTruck).transform.Find("Body_TruckCab"), Is.Not.Null);
-            Assert.That(FindFamily(VehicleFamilyId.Drift).transform.Find("Body_DriftWing"), Is.Not.Null);
+            Assert.That(GetFamilyPresentationPivot(baseline).Find("Body_TouringCabin"), Is.Not.Null);
+            Assert.That(GetFamilyPresentationPivot(FindFamily(VehicleFamilyId.Buggy)).Find("Body_BuggyCockpit"),
+                Is.Not.Null);
+            Assert.That(GetFamilyPresentationPivot(FindFamily(VehicleFamilyId.RcTruck)).Find("Body_TruckCab"),
+                Is.Not.Null);
+            Assert.That(GetFamilyPresentationPivot(FindFamily(VehicleFamilyId.Drift)).Find("Body_DriftWing"),
+                Is.Not.Null);
         }
 
         [Test]
@@ -138,14 +141,16 @@ namespace Tests.EditMode
         {
             GameObject vehicle = Track(PrototypeVehicleFactory.Create(default, VehicleFamilyId.Touring));
             VehicleFamilyVisual visual = vehicle.GetComponent<VehicleFamilyVisual>();
-            Renderer originalBody = vehicle.transform.Find("Body").GetComponent<Renderer>();
+            Transform presentationPivot = GetFamilyPresentationPivot(vehicle);
+            Renderer originalBody = presentationPivot.Find("Body").GetComponent<Renderer>();
             int originalChildCount = vehicle.transform.childCount;
+            int originalVisualChildCount = presentationPivot.childCount;
 
             VehicleFamilyVisualReplacement replacement =
                 PrototypeVehicleFactory.PrepareFamilyVisualReplacement(vehicle, VehicleFamilyId.Buggy);
 
             Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.Touring));
-            Assert.That(vehicle.transform.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
+            Assert.That(presentationPivot.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
             Assert.That(replacement.NewSourceRenderers, Has.Count.GreaterThan(visual.SourceRenderers.Count));
             foreach (Renderer staged in replacement.NewSourceRenderers)
                 Assert.That(staged.gameObject.activeSelf, Is.False);
@@ -153,8 +158,9 @@ namespace Tests.EditMode
             replacement.Dispose();
 
             Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.Touring));
-            Assert.That(vehicle.transform.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
+            Assert.That(presentationPivot.Find("Body").GetComponent<Renderer>(), Is.SameAs(originalBody));
             Assert.That(vehicle.transform.childCount, Is.EqualTo(originalChildCount));
+            Assert.That(presentationPivot.childCount, Is.EqualTo(originalVisualChildCount));
         }
 
         [Test]
@@ -177,8 +183,8 @@ namespace Tests.EditMode
             Assert.That(vehicle.GetComponent<VehicleFamilyVisual>(), Is.SameAs(visual));
             Assert.That(GetOrderedWheels(vehicle), Is.EqualTo(wheels));
             Assert.That(visual.FamilyId, Is.EqualTo(VehicleFamilyId.RcTruck));
-            Assert.That(vehicle.transform.Find("Body_TruckCab"), Is.Not.Null);
-            Assert.That(vehicle.transform.Find("Body_TouringCabin"), Is.Null);
+            Assert.That(GetFamilyPresentationPivot(vehicle).Find("Body_TruckCab"), Is.Not.Null);
+            Assert.That(GetFamilyPresentationPivot(vehicle).Find("Body_TouringCabin"), Is.Null);
             Assert.That(vehicle.GetComponentsInChildren<Collider>(true), Has.Length.EqualTo(5));
         }
 
@@ -192,6 +198,15 @@ namespace Tests.EditMode
         {
             return created.Find(gameObject =>
                 gameObject != null && gameObject.GetComponent<VehicleFamilyVisual>()?.FamilyId == familyId);
+        }
+
+        private static Transform GetFamilyPresentationPivot(GameObject vehicle)
+        {
+            Assert.That(vehicle, Is.Not.Null);
+            VehicleFamilyVisual visual = vehicle.GetComponent<VehicleFamilyVisual>();
+            Assert.That(visual, Is.Not.Null);
+            Assert.That(visual.PresentationPivot, Is.Not.Null);
+            return visual.PresentationPivot;
         }
 
         private static WheelCollider[] GetOrderedWheels(GameObject vehicle)

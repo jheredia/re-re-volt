@@ -56,6 +56,29 @@ Stage 9 implementation freeze.
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`
 
+## Stage 9 implementation-freeze validation — first executable baseline
+
+Unity 6000.6.0f1 imported and compiled the project at `2da2d16` with no C#
+errors. The first full EditMode run exposed three stale `VehicleFamilyTests`
+lookups that still expected `Body` and family silhouette children directly under
+the vehicle root after `d57737f` moved them beneath `PresentationVisualPivot`.
+The tests now resolve those objects through `VehicleFamilyVisual.PresentationPivot`
+without weakening their body identity, rollback, replacement, physics, wheel,
+controller, or collider assertions.
+
+Independent execution then passed the targeted fixture 7/7 and the complete
+EditMode suite 107/107, with zero failures, skips, or inconclusive tests. Evidence
+is preserved under `/private/tmp/stage9-vehicle-family-validation.ClnJuV/`.
+
+Targeted Stage 9 PlayMode batch validation remains blocked before test execution:
+Unity completes domain reload, loads `Temp/__Backupscenes/0.backup`, then produces
+no result XML or executed-test count. One bounded corrected-filter attempt was
+terminated after 115.378 seconds and is preserved under
+`/private/tmp/re-re-volt-stage9-freeze-2da2d16.6QcuuM/`. Do not treat the 31
+selected authored methods as executed evidence. Investigate the runner separately
+before targeted and full non-capture PlayMode coverage. Screenshot-producing tests
+remain intentionally deferred to the visual/readability gate.
+
 ## Stage 9B independent accessibility/performance static audit — corrections
 
 The independent audit confirmed no P1s and two P2s. First, the airborne chassis

@@ -210,6 +210,13 @@ implementation stages use only narrow checks needed to avoid compounding broken
 code. Windows runtime and physical multi-controller checks remain deferred until
 the user re-enables them.
 
+The first Stage 9 freeze execution imported and compiled under Unity 6000.6.0f1.
+Three stale EditMode assertions were updated for the intentional
+`PresentationVisualPivot` hierarchy; independent targeted execution passed 7/7
+and the full EditMode suite passed 107/107. Targeted PlayMode batch execution is
+still blocked after domain reload before any result XML or executed-test count,
+so PlayMode acceptance and all later runtime/visual/build evidence remain open.
+
 #### Stage 9A — AI-controlled test opponents
 
 Implementation checkpoint accepted after a separate static audit. Stage 9A now
