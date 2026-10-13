@@ -70,14 +70,20 @@ Independent execution then passed the targeted fixture 7/7 and the complete
 EditMode suite 107/107, with zero failures, skips, or inconclusive tests. Evidence
 is preserved under `/private/tmp/stage9-vehicle-family-validation.ClnJuV/`.
 
-Targeted Stage 9 PlayMode batch validation remains blocked before test execution:
-Unity completes domain reload, loads `Temp/__Backupscenes/0.backup`, then produces
-no result XML or executed-test count. One bounded corrected-filter attempt was
-terminated after 115.378 seconds and is preserved under
-`/private/tmp/re-re-volt-stage9-freeze-2da2d16.6QcuuM/`. Do not treat the 31
-selected authored methods as executed evidence. Investigate the runner separately
-before targeted and full non-capture PlayMode coverage. Screenshot-producing tests
-remain intentionally deferred to the visual/readability gate.
+The first targeted Stage 9 PlayMode batch did enter test execution, but its
+115.378-second global cutoff was too short for a selection containing a 90-second
+AI race plus countdowns and startup. Its log also exposed a deterministic VFX
+fixture failure: `Stage9BVfxPresentation` constructed a native
+`MaterialPropertyBlock` in a MonoBehaviour field initializer. Initialization now
+occurs in `Configure` before pool creation. Independent Unity execution passes
+both original reproductions 1/1 and the complete VFX fixture 6/6, with no
+constructor exception; evidence is preserved under
+`/private/tmp/stage9b-vfx-lifecycle-BUT3it/`.
+
+The original 31-test attempt produced no final XML and must not be treated as a
+completed suite. Resume PlayMode coverage in bounded fixtures or with a global
+budget that accounts for the long AI case. Screenshot-producing tests remain
+intentionally deferred to the visual/readability gate.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

@@ -213,9 +213,12 @@ the user re-enables them.
 The first Stage 9 freeze execution imported and compiled under Unity 6000.6.0f1.
 Three stale EditMode assertions were updated for the intentional
 `PresentationVisualPivot` hierarchy; independent targeted execution passed 7/7
-and the full EditMode suite passed 107/107. Targeted PlayMode batch execution is
-still blocked after domain reload before any result XML or executed-test count,
-so PlayMode acceptance and all later runtime/visual/build evidence remain open.
+and the full EditMode suite passed 107/107. Diagnosis proved the PlayMode runner
+did enter tests: its short global cutoff masked a 90-second AI case and a VFX
+fixture exception. Moving MaterialPropertyBlock creation from a MonoBehaviour
+field initializer into `Configure` closes that exception; both reproductions pass
+and the full VFX fixture passes 6/6. Remaining PlayMode fixtures and all later
+runtime/visual/build evidence remain open.
 
 #### Stage 9A — AI-controlled test opponents
 

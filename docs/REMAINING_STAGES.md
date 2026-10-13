@@ -42,9 +42,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      one- and four-player races.
    - Produce and launch the macOS test build; reassess Web feasibility.
    - Current evidence: import/compile passes and full EditMode passes 107/107
-     after correcting three stale vehicle-family hierarchy assertions. Targeted
-     PlayMode batch execution is blocked by a runner stall after domain reload;
-     investigate that infrastructure before claiming PlayMode coverage.
+     after correcting three stale vehicle-family hierarchy assertions. The VFX
+     PlayMode fixture passes 6/6 after moving native MaterialPropertyBlock creation
+     into `Configure`. The earlier broad target was cut off before completion by
+     an undersized global budget; remaining fixtures still need execution.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

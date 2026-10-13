@@ -178,7 +178,7 @@ namespace Presentation
         private readonly List<AIBinding> bots = new(3);
         private readonly PooledEntry[] skidByPlayer = new PooledEntry[LocalPlayerRules.MaximumPlayers];
         private readonly RaycastHit[] surfaceHits = new RaycastHit[16];
-        private readonly MaterialPropertyBlock properties = new();
+        private MaterialPropertyBlock properties;
         private RaceManager race;
         private VehicleManager vehicles;
         private AIManager ai;
@@ -209,6 +209,7 @@ namespace Presentation
             ValidateDensity(initialDensity);
             density = initialDensity;
 
+            properties = new MaterialPropertyBlock();
             vfxRoot = new GameObject("Stage9B_PooledVfx");
             vfxRoot.transform.SetParent(transform, false);
             effectMaterial = CreateEffectMaterial();
