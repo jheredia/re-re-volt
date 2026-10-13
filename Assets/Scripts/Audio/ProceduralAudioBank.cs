@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AudioPresentation
 {
-    /// <summary>Stable identifiers for the small, original Stage 8 procedural sound set.</summary>
+    /// <summary>Stable Stage 8 identifiers followed by the bounded Stage 9B sound set.</summary>
     public enum AudioCueId
     {
         Engine,
@@ -14,6 +14,22 @@ namespace AudioPresentation
         Pickup,
         WeaponFire,
         Impact,
+        TireMat,
+        TireWood,
+        TireFoam,
+        TireCardboard,
+        TireMetal,
+        TireRubber,
+        SkidStart,
+        SkidScrub,
+        SkidEnd,
+        HeavyImpact,
+        BoltLaunch,
+        BoltHit,
+        OilDrop,
+        OilHit,
+        Recovery,
+        ClubAmbience,
         Count
     }
 
@@ -29,14 +45,19 @@ namespace AudioPresentation
         {
             try
             {
-                clips[(int)AudioCueId.Engine] = CreateEngineLoop();
-                clips[(int)AudioCueId.Countdown] = CreateTone("RC countdown", .13f, 620f, 930f, .18f);
-                clips[(int)AudioCueId.Go] = CreateTone("RC go", .24f, 760f, 1260f, .22f, true);
-                clips[(int)AudioCueId.Finish] = CreateTone("RC finish", .5f, 520f, 1040f, .2f, true);
-                clips[(int)AudioCueId.UiConfirm] = CreateTone("RC UI confirm", .075f, 880f, 1320f, .12f);
-                clips[(int)AudioCueId.Pickup] = CreateTone("RC pickup", .2f, 540f, 1480f, .16f, true);
-                clips[(int)AudioCueId.WeaponFire] = CreateNoiseBurst("RC weapon fire", .16f, 150f, .18f);
-                clips[(int)AudioCueId.Impact] = CreateNoiseBurst("RC impact", .12f, 85f, .25f);
+                for (int i = 0; i < clips.Length; i++)
+                {
+                    AudioCueDefinition cue = RcAudioCueData.Get((AudioCueId)i);
+                    string label = "RC " + (AudioCueId)i;
+                    clips[i] = cue.Recipe switch
+                    {
+                        AudioRecipe.Engine => CreateEngineLoop(),
+                        AudioRecipe.Noise => CreateNoiseBurst(label, cue.Duration, cue.StartFrequency,
+                            cue.Amplitude, cue.Seed),
+                        _ => CreateTone(label, cue.Duration, cue.StartFrequency, cue.EndFrequency,
+                            cue.Amplitude, cue.Recipe == AudioRecipe.HarmonicTone)
+                    };
+                }
             }
             catch
             {
@@ -118,11 +139,12 @@ namespace AudioPresentation
             return CreateClip(name, samples);
         }
 
-        private static AudioClip CreateNoiseBurst(string name, float duration, float bodyFrequency, float amplitude)
+        private static AudioClip CreateNoiseBurst(string name, float duration, float bodyFrequency, float amplitude,
+            uint seed)
         {
             int sampleCount = Mathf.CeilToInt(SampleRate * duration);
             float[] samples = new float[sampleCount];
-            uint noiseState = 0x51F15EEDu;
+            uint noiseState = seed;
             for (int i = 0; i < sampleCount; i++)
             {
                 float normalized = (float)i / Mathf.Max(1, sampleCount - 1);

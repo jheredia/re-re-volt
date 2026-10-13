@@ -128,12 +128,12 @@ external sources from RC-racer design inference; and preserves the prohibition o
 authority changes, global hit-stop/camera response, cross-viewport feedback, and
 rumble while physical controller work is deferred.
 
-The next bounded implementation deliverable is per-player camera and vehicle
-presentation only. It must establish the documented visual-pivot and
-collision-payload seam, Off/Reduced/Full controls, local routing, and lifecycle
-cleanup before pooled VFX, audio expansion, then an independent
-accessibility/performance audit. Only after 9A and those separate 9B slices freeze
-should the project run the single consolidated validation matrix.
+The per-player camera/vehicle and pooled-VFX checkpoints below establish the
+documented visual-pivot, payload, surface, settings, routing, and cleanup seams.
+The audio-expansion implementation below is pending its independent static audit
+and overseer reconciliation. The separate accessibility/performance audit follows
+audio acceptance. Only after 9A and those separate 9B slices freeze should the
+project run the single consolidated validation matrix.
 
 ## Accepted checkpoint — Stage 9B per-player camera and vehicle response
 
@@ -187,10 +187,9 @@ matrix was run under the implementation-first cadence.
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`
 
-The next separate Stage 9B deliverable is pooled, surface-aware visual effects.
-It must consume the accepted player-local event language without changing race,
-vehicle, recovery, pickup, or combat authority. Audio expansion and the final
-accessibility/performance audit remain later independent deliverables.
+The subsequent pooled-VFX checkpoint consumes this accepted player-local event
+language. Audio expansion and the final accessibility/performance audit retain
+separate implementation and audit ownership.
 
 ## Accepted checkpoint — Stage 9B pooled, surface-aware VFX
 
@@ -286,5 +285,105 @@ measurement.
 - `Assets/Scripts/Weapons/WeaponManager.cs`
 - `Assets/Tests/EditMode/DemoFlowPreferencesTests.cs`
 - `Assets/Tests/PlayMode/Stage9BVfxIntegrationTests.cs` and `.meta`
+- `docs/agent_development_plan.md`
+- `docs/HANDOVER_STAGE9.md`
+
+## Accepted checkpoint — Stage 9B audio expansion
+
+The existing bootstrap-owned `RcAudioPresentation` now has 24 cached original
+procedural cues described by immutable authored records in `RcAudioCueData`.
+Records declare recipe, duration, amplitude, gain, bounded pitch/gain variation,
+cooldown, priority, and seed. Variation depends on cue, stable human slot, and
+accepted request sequence; it never consumes Unity random state or influences
+mechanics. Stage 8 cue identifiers remain stable, with the new cues appended.
+
+The accepted central 2D topology stays at six shared one-shot sources plus four
+human engine-loop sources, with no added listener or manager. Six explicit
+surface textures cover cutting mat, wood, foam, cardboard, metal, and rubber.
+Read-only grounded/motion state and a bounded nonallocating probe of the authored
+drivable mask drive tire ticks and skid onset, repeated scrub, and end cues.
+This first slice uses short scrub retriggers rather than adding tire-loop voices.
+Light/heavy contact uses a body layer and an optional explicit surface layer;
+unclassified contact retains only the body sound and records a classification
+miss. Vehicle contact is recognized through `VehicleController` and never
+pretends to be track material. Airborne or unmarked support emits no tire cues.
+
+Accepted pickup, weapon-spawn/resolution, and recovery payloads select exact human
+recipients: distinct Bolt launch/hit, Oil drop/hit, pickup, and recovery sounds.
+Rejected hits do not fabricate victim audio. Countdown/go/finish remain race
+event cues. A quiet workshop tool/hiss texture runs once every 9–13 seconds only
+in occupied setup or active racing, sharing the same one-shot pool. AI gets no
+engine/tire/listener or human recipient allocation in this slice.
+
+### Declared 1–4-player mix and overflow policy
+
+The existing master/cue/engine Inspector volumes and defaults remain the volume
+boundary. All sources remain 2D with Doppler disabled. No settings schema,
+input binding, mixer asset, or external clip setup is required.
+
+| Tier | Cues | Saturation behavior |
+| --- | --- | --- |
+| 0 | club ambience | drop newest |
+| 1 | surface, skid, UI | drop newest |
+| 2 | pickup, Bolt/Oil, light contact | drop newest |
+| 3 | heavy contact, recovery | steal oldest strictly lower-tier voice, else drop |
+| 4 | countdown, go, finish | steal oldest strictly lower-tier voice, else drop |
+
+Engine and tier-0–2 cue gain per voice scales by `1 / .70 / .58 / .50` for
+one/two/three/four humans. Tier-3–4 cues retain full authored gain. While any
+tier-4 voice is reserved, engine and lower-tier cue gain ducks to 35%; tier-3
+alone ducks to 55%. Existing engine smoothing eases duck/release; pause mutes
+engine volume immediately. Cue ducking updates immediately and releases when
+the logical clip reservation expires or is cleared. Unity source priorities
+also mirror the same tier order. These are provisional authored values requiring
+listening at the consolidated gate; readability has not been established live.
+
+Diagnostics expose requests, accepted cues, cooldown/capacity drops, steals,
+suppression while unavailable/disabled/paused, high-water count, surface misses,
+last recipient, and active voices per recipient. For valid routed requests,
+`requests = accepted + dropped + suppressed`; steals are accepted replacements.
+Priority voices never steal equal/higher tiers. Per-cue/per-recipient cooldowns
+and the existing per-player impact cooldown bound retriggers. Recipient release,
+disconnect, successful recovery, combat clear, race reset/exit, pause, disable,
+and destroy stop relevant voices and clear recipient/tire state. Disable pairs
+all collision/recovery subscriptions and re-enable restores them once. Audio
+only configures/destroys collision adapters it creates; the roster-owned shared
+adapter and its camera/VFX observers retain their threshold and lifetime.
+
+Focused EditMode source covers recipe/variation bounds and repeatability,
+explicit surface lookup, oldest eligible steal/equal-tier protection, and all
+four mix scales. Focused PlayMode source extends the existing audio fixture with
+saturation/duck/accounting/recipient checks, recovery/reset cleanup, fixed ten-
+source/one-listener bounds, four distinct routed human recipients, finish-cue
+survival across the results pause edge, and continued collision publication
+from the shared adapter after audio teardown. Tests are authored, not executed.
+
+Only the exact owned diff, scoped source checks, and scoped `git diff --check`
+were reviewed. A separate static audit found one P2: the normal results
+transition freezes gameplay time before `RaceCompleted`, so the general pause
+guard suppressed Finish and a naive exemption would be cleared on the next
+Update. Reconciliation now clears the racing mix, marks that pause edge handled,
+and grants only the private Finish path an unscaled results exception; every
+public cue path remains pause-suppressed. The auditor re-verified the fix and
+reported no remaining P1/P2 findings.
+
+Unity import/compilation, EditMode/PlayMode execution, listening,
+pause/disconnect/rematch runtime acceptance, allocation/profile evidence,
+screenshots, builds, and physical controllers remain deferred. P3 risks for the
+consolidated pass are sparse procedural timbre quality, tire/probe behavior on
+slopes and surface boundaries, four-player drop density, practical
+duck/readability, and stronger real-event coverage for all four recipients.
+Candidate travel/arming/landing/pickup-availability layers are outside this
+smallest audio slice and were not added without an accepted event requirement.
+
+### Files in the audio implementation
+
+- `Assets/Scripts/Audio/ProceduralAudioBank.cs`
+- `Assets/Scripts/Audio/RcAudioCueData.cs` and `.meta`
+- `Assets/Scripts/Audio/RcAudioPresentation.cs`
+- `Assets/Scripts/Presentation/Stage3Bootstrap.cs`
+- `Assets/Tests/EditMode/Stage9BAudioPolicyTests.cs` and `.meta`
+- `Assets/Tests/PlayMode/Stage8AudioIntegrationTests.cs`
+- `docs/REMAINING_STAGES.md`
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`

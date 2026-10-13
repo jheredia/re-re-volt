@@ -1,6 +1,7 @@
 # Pinned Remaining Roadmap
 
-Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-10.
+Status snapshot: `codex/local-multiplayer-prototype` after accepted VFX commit
+`971bd67`; Stage 9B audio is reconciled and awaits its own checkpoint commit.
 
 ## How much remains
 
@@ -13,12 +14,12 @@ Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-
 
 ## Required for the expanded playable prototype
 
-1. **Stage 9B — Pooled, surface-aware VFX** — next
+1. **Stage 9B — Pooled, surface-aware VFX** — accepted
    - Pool bounded short-lived collision, dust, skid, pickup, and combat effects.
    - Preserve player/viewport ownership, visual-style compatibility, explicit
      capacity and overflow behavior, cleanup, and Off/Reduced/Full settings.
 
-2. **Stage 9B — Audio expansion**
+2. **Stage 9B — Audio expansion** — accepted after independent static audit
    - Add authored cue data, bounded variation, tire/surface layers, distinct
      combat cues, club ambience, priorities, and mix ducking.
    - Keep dense four-player sound readable without changing gameplay authority.
@@ -86,9 +87,9 @@ Status snapshot: `codex/local-multiplayer-prototype` after `2616c83` on 2026-10-
 - Reproducible step-by-step implementation tutorial.
 - Broader car, character, track, music, and club-content production.
 
-## Current hold
+## Current implementation boundary
 
-Stage 9B pooled VFX remains paused at a clean commit because weekly Codex usage
-is beyond the user-defined 80% stop boundary. This scope update does not resume
-implementation. Resume only after the user explicitly signals continuation
-following a reset or authorizes a reset credit.
+The bounded Stage 9B audio slice is independently audited and reconciled with no
+remaining P1/P2 findings. The next separate deliverable is the accessibility and
+performance audit. Broad Unity tests, builds, profiling, and screenshot matrices
+remain deferred to the consolidated implementation-freeze gate.

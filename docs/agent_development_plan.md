@@ -286,8 +286,26 @@ with version-1/2 Full migration, while the protected input map remains unchanged
 The audit found and reconciliation fixed two P2 gaps: vehicle contacts previously
 lacked a classified presentation surface, and disabling the VFX owner left the
 legacy transient fallback suppressed. Unity execution and live capacity
-measurement remain deferred. The next fresh-agent deliverable is audio expansion,
-followed by the final accessibility/performance audit.
+measurement remain deferred.
+
+The audio-expansion slice is accepted after a separate independent static audit
+and overseer reconciliation. It extends the existing central 2D owner with
+24 authored procedural cue records, seeded bounded variation, explicit surface
+tire/skid layers, light/heavy contact, distinct Bolt/Oil/pickup/recovery cues,
+sparse workshop ambience, and declared priority/steal/drop/duck diagnostics.
+Six one-shot and four engine sources remain the fixed bound. Player gain scales
+are 1/.70/.58/.50; heavy/recovery and race signals duck lower tiers and engines
+to 55% and 35% respectively. Shared roster-owned collision adapters retain
+their threshold and lifetime. The existing Inspector volumes remain the audio
+settings boundary. The audit found and reconciliation fixed one P2 in which the
+results time freeze suppressed Finish; only that private unscaled results path
+now bypasses pause suppression and survives the next Update cleanup edge. The
+auditor re-verified no remaining P1/P2 findings. Focused policy/integration test
+source is authored, while only scoped diff/source checks have run. See
+`docs/HANDOVER_STAGE9.md` for exact overflow, cleanup, evidence, and remaining
+listening/probe/readability risks. The final accessibility/performance audit
+remains a separate fresh-agent deliverable before consolidated implementation
+freeze.
 
 Translate common arcade-game-feel tools into RC-racing equivalents. Screen
 shake becomes player-local camera impulse, speed framing, restrained FOV change,

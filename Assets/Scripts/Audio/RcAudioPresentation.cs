@@ -1,5 +1,6 @@
 using System;
 using Core;
+using Presentation;
 using UnityEngine;
 using Vehicle;
 using Weapons;
@@ -28,21 +29,37 @@ namespace AudioPresentation
 
         private readonly AudioSource[] oneShotSources = new AudioSource[MaximumOneShotVoices];
         private readonly float[] oneShotBusyUntil = new float[MaximumOneShotVoices];
+        private readonly float[] oneShotStartedAt = new float[MaximumOneShotVoices];
+        private readonly int[] oneShotPriorities = new int[MaximumOneShotVoices];
+        private readonly int[] oneShotRecipients = new int[MaximumOneShotVoices];
+        private readonly float[] oneShotGains = new float[MaximumOneShotVoices];
         private readonly AudioSource[] engineSources = new AudioSource[MaximumEngineVoices];
         private readonly LocalPlayer[] enginePlayers = new LocalPlayer[MaximumEngineVoices];
         private readonly VehicleImpactAudioEmitter[] impactEmitters =
             new VehicleImpactAudioEmitter[MaximumEngineVoices];
         private readonly bool[] ownsImpactEmitter = new bool[MaximumEngineVoices];
         private readonly float[] nextImpactAt = new float[MaximumEngineVoices];
+        private readonly float[] nextSurfaceAt = new float[MaximumEngineVoices];
+        private readonly bool[] skidding = new bool[MaximumEngineVoices];
+        private readonly Action<RecoveryPresentationPayload>[] recoveryCallbacks =
+            new Action<RecoveryPresentationPayload>[MaximumEngineVoices];
+        private readonly float[,] nextCueAt = new float[(int)AudioCueId.Count, MaximumEngineVoices + 1];
+        private readonly uint[,] cueSequences = new uint[(int)AudioCueId.Count, MaximumEngineVoices + 1];
+        private readonly RaycastHit[] surfaceHits = new RaycastHit[16];
 
         private RaceManager race;
         private VehicleManager vehicles;
         private WeaponManager weapons;
+        private Stage3RacePresentation presentation;
+        private LayerMask surfaceMask = ~0;
         private ProceduralAudioBank bank;
         private GameObject audioRoot;
         private bool configured;
         private bool subscribed;
         private bool audioAvailable;
+        private bool wasPaused;
+        private float nextAmbienceAt;
+        private uint ambienceSequence;
 
         public bool IsConfigured => configured;
         public bool AudioAvailable => audioAvailable;
@@ -53,9 +70,19 @@ namespace AudioPresentation
         public int ImpactEmitterCount { get; private set; }
         public int AcceptedCueCount { get; private set; }
         public int DroppedCueCount { get; private set; }
+        public int RequestedCueCount { get; private set; }
+        public int StolenCueCount { get; private set; }
+        public int CapacityDroppedCueCount { get; private set; }
+        public int CooldownDroppedCueCount { get; private set; }
+        public int SuppressedCueCount { get; private set; }
+        public int SurfaceClassificationMissCount { get; private set; }
+        public int OneShotHighWaterCount { get; private set; }
+        public int LastCuePlayerIndex { get; private set; } = -1;
+        public float CurrentDuckScale { get; private set; } = 1f;
         public AudioCueId LastCue { get; private set; } = AudioCueId.Count;
 
-        public void Configure(RaceManager raceManager, VehicleManager roster, WeaponManager combat = null)
+        public void Configure(RaceManager raceManager, VehicleManager roster, WeaponManager combat = null,
+            Stage3RacePresentation racePresentation = null, LayerMask? drivableMask = null)
         {
             if (configured) throw new InvalidOperationException("Audio presentation is already configured.");
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
@@ -64,6 +91,9 @@ namespace AudioPresentation
             race = raceManager;
             vehicles = roster;
             weapons = combat;
+            presentation = racePresentation;
+            surfaceMask = drivableMask ?? (LayerMask)~0;
+            nextAmbienceAt = Time.unscaledTime + 9f;
             configured = true;
 
             try
@@ -130,15 +160,18 @@ namespace AudioPresentation
             if (subscribed) return;
             race.CountdownChanged += OnCountdownChanged;
             race.RaceCompleted += OnRaceCompleted;
+            race.RaceStateChanged += OnRaceStateChanged;
             vehicles.PlayerJoined += OnPlayerJoined;
             vehicles.PlayerLeft += OnPlayerLeft;
             vehicles.HandlingModelChanged += OnSelectionChanged;
             vehicles.VehicleFamilyChanged += OnSelectionChanged;
+            vehicles.ControllerConnectionChanged += OnConnectionChanged;
             if (weapons != null)
             {
-                weapons.WeaponCollected += OnWeaponCollected;
-                weapons.WeaponFired += OnWeaponFired;
-                weapons.WeaponHit += OnWeaponHit;
+                weapons.PickupPresentationAcquired += OnPickupAcquired;
+                weapons.WeaponPresentationSpawned += OnWeaponSpawned;
+                weapons.WeaponPresentationResolved += OnWeaponResolved;
+                weapons.CombatCleared += OnCombatCleared;
             }
             subscribed = true;
         }
@@ -150,6 +183,7 @@ namespace AudioPresentation
             {
                 race.CountdownChanged -= OnCountdownChanged;
                 race.RaceCompleted -= OnRaceCompleted;
+                race.RaceStateChanged -= OnRaceStateChanged;
             }
             if (vehicles != null)
             {
@@ -157,12 +191,14 @@ namespace AudioPresentation
                 vehicles.PlayerLeft -= OnPlayerLeft;
                 vehicles.HandlingModelChanged -= OnSelectionChanged;
                 vehicles.VehicleFamilyChanged -= OnSelectionChanged;
+                vehicles.ControllerConnectionChanged -= OnConnectionChanged;
             }
             if (weapons != null)
             {
-                weapons.WeaponCollected -= OnWeaponCollected;
-                weapons.WeaponFired -= OnWeaponFired;
-                weapons.WeaponHit -= OnWeaponHit;
+                weapons.PickupPresentationAcquired -= OnPickupAcquired;
+                weapons.WeaponPresentationSpawned -= OnWeaponSpawned;
+                weapons.WeaponPresentationResolved -= OnWeaponResolved;
+                weapons.CombatCleared -= OnCombatCleared;
             }
             subscribed = false;
         }
@@ -200,11 +236,16 @@ namespace AudioPresentation
             {
                 VehicleImpactAudioEmitter emitter = player.Vehicle.GetComponent<VehicleImpactAudioEmitter>();
                 ownsImpactEmitter[slot] = emitter == null;
-                if (emitter == null) emitter = player.Vehicle.gameObject.AddComponent<VehicleImpactAudioEmitter>();
-                emitter.Configure(slot, minimumImpactImpulse);
-                emitter.Impacted += OnVehicleImpact;
+                if (emitter == null)
+                {
+                    emitter = player.Vehicle.gameObject.AddComponent<VehicleImpactAudioEmitter>();
+                    emitter.Configure(slot, minimumImpactImpulse);
+                }
+                emitter.ImpactObserved += OnVehicleImpact;
                 impactEmitters[slot] = emitter;
             }
+            recoveryCallbacks[slot] = payload => OnRecovered(slot, payload);
+            if (player.Recovery != null) player.Recovery.RecoveredAt += recoveryCallbacks[slot];
             AudioSource engine = engineSources[slot];
             if (audioAvailable && engine != null && engine.clip != null && !engine.isPlaying) engine.Play();
         }
@@ -221,7 +262,7 @@ namespace AudioPresentation
             VehicleImpactAudioEmitter emitter = impactEmitters[slot];
             if (emitter != null)
             {
-                emitter.Impacted -= OnVehicleImpact;
+                emitter.ImpactObserved -= OnVehicleImpact;
                 if (ownsImpactEmitter[slot])
                 {
                     if (Application.isPlaying) Destroy(emitter);
@@ -229,6 +270,15 @@ namespace AudioPresentation
                 }
             }
             impactEmitters[slot] = null;
+            if (enginePlayers[slot]?.Recovery != null && recoveryCallbacks[slot] != null)
+                enginePlayers[slot].Recovery.RecoveredAt -= recoveryCallbacks[slot];
+            recoveryCallbacks[slot] = null;
+            ClearRecipient(slot);
+            for (int i = 0; i < (int)AudioCueId.Count; i++)
+            {
+                nextCueAt[i, slot] = 0f;
+                cueSequences[i, slot] = 0;
+            }
             ownsImpactEmitter[slot] = false;
             enginePlayers[slot] = null;
             nextImpactAt[slot] = 0f;
@@ -259,21 +309,26 @@ namespace AudioPresentation
             {
                 VehicleImpactAudioEmitter emitter = impactEmitters[i];
                 if (emitter == null) continue;
-                emitter.Impacted -= OnVehicleImpact;
-                emitter.Impacted += OnVehicleImpact;
+                emitter.ImpactObserved -= OnVehicleImpact;
+                emitter.ImpactObserved += OnVehicleImpact;
+            }
+            for (int i = 0; i < enginePlayers.Length; i++)
+            {
+                if (enginePlayers[i]?.Recovery == null || recoveryCallbacks[i] == null) continue;
+                enginePlayers[i].Recovery.RecoveredAt -= recoveryCallbacks[i];
+                enginePlayers[i].Recovery.RecoveredAt += recoveryCallbacks[i];
             }
         }
 
         private void Update()
         {
             if (!audioAvailable) return;
-            float mixScale = ActiveEngineVoiceCount switch
-            {
-                4 => .5f,
-                3 => .58f,
-                2 => .7f,
-                _ => 1f
-            };
+            bool paused = IsPaused;
+            if (paused && !wasPaused) ClearTransientAudio();
+            wasPaused = paused;
+            float now = Time.unscaledTime;
+            RefreshOneShotMix(now);
+            float mixScale = RcAudioMixPolicy.PlayerScale(ActiveEngineVoiceCount);
             float response = 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime);
             for (int i = 0; i < enginePlayers.Length; i++)
             {
@@ -282,11 +337,21 @@ namespace AudioPresentation
                 if (player == null || player.Vehicle == null || source == null) continue;
                 float speed = Mathf.Clamp01(player.Vehicle.CurrentSpeed / referenceTopSpeedKph);
                 float throttle = Mathf.Abs(player.Vehicle.ThrottleInput);
-                float targetVolume = masterVolume * engineVolume * mixScale * (.32f + speed * .5f + throttle * .18f);
+                float targetVolume = masterVolume * engineVolume * mixScale * CurrentDuckScale *
+                    (.32f + speed * .5f + throttle * .18f);
                 if (!player.IsConnected) targetVolume *= .25f;
-                source.volume = Mathf.Lerp(source.volume, targetVolume, response);
+                if (paused) targetVolume = 0f;
+                source.volume = paused ? 0f : Mathf.Lerp(source.volume, targetVolume, response);
                 source.pitch = .72f + speed * 1.08f + throttle * .12f;
                 if (!source.isPlaying && source.clip != null) source.Play();
+                UpdateTires(i, player, now);
+            }
+            if (!paused && ActiveEngineVoiceCount > 0 && now >= nextAmbienceAt &&
+                (race.CurrentState == RaceManager.RaceState.Idle || race.RaceRunning))
+            {
+                TryPlayCue(AudioCueId.ClubAmbience);
+                // Sparse workshop tool/radio texture: one short cue every 9–13 seconds, no extra loop/source.
+                nextAmbienceAt = now + 9f + (ambienceSequence++ % 5);
             }
         }
 
@@ -296,94 +361,288 @@ namespace AudioPresentation
             else if (number == 0) TryPlayCue(AudioCueId.Go);
         }
 
-        private void OnRaceCompleted(System.Collections.Generic.IReadOnlyList<RacerState> standings) =>
-            TryPlayCue(AudioCueId.Finish);
+        private void OnRaceCompleted(System.Collections.Generic.IReadOnlyList<RacerState> standings)
+        {
+            // Results intentionally freeze gameplay time before RaceCompleted is published. Clear the racing mix,
+            // mark the pause edge as handled, then allow only this unscaled session cue to survive in results.
+            ClearTransientAudio();
+            wasPaused = true;
+            TryPlayRoutedCue(AudioCueId.Finish, -1, 1f, 1f, true);
+        }
 
-        private void OnSelectionChanged(LocalPlayer player) => TryPlayCue(AudioCueId.UiConfirm);
-        private void OnWeaponCollected(LocalPlayer player, WeaponKind kind) => TryPlayCue(AudioCueId.Pickup);
-        private void OnWeaponFired(LocalPlayer player, WeaponKind kind) => TryPlayCue(AudioCueId.WeaponFire);
-        private void OnWeaponHit(LocalPlayer player, WeaponKind kind) => TryPlayImpactFeedback(player.PlayerIndex,
-            fullImpactImpulse);
-        private void OnVehicleImpact(int playerIndex, float impulse) => TryPlayImpactFeedback(playerIndex, impulse);
+        private bool IsPaused => (presentation != null && presentation.IsPaused) || Time.timeScale <= 0f;
+
+        private bool OwnsConnectedPlayer(int slot) => slot >= 0 && slot < enginePlayers.Length &&
+            enginePlayers[slot] != null && enginePlayers[slot].IsConnected;
+
+        private void OnSelectionChanged(LocalPlayer player) =>
+            TryPlayPlayerCue(AudioCueId.UiConfirm, player.PlayerIndex);
+
+        private void OnPickupAcquired(PickupAcquiredPresentationPayload payload)
+        {
+            if (race.RaceRunning) TryPlayPlayerCue(AudioCueId.Pickup, payload.CollectorPlayerIndex);
+        }
+
+        private void OnWeaponSpawned(WeaponSpawnedPresentationPayload payload)
+        {
+            if (race.RaceRunning) TryPlayPlayerCue(payload.Kind == WeaponKind.Bolt
+                ? AudioCueId.BoltLaunch : AudioCueId.OilDrop, payload.SourcePlayerIndex);
+        }
+
+        private void OnWeaponResolved(WeaponResolvedPresentationPayload payload)
+        {
+            // Rejected/world hits do not fabricate a victim. Accepted payloads supply the exact recipient.
+            if (race.RaceRunning && payload.AcceptedHit)
+                TryPlayPlayerCue(payload.Kind == WeaponKind.Bolt ? AudioCueId.BoltHit : AudioCueId.OilHit,
+                    payload.TargetPlayerIndex);
+        }
+
+        private void OnRecovered(int slot, RecoveryPresentationPayload payload)
+        {
+            ClearRecipient(slot);
+            if (race.RaceRunning) TryPlayPlayerCue(AudioCueId.Recovery, slot);
+        }
+
+        private void OnConnectionChanged(LocalPlayer player)
+        {
+            if (!player.IsConnected) ClearRecipient(player.PlayerIndex);
+        }
+
+        private void OnRaceStateChanged(RaceManager.RaceState state)
+        {
+            if (state != RaceManager.RaceState.Racing) ClearTransientAudio();
+            nextAmbienceAt = Time.unscaledTime + 9f;
+        }
+
+        private void OnCombatCleared()
+        {
+            for (int i = 0; i < enginePlayers.Length; i++) ClearRecipient(i);
+        }
+
+        private void OnVehicleImpact(VehicleImpactPayload payload)
+        {
+            if (!race.RaceRunning || IsPaused || !OwnsConnectedPlayer(payload.PlayerIndex)) return;
+            if (!TryPlayImpactFeedback(payload.PlayerIndex, payload.Impulse)) return;
+            // Body contact and explicit material texture are separate bounded voices. Unknown surfaces retain
+            // the body cue only; vehicle contact is explicit and never masquerades as a track material.
+            if (payload.OtherCollider != null &&
+                payload.OtherCollider.GetComponentInParent<VehicleController>() != null) return;
+            if (TrackSurfaceMarker.TryResolve(payload.OtherCollider, out TrackSurfaceKind surface) &&
+                RcAudioCueData.TrySurfaceCue(surface, out AudioCueId cue))
+                TryPlayPlayerCue(cue, payload.PlayerIndex, .65f);
+            else SurfaceClassificationMissCount++;
+        }
+
+        private void UpdateTires(int slot, LocalPlayer player, float now)
+        {
+            VehicleController vehicle = player.Vehicle;
+            if (IsPaused || !race.RaceRunning || !player.IsConnected || player.Racer.IsFinished ||
+                !vehicle.isActiveAndEnabled || vehicle.GroundedWheelCount == 0 || vehicle.CurrentSpeed < 2f)
+            {
+                if (skidding[slot] && !IsPaused && race.RaceRunning && player.IsConnected &&
+                    !player.Racer.IsFinished && vehicle.GroundedWheelCount > 0)
+                    TryPlayPlayerCue(AudioCueId.SkidEnd, slot);
+                skidding[slot] = false;
+                return;
+            }
+            if (now < nextSurfaceAt[slot]) return;
+            nextSurfaceAt[slot] = now + .32f + slot * .015f;
+            if (!TryFindSurface(vehicle, out AudioCueId tireCue))
+            {
+                skidding[slot] = false;
+                SurfaceClassificationMissCount++;
+                return;
+            }
+            bool drift = vehicle.IsDrifting;
+            float speed = Mathf.Clamp01(vehicle.CurrentSpeed / referenceTopSpeedKph);
+            if (drift != skidding[slot])
+                TryPlayPlayerCue(drift ? AudioCueId.SkidStart : AudioCueId.SkidEnd, slot);
+            skidding[slot] = drift;
+            TryPlayPlayerCue(tireCue, slot, .4f + speed * .6f);
+            if (drift) TryPlayPlayerCue(AudioCueId.SkidScrub, slot, .4f + speed * .6f);
+        }
+
+        private bool TryFindSurface(VehicleController vehicle, out AudioCueId cue)
+        {
+            cue = AudioCueId.Count;
+            int count = Physics.RaycastNonAlloc(vehicle.transform.position + Vector3.up * .5f, Vector3.down,
+                surfaceHits, 2.5f, surfaceMask, QueryTriggerInteraction.Ignore);
+            if (count == surfaceHits.Length) return false;
+            Collider support = null;
+            float nearest = float.PositiveInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                RaycastHit hit = surfaceHits[i];
+                if (hit.collider == null || hit.collider.GetComponentInParent<VehicleController>() != null ||
+                    hit.normal.y < .5f || hit.distance >= nearest) continue;
+                nearest = hit.distance;
+                support = hit.collider;
+            }
+            return TrackSurfaceMarker.TryResolve(support, out TrackSurfaceKind surface) &&
+                RcAudioCueData.TrySurfaceCue(surface, out cue);
+        }
 
         /// <summary>Bounded presentation seam used by collision and combat adapters.</summary>
         public bool TryPlayImpactFeedback(int playerIndex, float impulse)
         {
-            if (playerIndex < 0 || playerIndex >= nextImpactAt.Length || impulse < minimumImpactImpulse)
+            if (!OwnsConnectedPlayer(playerIndex) || IsPaused || float.IsNaN(impulse) ||
+                float.IsInfinity(impulse) || impulse < minimumImpactImpulse)
                 return false;
             float now = Time.unscaledTime;
             if (now < nextImpactAt[playerIndex])
             {
                 DroppedCueCount++;
+                RequestedCueCount++;
+                CooldownDroppedCueCount++;
                 return false;
             }
             float intensity = Mathf.Clamp01(impulse / Mathf.Max(.01f, fullImpactImpulse));
-            if (!TryPlayCue(AudioCueId.Impact, Mathf.Lerp(.35f, 1f, intensity), Mathf.Lerp(.82f, 1.12f, intensity)))
+            AudioCueId cue = impulse >= fullImpactImpulse ? AudioCueId.HeavyImpact : AudioCueId.Impact;
+            if (!TryPlayPlayerCue(cue, playerIndex, Mathf.Lerp(.35f, 1f, intensity),
+                    Mathf.Lerp(.82f, 1.12f, intensity)))
                 return false;
             nextImpactAt[playerIndex] = now + impactCooldown;
             return true;
         }
 
-        /// <summary>Plays through the fixed one-shot pool; requests are dropped when all voices are occupied.</summary>
+        /// <summary>Legacy session-cue seam. One-shot capacity stays six; important cues steal only lower tiers.</summary>
         public bool TryPlayCue(AudioCueId cue, float volumeScale = 1f, float pitch = 1f)
+            => TryPlayRoutedCue(cue, -1, volumeScale, pitch);
+
+        public bool TryPlayPlayerCue(AudioCueId cue, int playerIndex, float volumeScale = 1f, float pitch = 1f)
+        {
+            if (!OwnsConnectedPlayer(playerIndex)) return false;
+            return TryPlayRoutedCue(cue, playerIndex, volumeScale, pitch);
+        }
+
+        private bool TryPlayRoutedCue(AudioCueId cue, int recipient, float volumeScale, float pitch,
+            bool allowWhilePaused = false)
         {
             int cueIndex = (int)cue;
-            if (!isActiveAndEnabled || !audioAvailable || cueIndex <= (int)AudioCueId.Engine ||
-                cueIndex >= (int)AudioCueId.Count)
+            if (cueIndex <= (int)AudioCueId.Engine || cueIndex >= (int)AudioCueId.Count ||
+                float.IsNaN(volumeScale) || float.IsInfinity(volumeScale) || float.IsNaN(pitch) ||
+                float.IsInfinity(pitch))
                 return false;
+            RequestedCueCount++;
+            if (!isActiveAndEnabled || !audioAvailable || (IsPaused && !allowWhilePaused))
+            {
+                SuppressedCueCount++;
+                return false;
+            }
             AudioClip clip = bank.Get(cue);
-            if (clip == null) return false;
+            if (clip == null) { SuppressedCueCount++; return false; }
             float now = Time.unscaledTime;
-            int selectedVoice = -1;
-            for (int i = 0; i < oneShotSources.Length; i++)
+            int recipientSlot = recipient >= 0 ? recipient : MaximumEngineVoices;
+            AudioCueDefinition data = RcAudioCueData.Get(cue);
+            if (now < nextCueAt[cueIndex, recipientSlot])
             {
-                if (oneShotSources[i] != null && now >= oneShotBusyUntil[i])
-                {
-                    selectedVoice = i;
-                    break;
-                }
+                DroppedCueCount++;
+                CooldownDroppedCueCount++;
+                return false;
             }
-            if (selectedVoice < 0 && IsPriorityCue(cue))
-            {
-                float earliestRelease = float.PositiveInfinity;
-                for (int i = 0; i < oneShotSources.Length; i++)
-                    if (oneShotSources[i] != null && oneShotBusyUntil[i] < earliestRelease)
-                    {
-                        earliestRelease = oneShotBusyUntil[i];
-                        selectedVoice = i;
-                    }
-            }
+            int selectedVoice = RcAudioMixPolicy.SelectVoice(now, data.Priority, oneShotBusyUntil,
+                oneShotStartedAt, oneShotPriorities, out bool stolen);
             if (selectedVoice >= 0)
             {
                 AudioSource source = oneShotSources[selectedVoice];
+                RcAudioCueData.Variation(cue, recipient, cueSequences[cueIndex, recipientSlot]++,
+                    out float variedPitch, out float variedGain);
                 source.Stop();
                 source.clip = clip;
-                source.pitch = Mathf.Clamp(pitch, .25f, 3f);
-                source.volume = masterVolume * cueVolume * Mathf.Clamp01(volumeScale);
-                source.Play();
+                source.pitch = Mathf.Clamp(pitch * variedPitch, .25f, 3f);
+                source.priority = 128 - data.Priority * 24;
+                oneShotGains[selectedVoice] = masterVolume * cueVolume * Mathf.Clamp01(volumeScale) * variedGain;
+                oneShotPriorities[selectedVoice] = data.Priority;
+                oneShotRecipients[selectedVoice] = recipient;
+                oneShotStartedAt[selectedVoice] = now;
                 oneShotBusyUntil[selectedVoice] = now + clip.length / Mathf.Abs(source.pitch);
+                nextCueAt[cueIndex, recipientSlot] = now + data.Cooldown;
+                RefreshOneShotMix(now);
+                source.Play();
                 LastCue = cue;
+                LastCuePlayerIndex = recipient;
                 AcceptedCueCount++;
+                if (stolen) StolenCueCount++;
                 return true;
             }
             DroppedCueCount++;
+            CapacityDroppedCueCount++;
             return false;
         }
 
-        private static bool IsPriorityCue(AudioCueId cue) =>
-            cue == AudioCueId.Countdown || cue == AudioCueId.Go || cue == AudioCueId.Finish;
+        private void RefreshOneShotMix(float now)
+        {
+            int active = 0;
+            int priority = 0;
+            for (int i = 0; i < oneShotSources.Length; i++)
+                if (now < oneShotBusyUntil[i])
+                {
+                    active++;
+                    priority = Mathf.Max(priority, oneShotPriorities[i]);
+                }
+            OneShotHighWaterCount = Mathf.Max(OneShotHighWaterCount, active);
+            CurrentDuckScale = RcAudioMixPolicy.DuckScale(priority);
+            for (int i = 0; i < oneShotSources.Length; i++)
+            {
+                if (oneShotSources[i] == null) continue;
+                float scale = oneShotPriorities[i] >= 3 ? 1f :
+                    RcAudioMixPolicy.PlayerScale(ActiveEngineVoiceCount) * CurrentDuckScale;
+                oneShotSources[i].volume = oneShotGains[i] * scale;
+            }
+        }
+
+        public int GetActiveRecipientVoiceCount(int playerIndex)
+        {
+            int count = 0;
+            for (int i = 0; i < oneShotSources.Length; i++)
+                if (Time.unscaledTime < oneShotBusyUntil[i] && oneShotRecipients[i] == playerIndex) count++;
+            return count;
+        }
+
+        private void ClearRecipient(int slot)
+        {
+            if (slot < 0 || slot >= enginePlayers.Length) return;
+            for (int i = 0; i < oneShotSources.Length; i++)
+                if (oneShotRecipients[i] == slot) ClearVoice(i);
+            skidding[slot] = false;
+            nextSurfaceAt[slot] = 0f;
+            nextImpactAt[slot] = 0f;
+            Array.Clear(surfaceHits, 0, surfaceHits.Length);
+        }
+
+        private void ClearVoice(int voice)
+        {
+            if (oneShotSources[voice] != null)
+            {
+                oneShotSources[voice].Stop();
+                oneShotSources[voice].clip = null;
+                oneShotSources[voice].volume = 0f;
+            }
+            oneShotBusyUntil[voice] = 0f;
+            oneShotStartedAt[voice] = 0f;
+            oneShotPriorities[voice] = 0;
+            oneShotRecipients[voice] = -1;
+            oneShotGains[voice] = 0f;
+        }
+
+        private void ClearTransientAudio()
+        {
+            for (int i = 0; i < oneShotSources.Length; i++) ClearVoice(i);
+            for (int i = 0; i < enginePlayers.Length; i++) ClearRecipient(i);
+            Array.Clear(nextCueAt, 0, nextCueAt.Length);
+            CurrentDuckScale = 1f;
+        }
 
         private void OnDisable()
         {
             Unsubscribe();
             for (int i = 0; i < impactEmitters.Length; i++)
-                if (impactEmitters[i] != null) impactEmitters[i].Impacted -= OnVehicleImpact;
-            for (int i = 0; i < oneShotSources.Length; i++)
-                if (oneShotSources[i] != null)
-                {
-                    oneShotSources[i].Stop();
-                    oneShotBusyUntil[i] = 0f;
-                }
+            {
+                if (impactEmitters[i] != null) impactEmitters[i].ImpactObserved -= OnVehicleImpact;
+                if (enginePlayers[i]?.Recovery != null && recoveryCallbacks[i] != null)
+                    enginePlayers[i].Recovery.RecoveredAt -= recoveryCallbacks[i];
+            }
+            ClearTransientAudio();
             for (int i = 0; i < engineSources.Length; i++)
                 if (engineSources[i] != null) engineSources[i].Stop();
             if (audioRoot != null) audioRoot.SetActive(false);

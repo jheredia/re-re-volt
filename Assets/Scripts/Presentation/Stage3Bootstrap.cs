@@ -106,7 +106,8 @@ namespace Presentation
                 DemoPreferences.VfxDensity);
             Presentation.AttachVfxPresentation(VfxPresentation);
             AudioPresentation = gameObject.AddComponent<RcAudioPresentation>();
-            AudioPresentation.Configure(RaceManager, VehicleManager, WeaponManager);
+            AudioPresentation.Configure(RaceManager, VehicleManager, WeaponManager, Presentation,
+                circuit.DrivableMask);
             HandlingBakeOff = gameObject.AddComponent<HandlingBakeOffCoordinator>();
             HandlingBakeOff.Configure(RaceManager, VehicleManager);
             ConfigureGameManager();
