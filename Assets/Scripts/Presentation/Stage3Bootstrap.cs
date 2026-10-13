@@ -31,6 +31,7 @@ namespace Presentation
         public WeaponManager WeaponManager { get; private set; }
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
         public RcAudioPresentation AudioPresentation { get; private set; }
+        public Stage9BVfxPresentation VfxPresentation { get; private set; }
         public VisualStyleController VisualStyle { get; private set; }
         public DemoFlowPreferences DemoPreferences { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
@@ -100,6 +101,10 @@ namespace Presentation
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
+            VfxPresentation = gameObject.AddComponent<Stage9BVfxPresentation>();
+            VfxPresentation.Configure(RaceManager, VehicleManager, AIManager, WeaponManager, VisualStyle,
+                DemoPreferences.VfxDensity);
+            Presentation.AttachVfxPresentation(VfxPresentation);
             AudioPresentation = gameObject.AddComponent<RcAudioPresentation>();
             AudioPresentation.Configure(RaceManager, VehicleManager, WeaponManager);
             HandlingBakeOff = gameObject.AddComponent<HandlingBakeOffCoordinator>();

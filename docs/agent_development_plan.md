@@ -269,9 +269,25 @@ Reduced, and Full with version-1 migration. Pause, recovery, reset, disconnect,
 controller replacement, race exit, release, disable, and destroy clear the
 response. A separate static audit identified and reconciliation fixed the
 controller-replacement suspension edge case; Unity execution remains deferred
-to the consolidated freeze. The next fresh-agent deliverable is pooled,
-surface-aware VFX, followed separately by audio expansion and the final
-accessibility/performance audit.
+to the consolidated freeze.
+
+The pooled, surface-aware VFX implementation is now accepted after independent
+static audit and reconciliation. One bootstrap-owned observer prewarms fixed
+collision, human skid-smoke, Bolt travel/impact, Oil impact, and pickup/recovery
+families; exposes warm capacity, hard cap, drops, and high-water marks; and drops
+newest requests without stealing visible effects. Exact additive payloads bridge
+collision, weapon, pickup, recovery, and AI world-presentation outcomes after
+authority has resolved them. Authored surface markers replace material/name
+inference, while an explicit vehicle-contact category keeps human/AI car impacts
+visible.
+Renderers register once with the existing visual-style owner and unregister on
+final disposal. Preference schema version 3 adds a separate VFX-density setting
+with version-1/2 Full migration, while the protected input map remains unchanged.
+The audit found and reconciliation fixed two P2 gaps: vehicle contacts previously
+lacked a classified presentation surface, and disabling the VFX owner left the
+legacy transient fallback suppressed. Unity execution and live capacity
+measurement remain deferred. The next fresh-agent deliverable is audio expansion,
+followed by the final accessibility/performance audit.
 
 Translate common arcade-game-feel tools into RC-racing equivalents. Screen
 shake becomes player-local camera impulse, speed framing, restrained FOV change,

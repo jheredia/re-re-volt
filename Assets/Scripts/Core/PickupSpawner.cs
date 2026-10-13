@@ -21,10 +21,12 @@ namespace Core
 
         public bool IsAvailable => cycle != null && cycle.IsAvailable(owner.SimulationTime);
         public WeaponKind Offering => cycle?.Offering ?? WeaponKind.None;
+        public int PickupIndex { get; private set; } = -1;
 
         public void Configure(WeaponManager manager, int index)
         {
             owner = manager;
+            PickupIndex = index;
             cycle = new PickupCycle(index, Mathf.Max(.1f, respawnCooldown));
             BoxCollider volume = gameObject.AddComponent<BoxCollider>();
             volume.isTrigger = true;

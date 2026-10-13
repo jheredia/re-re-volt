@@ -50,9 +50,11 @@ namespace Presentation
             public int cameraMotion;
             public int vehicleMotion;
             public bool hasPresentationResponseSettings;
+            public int vfxDensity;
+            public bool hasVfxDensitySetting;
         }
 
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
         public const string StorageKey = "re-re-volt.demo-flow.preferences";
 
         private readonly ILocalPreferenceStore store;
@@ -69,6 +71,7 @@ namespace Presentation
         public VisualStyleMode VisualStyle { get; private set; }
         public PresentationResponseLevel CameraMotion { get; private set; }
         public PresentationResponseLevel VehicleMotion { get; private set; }
+        public VfxDensityLevel VfxDensity { get; private set; }
         public string RecoveryMessage { get; private set; } = string.Empty;
 
         public void Load()
@@ -100,7 +103,7 @@ namespace Presentation
                 return;
             }
 
-            if (payload == null || (payload.version != 1 && payload.version != CurrentVersion))
+            if (payload == null || (payload.version != 1 && payload.version != 2 && payload.version != CurrentVersion))
             {
                 ReportRecovery("LOCAL SETTINGS VERSION WAS NOT RECOGNIZED — SAFE DEFAULTS ARE ACTIVE");
                 return;
@@ -127,11 +130,19 @@ namespace Presentation
                     repaired = true;
             }
 
-            if (payload.version == CurrentVersion && payload.hasPresentationResponseSettings)
+            if (payload.version >= 2 && payload.hasPresentationResponseSettings)
             {
                 if (IsPresentationLevel(payload.cameraMotion)) CameraMotion = (PresentationResponseLevel)payload.cameraMotion;
                 else repaired = true;
                 if (IsPresentationLevel(payload.vehicleMotion)) VehicleMotion = (PresentationResponseLevel)payload.vehicleMotion;
+                else repaired = true;
+            }
+            else if (payload.version >= 2)
+                repaired = true;
+
+            if (payload.version == CurrentVersion && payload.hasVfxDensitySetting)
+            {
+                if (IsVfxDensity(payload.vfxDensity)) VfxDensity = (VfxDensityLevel)payload.vfxDensity;
                 else repaired = true;
             }
             else if (payload.version == CurrentVersion)
@@ -191,6 +202,15 @@ namespace Presentation
             return Save();
         }
 
+        public bool SetVfxDensity(VfxDensityLevel vfxDensity)
+        {
+            if (!IsVfxDensity((int)vfxDensity)) throw new ArgumentOutOfRangeException(nameof(vfxDensity));
+            if (VfxDensity == vfxDensity) return !dirty || Save();
+            VfxDensity = vfxDensity;
+            dirty = true;
+            return Save();
+        }
+
         internal void ReportRecovery(string message)
         {
             RecoveryMessage = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
@@ -206,7 +226,9 @@ namespace Presentation
                 vehicleFamilies = new int[LocalPlayerRules.MaximumPlayers],
                 cameraMotion = (int)CameraMotion,
                 vehicleMotion = (int)VehicleMotion,
-                hasPresentationResponseSettings = true
+                hasPresentationResponseSettings = true,
+                vfxDensity = (int)VfxDensity,
+                hasVfxDensitySetting = true
             };
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
@@ -234,6 +256,7 @@ namespace Presentation
             VisualStyle = VisualStyleMode.Clean3D;
             CameraMotion = PresentationResponseLevel.Full;
             VehicleMotion = PresentationResponseLevel.Full;
+            VfxDensity = VfxDensityLevel.Full;
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
                 handlingModels[i] = HandlingModelId.A;
@@ -249,5 +272,7 @@ namespace Presentation
 
         private static bool IsPresentationLevel(int value) =>
             Enum.IsDefined(typeof(PresentationResponseLevel), value);
+
+        private static bool IsVfxDensity(int value) => Enum.IsDefined(typeof(VfxDensityLevel), value);
     }
 }

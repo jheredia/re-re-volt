@@ -4,6 +4,16 @@ using UnityEngine;
 
 namespace Vehicle
 {
+    public readonly struct RecoveryPresentationPayload
+    {
+        public RecoveryPresentationPayload(Pose destination)
+        {
+            Destination = destination;
+        }
+
+        public Pose Destination { get; }
+    }
+
     /// <summary>Returns to the last accepted checkpoint, then the grid, without changing race progress.</summary>
     [RequireComponent(typeof(VehicleController), typeof(Rigidbody))]
     public sealed class VehicleRecovery : MonoBehaviour
@@ -22,6 +32,7 @@ namespace Vehicle
         private float nextRecoveryTime;
 
         public event Action Recovered;
+        public event Action<RecoveryPresentationPayload> RecoveredAt;
 
         private void Awake() => vehicle = GetComponent<VehicleController>();
 
@@ -59,6 +70,8 @@ namespace Vehicle
             vehicle.Teleport(destination);
             if (race != null) race.ReportSegmentProgress(gameObject, 0f);
             Recovered?.Invoke();
+            try { RecoveredAt?.Invoke(new RecoveryPresentationPayload(destination)); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
             return true;
         }
 

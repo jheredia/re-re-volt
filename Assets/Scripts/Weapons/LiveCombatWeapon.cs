@@ -65,7 +65,8 @@ namespace Weapons
         private bool Impact(Collider collider, Vector3 point)
         {
             LocalPlayer target = owner.ResolvePlayer(collider);
-            if (target != null) owner.TryHit(this, target);
+            bool accepted = target != null && owner.TryHit(this, target);
+            owner.NotifyWeaponResolved(this, target, point, collider, accepted);
             owner.ShowBurst(point, Kind);
             return false;
         }
@@ -86,7 +87,11 @@ namespace Weapons
                     Vector3 nearest = overlaps[i].ClosestPoint(transform.position + Vector3.up * .35f);
                     Vector3 horizontal = Vector3.ProjectOnPlane(nearest - transform.position, Vector3.up);
                     if (horizontal.sqrMagnitude > oilRadius * oilRadius) continue;
-                    if (owner.TryHit(this, target)) return false;
+                    if (owner.TryHit(this, target))
+                    {
+                        owner.NotifyWeaponResolved(this, target, nearest, overlaps[i], true);
+                        return false;
+                    }
                 }
             return true;
         }

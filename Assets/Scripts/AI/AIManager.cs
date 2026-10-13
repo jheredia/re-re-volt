@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Core;
+using AudioPresentation;
 using Presentation;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,6 +9,24 @@ using Vehicle;
 
 namespace AI
 {
+    /// <summary>World-presentation references for a bot; carries no local-player or viewport ownership.</summary>
+    public readonly struct AIVehiclePresentationHandle
+    {
+        public AIVehiclePresentationHandle(int botIndex, VehicleController vehicle, VehicleRecovery recovery,
+            VehicleImpactAudioEmitter impactEmitter)
+        {
+            BotIndex = botIndex;
+            Vehicle = vehicle;
+            Recovery = recovery;
+            ImpactEmitter = impactEmitter;
+        }
+
+        public int BotIndex { get; }
+        public VehicleController Vehicle { get; }
+        public VehicleRecovery Recovery { get; }
+        public VehicleImpactAudioEmitter ImpactEmitter { get; }
+    }
+
     /// <summary>
     /// Owns the non-human roster independently from VehicleManager. Bots are created only when
     /// a race is submitted, so setup remains free for up to four human device owners.
@@ -17,10 +36,14 @@ namespace AI
     {
         private sealed class BotEntry
         {
+            internal int BotIndex;
             internal int GridIndex;
             internal GameObject VehicleObject;
+            internal VehicleController Vehicle;
             internal AIDriverController Driver;
             internal Renderer[] Renderers;
+            internal VehicleRecovery Recovery;
+            internal VehicleImpactAudioEmitter ImpactEmitter;
         }
 
         private static readonly Color[] BotColors =
@@ -45,6 +68,8 @@ namespace AI
 
         public event Action<int> SelectedBotCountChanged;
         public event Action<int> ActiveBotCountChanged;
+        public event Action<AIVehiclePresentationHandle> BotPresentationAdded;
+        public event Action<AIVehiclePresentationHandle> BotPresentationRemoving;
 
         public int SelectedBotCount => selectedBotCount;
         public int MaximumSelectableBots => humans == null ? 0 : Mathf.Clamp(4 - humans.Players.Count, 0, 3);
@@ -194,6 +219,8 @@ namespace AI
             for (int i = bots.Count - 1; i >= 0; i--)
             {
                 BotEntry bot = bots[i];
+                PublishBotPresentationRemoving(new AIVehiclePresentationHandle(bot.BotIndex,
+                    bot.Vehicle, bot.Recovery, bot.ImpactEmitter));
                 if (bot.VehicleObject != null && race != null) race.UnregisterRacer(bot.VehicleObject);
                 UnregisterRenderers(bot.Renderers);
                 if (bot.VehicleObject != null)
@@ -225,6 +252,8 @@ namespace AI
                 VehicleRecovery recovery = car.AddComponent<VehicleRecovery>();
                 recovery.ConfigureGroundMask(drivableMask);
                 recovery.Initialize(pose, race);
+                VehicleImpactAudioEmitter impactEmitter = car.AddComponent<VehicleImpactAudioEmitter>();
+                impactEmitter.ConfigureWorldOnly(LocalPlayerRules.MaximumPlayers + botIndex, 0f);
 
                 string racerId = $"bot-{botIndex + 1}";
                 RacerState racer = race.RegisterRacer(racerId, car, $"CPU {botIndex + 1}", false);
@@ -239,13 +268,19 @@ namespace AI
                 ApplyBotColor(car, BotColors[botIndex % BotColors.Length]);
                 BotEntry entry = new()
                 {
+                    BotIndex = botIndex,
                     GridIndex = gridIndex,
                     VehicleObject = car,
+                    Vehicle = vehicle,
                     Driver = driver,
-                    Renderers = renderers
+                    Renderers = renderers,
+                    Recovery = recovery,
+                    ImpactEmitter = impactEmitter
                 };
                 bots.Add(entry);
                 drivers.Add(driver);
+                PublishBotPresentationAdded(new AIVehiclePresentationHandle(botIndex, vehicle, recovery,
+                    impactEmitter));
                 return true;
             }
             catch (Exception exception)
@@ -333,6 +368,18 @@ namespace AI
             1 => .65f,
             _ => 0f
         };
+
+        private void PublishBotPresentationAdded(AIVehiclePresentationHandle handle)
+        {
+            try { BotPresentationAdded?.Invoke(handle); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void PublishBotPresentationRemoving(AIVehiclePresentationHandle handle)
+        {
+            try { BotPresentationRemoving?.Invoke(handle); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
 
         private static void ApplyBotColor(GameObject car, Color color)
         {

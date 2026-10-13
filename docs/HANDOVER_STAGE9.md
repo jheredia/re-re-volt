@@ -191,3 +191,100 @@ The next separate Stage 9B deliverable is pooled, surface-aware visual effects.
 It must consume the accepted player-local event language without changing race,
 vehicle, recovery, pickup, or combat authority. Audio expansion and the final
 accessibility/performance audit remain later independent deliverables.
+
+## Accepted checkpoint — Stage 9B pooled, surface-aware VFX
+
+The bounded pooled-VFX implementation now has one `Stage9BVfxPresentation`
+owner composed by `Stage3Bootstrap` after the accepted combat, AI, and visual-
+style owners. Six fixed families are prewarmed with explicit hard active caps:
+collision 12/12, merged human skid smoke 4/4, Bolt travel 16/16, Bolt impact
+12/12, Oil impact 8/8, and shared pickup/recovery cues 8/8. Each pool exposes
+created, active, request, drop, and high-water diagnostics. Saturation drops the
+new decorative request and never steals a visible entry; return clears follow
+targets, weapon references, player recipients, transforms, property blocks, and
+enabled renderer state before reuse.
+
+Generated track colliders now carry an explicit `TrackSurfaceMarker` authored
+as cutting mat, workbench wood, foam, cardboard, metal, or rubber. Collision
+requests without an explicit marker are counted and dropped rather than deriving
+identity from renderer color, material/object name, or layer; skid emitters
+release while no explicit track surface is found. Vehicle-to-vehicle impacts
+use a separate explicit `VehicleContact` presentation category detected through
+the existing `VehicleController` type, so human and AI car contacts remain
+visible without pretending a chassis is a track material. Human collision
+payloads retain local player identity. AI cars receive separate world-only
+impact/recovery handles and never gain an `InputUser`, camera, HUD, listener, or
+local-player slot.
+
+`WeaponManager`, `LiveCombatWeapon`, `PickupSpawner`, and `VehicleRecovery` add
+immutable presentation notifications alongside every existing event and rule.
+They publish exact accepted pickup points, weapon spawn/removal, impact point and
+direction, accepted-hit state, and successful recovery pose after authority has
+already resolved the outcome. While the pooled owner is present, only the old
+instantiate/destroy transient combat bursts are suppressed; persistent pickups,
+live weapon readability geometry, disruption indicators, inventory, cooldowns,
+caps, modifiers, hit physics, and cleanup remain unchanged. Disabling or
+destroying the VFX owner restores the legacy fallback; re-enabling it reacquires
+the handoff and clears any temporary legacy burst before subscribing.
+
+Optional VFX density is independently persisted as `Off`, `Reduced`, or `Full`
+through preference schema version 3. Version 1 and 2 payloads migrate to Full
+without fabricating an error. Off releases and suppresses optional pooled
+effects while the established persistent gameplay-readable weapon/pickup shapes
+remain. Reduced keeps one element per accepted effect and shortens finite
+lifetimes; Full keeps the bounded three-element treatment. Setup and pause show
+the current value, and the existing explicit settings API changes it without
+adding or changing any protected `InputHandler` binding.
+
+Pool renderers register exactly once when created and remain registered while
+inactive so Clean 3D, Ink Lite, and Full Ink can switch without hot-path
+registration churn. Final owner disposal pairs every registration with
+`VisualStyleController.UnregisterRenderer`. Race exit, combat clear, successful
+recovery, human/bot removal, owner disable, rematch/lobby reset, and destruction
+release active entries and recipient references.
+
+Focused test source covers schema migration/retry and invalid values, capacity,
+drop/high-water accounting, return and reuse, Off/Reduced/Full behavior,
+recipient isolation without cameras/canvases, explicit surface classification,
+vehicle-contact classification, enable/disable fallback, payload context,
+visual-style registration stability, and final unregistration.
+Only scoped static review and `git diff --check` on owned paths were performed;
+Unity import/compilation, test execution, visuals, allocations, pool high-water
+under a live four-car race, and renderer cost remain intentionally deferred to
+the consolidated freeze.
+
+A fresh independent static audit after the usage reset found no P1 issues and
+two P2 lifecycle/readability gaps. Reconciliation added the explicit
+vehicle-contact category so human/AI car collisions no longer disappear, and
+paired legacy transient-burst ownership with enable/disable as well as destroy.
+The audit also identified the collidable start arch as unclassified; all three
+parts now carry an explicit foam surface. No P1/P2 findings remain after the
+focused source and test reconciliation.
+
+Known limitations for the consolidated freeze: this first slice uses pooled
+geometry rather than ParticleSystem assets; merged skid smoke is human-only as
+specified by the four-entry cap and does not yet leave persistent marks; AI
+receives world-space collision/recovery effects but weapon use is outside current
+AI authority; and capacities are the provisional reference values pending
+measurement.
+
+### Additional files in this accepted Stage 9B VFX checkpoint
+
+- `Assets/Scripts/AI/AIManager.cs`
+- `Assets/Scripts/Audio/VehicleImpactAudioEmitter.cs`
+- `Assets/Scripts/Core/PickupSpawner.cs`
+- `Assets/Scripts/Presentation/DemoFlowPreferences.cs`
+- `Assets/Scripts/Presentation/PrototypeCircuitBuilder.cs`
+- `Assets/Scripts/Presentation/Stage3Bootstrap.cs`
+- `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
+- `Assets/Scripts/Presentation/Stage9BVfxPresentation.cs` and `.meta`
+- `Assets/Scripts/Presentation/TrackSurfaceMarker.cs` and `.meta`
+- `Assets/Scripts/Presentation/VfxDensityLevel.cs` and `.meta`
+- `Assets/Scripts/Vehicle/VehicleRecovery.cs`
+- `Assets/Scripts/Weapons/CombatPresentationPayloads.cs` and `.meta`
+- `Assets/Scripts/Weapons/LiveCombatWeapon.cs`
+- `Assets/Scripts/Weapons/WeaponManager.cs`
+- `Assets/Tests/EditMode/DemoFlowPreferencesTests.cs`
+- `Assets/Tests/PlayMode/Stage9BVfxIntegrationTests.cs` and `.meta`
+- `docs/agent_development_plan.md`
+- `docs/HANDOVER_STAGE9.md`

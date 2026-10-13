@@ -178,6 +178,45 @@ namespace Tests.EditMode
         }
 
         [Test]
+        public void VersionTwoPayloadMigratesWithFullVfxDensityAndVersionThreeRoundTrips()
+        {
+            MemoryStore store = new();
+            store.Seed("{\"version\":2,\"visualStyle\":0,\"handlingModels\":[0,0,0,0]," +
+                       "\"vehicleFamilies\":[0,0,0,0],\"cameraMotion\":1,\"vehicleMotion\":2," +
+                       "\"hasPresentationResponseSettings\":true}");
+            DemoFlowPreferences preferences = new(store);
+            preferences.Load();
+
+            Assert.That(preferences.VfxDensity, Is.EqualTo(VfxDensityLevel.Full));
+            Assert.That(preferences.CameraMotion, Is.EqualTo(PresentationResponseLevel.Reduced));
+            Assert.That(preferences.SetVfxDensity(VfxDensityLevel.Reduced), Is.True);
+
+            DemoFlowPreferences reloaded = new(store);
+            reloaded.Load();
+            Assert.That(store.ReadRaw(), Does.Contain($"\"version\":{DemoFlowPreferences.CurrentVersion}"));
+            Assert.That(reloaded.VfxDensity, Is.EqualTo(VfxDensityLevel.Reduced));
+        }
+
+        [Test]
+        public void PartialOrFailedVfxDensityStaysSafeAndRetries()
+        {
+            MemoryStore partial = new();
+            partial.Seed("{\"version\":3,\"visualStyle\":0,\"handlingModels\":[0,0,0,0]," +
+                         "\"vehicleFamilies\":[0,0,0,0],\"cameraMotion\":2,\"vehicleMotion\":2," +
+                         "\"hasPresentationResponseSettings\":true}");
+            DemoFlowPreferences repaired = new(partial);
+            repaired.Load();
+            Assert.That(repaired.VfxDensity, Is.EqualTo(VfxDensityLevel.Full));
+            Assert.That(repaired.RecoveryMessage, Does.Contain("SAFE DEFAULTS"));
+
+            MemoryStore failing = new() { FailWrites = true };
+            DemoFlowPreferences preferences = new(failing);
+            Assert.That(preferences.SetVfxDensity(VfxDensityLevel.Off), Is.False);
+            failing.FailWrites = false;
+            Assert.That(preferences.SetVfxDensity(VfxDensityLevel.Off), Is.True);
+        }
+
+        [Test]
         public void PartialOrFailedMotionSettingsStaySafeAndRetry()
         {
             MemoryStore partial = new();
@@ -209,6 +248,7 @@ namespace Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetVisualStyle((VisualStyleMode)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetPresentationResponseLevels(
                 (PresentationResponseLevel)99, PresentationResponseLevel.Full));
+            Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetVfxDensity((VfxDensityLevel)99));
         }
     }
 }

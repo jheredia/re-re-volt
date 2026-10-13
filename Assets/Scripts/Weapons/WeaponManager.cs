@@ -64,6 +64,7 @@ namespace Weapons
         private Stage3RacePresentation presentation;
         private LayerMask drivableMask;
         private bool configured, subscribed;
+        private bool externalTransientVfxOwner;
         private GameObject combatRoot;
         private VisualStyleController visualStyle;
 
@@ -91,6 +92,11 @@ namespace Weapons
         public event Action<LocalPlayer, WeaponKind> WeaponCollected;
         public event Action<LocalPlayer, WeaponKind> WeaponFired;
         public event Action<LocalPlayer, WeaponKind> WeaponHit;
+        public event Action<WeaponSpawnedPresentationPayload> WeaponPresentationSpawned;
+        public event Action<LiveCombatWeapon> WeaponPresentationRemoved;
+        public event Action<WeaponResolvedPresentationPayload> WeaponPresentationResolved;
+        public event Action<PickupAcquiredPresentationPayload> PickupPresentationAcquired;
+        public event Action CombatCleared;
         internal Material BoltMaterial { get; private set; }
         internal Material OilMaterial { get; private set; }
         internal Material FeedbackMaterial { get; private set; }
@@ -211,6 +217,8 @@ namespace Weapons
             if (!CanParticipate(state) || SimulationTime < state.SafeUntil || !spawner.TryCollect(state.Inventory)) return;
             PublishSlot(state);
             ShowBurst(spawner.transform.position, state.Inventory.Held);
+            PublishPickupPresentation(new PickupAcquiredPresentationPayload(spawner.PickupIndex, player,
+                state.Inventory.Held, spawner.transform.position));
             WeaponCollected?.Invoke(player, state.Inventory.Held);
         }
 
@@ -241,6 +249,7 @@ namespace Weapons
             liveWeapons.Add(weapon);
             BuildLiveWeaponVisual(weapon, kind);
             PublishSlot(state);
+            PublishWeaponSpawned(new WeaponSpawnedPresentationPayload(weapon, player, kind, position, forward));
             WeaponFired?.Invoke(player, kind);
         }
 
@@ -343,6 +352,14 @@ namespace Weapons
             return true;
         }
 
+        internal void NotifyWeaponResolved(LiveCombatWeapon source, LocalPlayer target, Vector3 point,
+            Collider collider, bool acceptedHit)
+        {
+            if (source == null) return;
+            PublishWeaponResolved(new WeaponResolvedPresentationPayload(source, source.Shooter, target,
+                source.Kind, point, source.Direction, collider, acceptedHit));
+        }
+
         private void BuildDisruptionFeedback(Transform parent, WeaponKind kind)
         {
             if (kind == WeaponKind.Bolt)
@@ -372,6 +389,7 @@ namespace Weapons
 
         internal void ShowBurst(Vector3 position, WeaponKind kind)
         {
+            if (externalTransientVfxOwner) return;
             if (bursts.Count >= maximumFeedbackEffects) return;
             GameObject visual = new GameObject(kind == WeaponKind.Bolt ? "Bolt impact pulse" : "Oil impact pulse");
             visual.transform.SetParent(combatRoot.transform, false);
@@ -446,6 +464,7 @@ namespace Weapons
             LiveCombatWeapon weapon = liveWeapons[index];
             if (weapon != null)
             {
+                PublishWeaponRemoved(weapon);
                 UnregisterVisualTree(weapon.gameObject);
                 weapon.gameObject.SetActive(false);
                 Destroy(weapon.gameObject);
@@ -479,6 +498,55 @@ namespace Weapons
             bursts.Clear();
             SimulationTime = 0;
             foreach (PickupSpawner spawner in spawners) if (spawner != null) spawner.ResetPickup();
+            PublishPresentationEvent(CombatCleared);
+        }
+
+        private void PublishWeaponSpawned(WeaponSpawnedPresentationPayload payload)
+        {
+            try { WeaponPresentationSpawned?.Invoke(payload); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void PublishWeaponRemoved(LiveCombatWeapon weapon)
+        {
+            try { WeaponPresentationRemoved?.Invoke(weapon); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void PublishWeaponResolved(WeaponResolvedPresentationPayload payload)
+        {
+            try { WeaponPresentationResolved?.Invoke(payload); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void PublishPickupPresentation(PickupAcquiredPresentationPayload payload)
+        {
+            try { PickupPresentationAcquired?.Invoke(payload); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void PublishPresentationEvent(Action callback)
+        {
+            try { callback?.Invoke(); }
+            catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        /// <summary>
+        /// Presentation handoff used by the pooled Stage 9B owner. It suppresses only legacy transient bursts;
+        /// persistent pickup, live-weapon, disruption, inventory, and combat authority remain unchanged.
+        /// </summary>
+        public void SetExternalTransientVfxOwner(bool active)
+        {
+            externalTransientVfxOwner = active;
+            if (!active) return;
+            foreach (Burst burst in bursts)
+                if (burst.Visual != null)
+                {
+                    UnregisterVisualTree(burst.Visual);
+                    burst.Visual.SetActive(false);
+                    Destroy(burst.Visual);
+                }
+            bursts.Clear();
         }
 
         private void OnDisable()

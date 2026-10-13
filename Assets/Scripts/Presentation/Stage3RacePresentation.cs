@@ -70,6 +70,7 @@ namespace Presentation
         private bool subscribed;
         private DriverPortraitAtlas portraitAtlas;
         private DemoFlowPreferences preferences;
+        private Stage9BVfxPresentation vfxPresentation;
         private bool applyingPreferences;
 
         public int HudCount => hudLabels.Count;
@@ -91,6 +92,7 @@ namespace Presentation
         public int SelectedBotCount => ai?.SelectedBotCount ?? 0;
         public PresentationResponseLevel CameraMotionSetting => preferences?.CameraMotion ?? PresentationResponseLevel.Full;
         public PresentationResponseLevel VehicleMotionSetting => preferences?.VehicleMotion ?? PresentationResponseLevel.Full;
+        public VfxDensityLevel VfxDensitySetting => preferences?.VfxDensity ?? VfxDensityLevel.Full;
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -134,6 +136,26 @@ namespace Presentation
             if (preferences == null) return false;
             bool saved = preferences.SetPresentationResponseLevels(cameraMotion, vehicleMotion);
             ApplyPresentationResponseSettings();
+            RefreshLobbyText();
+            if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
+            return saved;
+        }
+
+        /// <summary>Attaches the optional pooled world-VFX owner after combat composition.</summary>
+        public void AttachVfxPresentation(Stage9BVfxPresentation owner)
+        {
+            vfxPresentation = owner;
+            vfxPresentation?.SetDensity(VfxDensitySetting);
+            RefreshLobbyText();
+            if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
+        }
+
+        /// <summary>Explicit settings API; no new InputHandler binding is introduced.</summary>
+        public bool SetVfxDensitySetting(VfxDensityLevel level)
+        {
+            if (preferences == null) return false;
+            bool saved = preferences.SetVfxDensity(level);
+            vfxPresentation?.SetDensity(VfxDensitySetting);
             RefreshLobbyText();
             if (pauseReason == PauseReason.Manual) ShowManualPauseModal();
             return saved;
@@ -344,9 +366,10 @@ namespace Presentation
                 ? string.Empty
                 : $"\nNOTICE  {PreferenceRecoveryMessage}";
             string responseLine = $"\nCAMERA MOTION  {GetResponseLabel(CameraMotionSetting)}   VEHICLE MOTION  {GetResponseLabel(VehicleMotionSetting)}";
+            string vfxLine = $"\nVFX DENSITY  {GetVfxDensityLabel(VfxDensitySetting)}";
             ShowModal("RACE PAUSED / SETTINGS",
-                "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + responseLine + recoveryLine,
-                "V / R3   CHANGE DISPLAY STYLE\nMOTION RESPONSE IS AVAILABLE THROUGH THE SETTINGS API\nESC / MENU / START   RESUME");
+                "DRIVING AND THE WORKSHOP CLOCK ARE SUSPENDED." + styleLine + responseLine + vfxLine + recoveryLine,
+                "V / R3   CHANGE DISPLAY STYLE\nMOTION AND VFX DENSITY ARE AVAILABLE THROUGH THE SETTINGS API\nESC / MENU / START   RESUME");
         }
 
         private void OnControllerConnectionChanged(LocalPlayer player)
@@ -689,6 +712,8 @@ namespace Presentation
                     .AppendLine("  [V / R3]");
             builder.Append("CAMERA MOTION  ").Append(GetResponseLabel(CameraMotionSetting)).Append("   VEHICLE MOTION  ")
                 .Append(GetResponseLabel(VehicleMotionSetting)).AppendLine("  [SETTINGS API]");
+            builder.Append("VFX DENSITY  ").Append(GetVfxDensityLabel(VfxDensitySetting))
+                .AppendLine("  [SETTINGS API]");
             builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
                            "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
                            "AI TEST CARS: B   GAMEPAD L3\n" +
@@ -701,6 +726,13 @@ namespace Presentation
         {
             PresentationResponseLevel.Off => "OFF",
             PresentationResponseLevel.Reduced => "REDUCED",
+            _ => "FULL"
+        };
+
+        private static string GetVfxDensityLabel(VfxDensityLevel level) => level switch
+        {
+            VfxDensityLevel.Off => "OFF",
+            VfxDensityLevel.Reduced => "REDUCED",
             _ => "FULL"
         };
 

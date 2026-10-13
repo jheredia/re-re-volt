@@ -125,7 +125,7 @@ namespace Presentation
             Material graphite = CreateMaterial("Graphite", new Color(0.12f, 0.12f, 0.13f));
 
             CreateBox(root.transform, "Workbench Surface", new Vector3(0f, -.45f, 0f),
-                new Vector3(48f, .8f, 48f), floor, true, 0);
+                new Vector3(48f, .8f, 48f), floor, true, 0, surfaceKind: TrackSurfaceKind.WorkbenchWood);
             CreateRoad(root.transform, road);
             CreateBarriers(root.transform, barrier, red);
             CreateRouteMarks(root.transform, stripe, barrier);
@@ -185,23 +185,31 @@ namespace Presentation
         private static void CreateRoad(Transform parent, Material road)
         {
             CreateBox(parent, "Road_West", new Vector3(-RoadHalfExtent, .05f, 0f),
-                new Vector3(RoadWidth, .2f, 30f), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, 30f), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_North", new Vector3(0f, .05f, RoadHalfExtent),
-                new Vector3(30f, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(30f, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_East", new Vector3(RoadHalfExtent, .05f, 0f),
-                new Vector3(RoadWidth, .2f, 30f), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, 30f), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_South", new Vector3(0f, .05f, -RoadHalfExtent),
-                new Vector3(30f, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(30f, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
 
             // Overlapping corner pads keep the route forgiving for compact RC cars.
             CreateBox(parent, "Road_NW", new Vector3(-RoadHalfExtent, .05f, RoadHalfExtent),
-                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_NE", new Vector3(RoadHalfExtent, .05f, RoadHalfExtent),
-                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_SE", new Vector3(RoadHalfExtent, .05f, -RoadHalfExtent),
-                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
             CreateBox(parent, "Road_SW", new Vector3(-RoadHalfExtent, .05f, -RoadHalfExtent),
-                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer);
+                new Vector3(RoadWidth, .2f, RoadWidth), road, true, DrivableLayer,
+                surfaceKind: TrackSurfaceKind.CuttingMat);
         }
 
         private static void CreateBarriers(Transform parent, Material yellow, Material red)
@@ -214,10 +222,14 @@ namespace Presentation
 
         private static void CreateBarrierLoop(Transform parent, string prefix, float extent, float span, Material material)
         {
-            CreateBox(parent, $"{prefix}_West", new Vector3(-extent, .65f, 0f), new Vector3(.45f, 1.2f, span), material, true, 0);
-            CreateBox(parent, $"{prefix}_East", new Vector3(extent, .65f, 0f), new Vector3(.45f, 1.2f, span), material, true, 0);
-            CreateBox(parent, $"{prefix}_North", new Vector3(0f, .65f, extent), new Vector3(span, 1.2f, .45f), material, true, 0);
-            CreateBox(parent, $"{prefix}_South", new Vector3(0f, .65f, -extent), new Vector3(span, 1.2f, .45f), material, true, 0);
+            CreateBox(parent, $"{prefix}_West", new Vector3(-extent, .65f, 0f), new Vector3(.45f, 1.2f, span), material, true, 0,
+                surfaceKind: TrackSurfaceKind.Foam);
+            CreateBox(parent, $"{prefix}_East", new Vector3(extent, .65f, 0f), new Vector3(.45f, 1.2f, span), material, true, 0,
+                surfaceKind: TrackSurfaceKind.Foam);
+            CreateBox(parent, $"{prefix}_North", new Vector3(0f, .65f, extent), new Vector3(span, 1.2f, .45f), material, true, 0,
+                surfaceKind: TrackSurfaceKind.Foam);
+            CreateBox(parent, $"{prefix}_South", new Vector3(0f, .65f, -extent), new Vector3(span, 1.2f, .45f), material, true, 0,
+                surfaceKind: TrackSurfaceKind.Foam);
         }
 
         private static Transform[] CreateGrid(Transform parent, Material marker)
@@ -263,9 +275,12 @@ namespace Presentation
             }
 
             // Start arch turns the first timing line into a readable landmark.
-            CreateBox(parent, "StartArch_Left", new Vector3(-18.05f, 1.65f, 0f), new Vector3(.35f, 3f, .45f), yellow, true, 0);
-            CreateBox(parent, "StartArch_Right", new Vector3(-11.95f, 1.65f, 0f), new Vector3(.35f, 3f, .45f), yellow, true, 0);
-            CreateBox(parent, "StartArch_Top", new Vector3(-15f, 3.05f, 0f), new Vector3(6.45f, .35f, .45f), yellow, true, 0);
+            CreateBox(parent, "StartArch_Left", new Vector3(-18.05f, 1.65f, 0f),
+                new Vector3(.35f, 3f, .45f), yellow, true, 0, surfaceKind: TrackSurfaceKind.Foam);
+            CreateBox(parent, "StartArch_Right", new Vector3(-11.95f, 1.65f, 0f),
+                new Vector3(.35f, 3f, .45f), yellow, true, 0, surfaceKind: TrackSurfaceKind.Foam);
+            CreateBox(parent, "StartArch_Top", new Vector3(-15f, 3.05f, 0f),
+                new Vector3(6.45f, .35f, .45f), yellow, true, 0, surfaceKind: TrackSurfaceKind.Foam);
             return checkpoints;
         }
 
@@ -290,19 +305,24 @@ namespace Presentation
             Material blue, Material yellow, Material graphite, Material white, Material red)
         {
             // Cardboard storage and a small improvised ramp sit outside the racing line.
-            CreateBox(parent, "CardboardBox_A", new Vector3(-22f, 1.8f, 14f), new Vector3(5f, 3.6f, 6f), cardboard, true, 0);
-            CreateBox(parent, "CardboardBox_B", new Vector3(22f, 1.3f, -13f), new Vector3(5f, 2.6f, 7f), cardboard, true, 0);
+            CreateBox(parent, "CardboardBox_A", new Vector3(-22f, 1.8f, 14f), new Vector3(5f, 3.6f, 6f), cardboard, true, 0,
+                surfaceKind: TrackSurfaceKind.Cardboard);
+            CreateBox(parent, "CardboardBox_B", new Vector3(22f, 1.3f, -13f), new Vector3(5f, 2.6f, 7f), cardboard, true, 0,
+                surfaceKind: TrackSurfaceKind.Cardboard);
             CreateBox(parent, "CardboardRamp", new Vector3(1f, 1f, 5.5f), new Vector3(7f, .35f, 4f), cardboard, true, 0,
-                Quaternion.Euler(12f, 0f, 0f));
+                Quaternion.Euler(12f, 0f, 0f), TrackSurfaceKind.Cardboard);
 
-            CreateCylinder(parent, "PaintCan_Blue", new Vector3(-5f, 1.6f, -4f), new Vector3(2.4f, 1.6f, 2.4f), blue, true);
-            CreateCylinder(parent, "PaintCan_Metal", new Vector3(5f, 1.25f, -5f), new Vector3(2f, 1.25f, 2f), metal, true);
-            CreateCylinder(parent, "TapeRoll", new Vector3(0f, .8f, -5f), new Vector3(2.8f, .8f, 2.8f), yellow, true);
+            CreateCylinder(parent, "PaintCan_Blue", new Vector3(-5f, 1.6f, -4f), new Vector3(2.4f, 1.6f, 2.4f), blue, true,
+                TrackSurfaceKind.Metal);
+            CreateCylinder(parent, "PaintCan_Metal", new Vector3(5f, 1.25f, -5f), new Vector3(2f, 1.25f, 2f), metal, true,
+                TrackSurfaceKind.Metal);
+            CreateCylinder(parent, "TapeRoll", new Vector3(0f, .8f, -5f), new Vector3(2.8f, .8f, 2.8f), yellow, true,
+                TrackSurfaceKind.Rubber);
             CreateCylinder(parent, "TapeHole", new Vector3(0f, 1.63f, -5f), new Vector3(1.35f, .05f, 1.35f), graphite, false);
 
             // Oversized ruler and pencils sell the toy scale without depending on authored meshes.
             CreateBox(parent, "Ruler", new Vector3(0f, .75f, 9f), new Vector3(15f, .3f, 1.8f), yellow, true, 0,
-                Quaternion.Euler(0f, -8f, 0f));
+                Quaternion.Euler(0f, -8f, 0f), TrackSurfaceKind.WorkbenchWood);
             for (int i = -6; i <= 6; i++)
                 CreateBox(parent, $"RulerTick_{i}", new Vector3(i, .94f, 9f - i * .14f), new Vector3(.08f, .04f, i % 2 == 0 ? .9f : .55f), graphite, false, 0,
                     Quaternion.Euler(0f, -8f, 0f));
@@ -313,13 +333,15 @@ namespace Presentation
             // A loose cable snakes around one edge using a few broad dark segments.
             for (int i = 0; i < 5; i++)
                 CreateBox(parent, $"Cable_{i}", new Vector3(-23f + i * 2.2f, .25f, -20.5f + Mathf.Sin(i) * .8f),
-                    new Vector3(2.8f, .28f, .28f), graphite, true, 0, Quaternion.Euler(0f, Mathf.Sin(i) * 22f, 0f));
+                    new Vector3(2.8f, .28f, .28f), graphite, true, 0,
+                    Quaternion.Euler(0f, Mathf.Sin(i) * 22f, 0f), TrackSurfaceKind.Rubber);
         }
 
         private static void CreatePencil(Transform parent, string name, Vector3 position, Material paint,
             Material graphite, Material wood)
         {
-            GameObject body = CreateCylinder(parent, name, position, new Vector3(.42f, 6f, .42f), paint, true);
+            GameObject body = CreateCylinder(parent, name, position, new Vector3(.42f, 6f, .42f), paint, true,
+                TrackSurfaceKind.WorkbenchWood);
             body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             GameObject tip = CreateCylinder(parent, name + "_Wood", position + Vector3.forward * 3.2f,
                 new Vector3(.38f, .7f, .38f), wood, false);
@@ -329,7 +351,8 @@ namespace Presentation
         }
 
         private static GameObject CreateBox(Transform parent, string name, Vector3 position, Vector3 scale,
-            Material material, bool collider, int layer, Quaternion rotation = default)
+            Material material, bool collider, int layer, Quaternion rotation = default,
+            TrackSurfaceKind surfaceKind = TrackSurfaceKind.Unclassified)
         {
             GameObject item = GameObject.CreatePrimitive(PrimitiveType.Cube);
             item.name = name;
@@ -339,11 +362,13 @@ namespace Presentation
             item.transform.localScale = scale;
             item.GetComponent<Renderer>().sharedMaterial = material;
             if (!collider) UnityEngine.Object.Destroy(item.GetComponent<Collider>());
+            else if (surfaceKind != TrackSurfaceKind.Unclassified)
+                item.AddComponent<TrackSurfaceMarker>().Configure(surfaceKind);
             return item;
         }
 
         private static GameObject CreateCylinder(Transform parent, string name, Vector3 position, Vector3 scale,
-            Material material, bool collider)
+            Material material, bool collider, TrackSurfaceKind surfaceKind = TrackSurfaceKind.Unclassified)
         {
             GameObject item = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             item.name = name;
@@ -352,6 +377,8 @@ namespace Presentation
             item.transform.localScale = scale;
             item.GetComponent<Renderer>().sharedMaterial = material;
             if (!collider) UnityEngine.Object.Destroy(item.GetComponent<Collider>());
+            else if (surfaceKind != TrackSurfaceKind.Unclassified)
+                item.AddComponent<TrackSurfaceMarker>().Configure(surfaceKind);
             return item;
         }
 
