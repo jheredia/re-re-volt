@@ -85,6 +85,34 @@ completed suite. Resume PlayMode coverage in bounded fixtures or with a global
 budget that accounts for the long AI case. Screenshot-producing tests remain
 intentionally deferred to the visual/readability gate.
 
+Four remaining fixtures were then run once in separate bounded Unity processes.
+Audio passed 6/6. Presentation response passed 5/6, demo flow passed 6/8, and AI
+opponents passed 2/5, for 19 passed and 6 failed overall. Exact XML and logs are
+preserved under `/private/tmp/stage9-remaining-playmode.IGXIf0/`.
+
+The freeze gate remains failed on these evidenced items:
+
+- The new paused-settings tests prove neither Confirm nor Fire reaches the
+  presentation while gameplay input is suspended: both keyboard and gamepad
+  leave Camera Motion at Full. The source-level accessibility P2 is therefore
+  reopened. A fresh correction should use a narrowly owned pause-menu input
+  adapter outside the protected `InputHandler`, or another command demonstrated
+  to remain available while suspended; do not guess from static subscriptions.
+- `GroundedAndAirborneMotionLevelsOnlyDisplaceTheVisualPivot` compares an
+  interpolated Rigidbody position exactly against a separately sampled Transform
+  position. The formatted values match; preserve the authority assertion while
+  comparing like-for-like baselines with appropriate numeric tolerance.
+- Two AI tests contain similarly brittle Unity semantics: `Is.Null` on a retained
+  destroyed Unity object, and exact Transform position equality across input
+  frames. Correct the assertions without weakening release or pause authority.
+- The three-lap autonomous AI test is a real unresolved behavior failure. It
+  timed out at lap 3/3 with checkpoint 0, 16/24 accepted crossings, 0.1 km/h,
+  13 recoveries, and position `(-10.41, 0.60, -12.10)`. Diagnose navigation and
+  recovery separately from test-assertion cleanup.
+
+Do not begin screenshots, profiling, or player builds until these failures are
+reconciled and the affected fixtures plus the full non-capture PlayMode suite pass.
+
 ## Stage 9B independent accessibility/performance static audit — corrections
 
 The independent audit confirmed no P1s and two P2s. First, the airborne chassis

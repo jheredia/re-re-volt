@@ -45,7 +45,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      after correcting three stale vehicle-family hierarchy assertions. The VFX
      PlayMode fixture passes 6/6 after moving native MaterialPropertyBlock creation
      into `Configure`. The earlier broad target was cut off before completion by
-     an undersized global budget; remaining fixtures still need execution.
+     an undersized global budget. Subsequent bounded fixtures produced 19 passes
+     and 6 failures: paused settings input is still unreachable, three assertions
+     need Unity-safe baseline/tolerance semantics, and the autonomous AI race
+     fails to complete after repeated recoveries. The freeze gate remains failed.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

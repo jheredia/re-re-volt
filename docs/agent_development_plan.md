@@ -217,8 +217,13 @@ and the full EditMode suite passed 107/107. Diagnosis proved the PlayMode runner
 did enter tests: its short global cutoff masked a 90-second AI case and a VFX
 fixture exception. Moving MaterialPropertyBlock creation from a MonoBehaviour
 field initializer into `Configure` closes that exception; both reproductions pass
-and the full VFX fixture passes 6/6. Remaining PlayMode fixtures and all later
-runtime/visual/build evidence remain open.
+and the full VFX fixture passes 6/6. The next bounded fixture pass recorded 19
+passes and 6 failures: pause-time Confirm does not reach the settings presenter,
+three assertions use brittle Transform/Rigidbody or Unity destroyed-object exact
+semantics, and the autonomous AI race fails after repeated recoveries. The freeze
+gate remains failed; these must be split across fresh correction/AI agents before
+the affected fixtures and full non-capture PlayMode suite are rerun. All later
+runtime/visual/build evidence remains open.
 
 #### Stage 9A — AI-controlled test opponents
 
