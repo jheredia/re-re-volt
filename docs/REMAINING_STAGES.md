@@ -50,7 +50,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      presentation passes 6/6 and AI passes 4/5. Paused settings input is now
      independently verified 8/8 through a pause-only paired-device UI path
      outside the protected `InputHandler`. The autonomous AI race still fails
-     after repeated recoveries, so the freeze gate remains failed.
+     after repeated recoveries, so the freeze gate remains failed. A first
+     uncommitted lane-aligned turn-guidance experiment passed its EditMode fixture
+     6/6 but not the authoritative PlayMode case, which remains 4/5 after a lap
+     2/3 stall. It must be corrected or replaced before acceptance.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

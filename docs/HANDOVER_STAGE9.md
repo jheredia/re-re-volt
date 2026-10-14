@@ -110,7 +110,18 @@ The freeze gate remains failed on these evidenced items:
 - The three-lap autonomous AI test is a real unresolved behavior failure. It
   timed out at lap 3/3 with checkpoint 0, 16/24 accepted crossings, 0.1 km/h,
   13 recoveries, and position `(-10.41, 0.60, -12.10)`. Diagnose navigation and
-  recovery separately from test-assertion cleanup.
+  recovery separately from test-assertion cleanup. A first uncommitted correction
+  in `AIDriverController` replaces diagonal checkpoint cuts with lane-aligned
+  perpendicular turn guidance and adds two `AIDrivingPolicyTests`. Static scope
+  review passed and the focused EditMode fixture passed 6/6, but independent
+  PlayMode verification remained 4/5: the bot timed out at lap 2/3,
+  checkpoint 0, 8 accepted crossings, 0 km/h, 12 recoveries, and position
+  `(-15.52, 0.60, -8.50)`. Therefore this experiment is not accepted or staged;
+  its evidence is under
+  `/private/tmp/stage9-ai-race-completion-verify.QPgFh0/`. The next fresh
+  correction agent should inspect why the lane-aligned bot still stalls on the
+  west/south leg, then amend or replace the experiment before another focused
+  AI fixture run.
 
 Do not begin screenshots, profiling, or player builds until these failures are
 reconciled and the affected fixtures plus the full non-capture PlayMode suite pass.

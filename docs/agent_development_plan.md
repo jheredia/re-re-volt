@@ -229,7 +229,11 @@ device UI path outside the protected `InputHandler`; focused queued-input covera
 passes 8/8 for keyboard and gamepad while gameplay remains suspended. Autonomous
 AI completion is the sole remaining bounded fixture failure and stays a separate
 fresh-agent deliverable before the full non-capture PlayMode suite is rerun. All
-later runtime/visual/build evidence remains open.
+later runtime/visual/build evidence remains open. The first uncommitted
+lane-aligned turn-guidance attempt passed the focused EditMode policy fixture 6/6
+but still failed the real AI fixture 4/5 after stalling on lap 2/3. Preserve that
+diagnostic evidence, but do not accept the experiment until a fresh correction
+agent fixes or replaces it and an independent verifier obtains AI 5/5.
 
 #### Stage 9A — AI-controlled test opponents
 
