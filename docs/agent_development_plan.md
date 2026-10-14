@@ -224,9 +224,12 @@ semantics, and the autonomous AI race fails after repeated recoveries. The freez
 gate remains failed. The three assertion-only failures are now fixed and
 independently verified: presentation passes 6/6, AI release and pause-authority
 tests pass, and the AI fixture is 4/5 with only the autonomous race still failing.
-Paused-settings input and autonomous AI completion remain separate fresh-agent
-deliverables before the full non-capture PlayMode suite is rerun. All later
-runtime/visual/build evidence remains open.
+Paused-settings input is now reconciled through a pause-only, roster-owned paired
+device UI path outside the protected `InputHandler`; focused queued-input coverage
+passes 8/8 for keyboard and gamepad while gameplay remains suspended. Autonomous
+AI completion is the sole remaining bounded fixture failure and stays a separate
+fresh-agent deliverable before the full non-capture PlayMode suite is rerun. All
+later runtime/visual/build evidence remains open.
 
 #### Stage 9A — AI-controlled test opponents
 

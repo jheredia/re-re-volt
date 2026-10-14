@@ -187,14 +187,16 @@ namespace Tests.PlayMode
         private IEnumerator ExercisePauseSettings(LocalPlayer player, InputDevice device)
         {
             Gamepad outsider = InputSystem.AddDevice<Gamepad>();
+            Keyboard outsiderKeyboard = InputSystem.AddDevice<Keyboard>();
             Gamepad sibling = InputSystem.AddDevice<Gamepad>();
-            Assert.That(roster.TryJoinGamepad(sibling, out _), Is.True);
+            Assert.That(roster.TryJoinGamepad(sibling, out LocalPlayer siblingPlayer), Is.True);
             Assert.That(race.StartRace(), Is.True);
             float deadline = Time.realtimeSinceStartup + 10f;
             while (!race.RaceRunning && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(race.RaceRunning, Is.True);
             yield return SettingsCommand(device, Key.Escape, GamepadButton.Start);
             Assert.That(presentation.IsPaused, Is.True);
+            Assert.That(player.Input.GameplaySuspended, Is.True);
             Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
             Assert.That(presentation.ModalFooterText, Does.Contain("ENTER / A / CROSS"));
             Assert.That(presentation.ModalFooterText, Does.Contain("CYCLE VALUE, THEN NEXT ROW"));
@@ -207,6 +209,7 @@ namespace Tests.PlayMode
 
             yield return PressAndRelease(outsider, GamepadButton.South);
             yield return PressAndRelease(outsider, GamepadButton.West);
+            yield return SettingsCommand(outsiderKeyboard, Key.Enter, GamepadButton.South);
             Assert.That(presentation.ModalBodyText, Does.Contain("> CAMERA MOTION  FULL"));
 
             int fireRequests = 0;
@@ -235,7 +238,10 @@ namespace Tests.PlayMode
                 for (int row = 0; row < rows.Length; row++)
                 {
                     Assert.That(presentation.ModalBodyText, Does.Contain($"> {rows[row]}  "));
-                    yield return SettingsCommand(device, Key.Enter, GamepadButton.South);
+                    // Every connected owner may edit the shared menu; unpaired devices cannot.
+                    bool siblingCommand = round == levels.Length - 1 && row == 1;
+                    yield return PausedSettingsConfirm(siblingCommand ? sibling : device,
+                        siblingCommand ? siblingPlayer : player);
                     Assert.That(presentation.ModalBodyText, Does.Contain($"  {rows[row]}  {levels[round]}"));
                     Assert.That(presentation.ModalBodyText, Does.Contain($"> {rows[(row + 1) % rows.Length]}  "));
                     if (row == 0)
@@ -249,6 +255,8 @@ namespace Tests.PlayMode
                     Assert.That(presentation.VfxDensitySetting, Is.EqualTo(expectedVfx));
                     Assert.That(player.PresentationResponse.CameraLevel, Is.EqualTo(expectedCamera));
                     Assert.That(player.PresentationResponse.VehicleLevel, Is.EqualTo(expectedVehicle));
+                    Assert.That(siblingPlayer.PresentationResponse.CameraLevel, Is.EqualTo(expectedCamera));
+                    Assert.That(siblingPlayer.PresentationResponse.VehicleLevel, Is.EqualTo(expectedVehicle));
                     DemoFlowPreferences saved = new(store);
                     saved.Load();
                     Assert.That(saved.CameraMotion, Is.EqualTo(presentation.CameraMotionSetting));
@@ -271,6 +279,7 @@ namespace Tests.PlayMode
             Assert.That(player.PresentationResponse.VehicleLevel, Is.EqualTo(PresentationResponseLevel.Off));
             Assert.That(player.Vehicle.SelectedHandlingModel, Is.EqualTo(model));
             Assert.That(player.FamilyVisual.FamilyId, Is.EqualTo(family));
+            Assert.That(fireRequests, Is.Zero);
 
             yield return SettingsCommand(device, Key.Escape, GamepadButton.Start);
             Assert.That(presentation.IsPaused, Is.False, "Escape remains resume, even though it also maps Back.");
@@ -293,8 +302,29 @@ namespace Tests.PlayMode
             Assert.That(presentation.ModalHeadingText, Is.EqualTo("INPUT CHECK"));
             yield return PressAndRelease(outsider, GamepadButton.South);
             yield return PressAndRelease(outsider, GamepadButton.West);
+            yield return SettingsCommand(outsiderKeyboard, Key.Enter, GamepadButton.South);
             Assert.That(presentation.CameraMotionSetting, Is.EqualTo(PresentationResponseLevel.Off));
             Assert.That(presentation.ModalHeadingText, Is.EqualTo("INPUT CHECK"));
+        }
+
+        private IEnumerator PausedSettingsConfirm(InputDevice device, LocalPlayer player)
+        {
+            if (device is Gamepad pad)
+                InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(GamepadButton.South));
+            else
+                InputSystem.QueueStateEvent((Keyboard)device, new KeyboardState(Key.Enter));
+            yield return Frames();
+            string afterPress = presentation.ModalBodyText;
+            // Simulate a future forwarded Confirm while paused: only the UI device path may activate.
+            presentation.SendMessage("OnConfirmRequested", player, SendMessageOptions.RequireReceiver);
+            for (int frame = 0; frame < 4; frame++) yield return null;
+            Assert.That(presentation.ModalBodyText, Is.EqualTo(afterPress),
+                "A held press and a forwarded Confirm must not cycle or advance the menu again.");
+            if (device is Gamepad releasedPad)
+                InputSystem.QueueStateEvent(releasedPad, new GamepadState());
+            else
+                InputSystem.QueueStateEvent((Keyboard)device, new KeyboardState());
+            yield return Frames();
         }
 
         private static IEnumerator SettingsCommand(InputDevice device, Key key, GamepadButton button)

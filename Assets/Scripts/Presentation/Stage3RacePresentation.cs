@@ -5,6 +5,7 @@ using AI;
 using Core;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Vehicle;
 
@@ -227,6 +228,8 @@ namespace Presentation
         {
             if (!configured) return;
 
+            ReadPausedSettingsInput();
+
             if (countdownHideAt > 0f && Time.unscaledTime >= countdownHideAt)
             {
                 countdownHideAt = -1f;
@@ -243,17 +246,35 @@ namespace Presentation
 
         private void OnConfirmRequested(LocalPlayer player)
         {
-            if (pauseReason == PauseReason.Manual)
-            {
-                if (!CanEditPausedSettings(player)) return;
-                CycleSelectedPausedSetting();
-                selectedSettingsRow = (selectedSettingsRow + 1) % 3;
-                ShowManualPauseModal();
-                return;
-            }
+            // Paused settings have one UI-owned input path, even if gameplay Confirm becomes available.
+            if (pauseReason == PauseReason.Manual) return;
             if (AnyPlayerDisconnected()) return;
             if (race.CurrentState == RaceManager.RaceState.Idle) StartRaceFromLobby();
             else if (race.CurrentState == RaceManager.RaceState.Finished) StartRematch();
+        }
+
+        private void ReadPausedSettingsInput()
+        {
+            if (pauseReason != PauseReason.Manual || race.CurrentState != RaceManager.RaceState.Racing ||
+                preferences == null || AnyPlayerDisconnected()) return;
+
+            for (int i = 0; i < vehicles.Players.Count; i++)
+            {
+                LocalPlayer player = vehicles.Players[i];
+                if (!CanEditPausedSettings(player) || !player.User.valid) continue;
+                foreach (InputDevice device in player.User.pairedDevices)
+                {
+                    if (!device.added || !device.enabled) continue;
+                    bool pressed = device is Keyboard keyboard
+                        ? keyboard.enterKey.wasPressedThisFrame
+                        : device is Gamepad pad && pad.buttonSouth.wasPressedThisFrame;
+                    if (!pressed) continue;
+
+                    CycleSelectedPausedSetting();
+                    selectedSettingsRow = (selectedSettingsRow + 1) % 3;
+                    ShowManualPauseModal();
+                }
+            }
         }
 
         private void OnBackRequested(LocalPlayer player)

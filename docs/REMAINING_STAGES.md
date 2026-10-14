@@ -47,9 +47,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      into `Configure`. The earlier broad target was cut off before completion by
      an undersized global budget. Subsequent bounded fixtures produced 19 passes
      and 6 failures. The three assertion-only failures are now reconciled:
-     presentation passes 6/6 and AI passes 4/5. Paused settings input remains
-     unreachable, and the autonomous AI race still fails after repeated
-     recoveries. The freeze gate remains failed.
+     presentation passes 6/6 and AI passes 4/5. Paused settings input is now
+     independently verified 8/8 through a pause-only paired-device UI path
+     outside the protected `InputHandler`. The autonomous AI race still fails
+     after repeated recoveries, so the freeze gate remains failed.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

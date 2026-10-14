@@ -92,12 +92,15 @@ preserved under `/private/tmp/stage9-remaining-playmode.IGXIf0/`.
 
 The freeze gate remains failed on these evidenced items:
 
-- The new paused-settings tests prove neither Confirm nor Fire reaches the
-  presentation while gameplay input is suspended: both keyboard and gamepad
-  leave Camera Motion at Full. The source-level accessibility P2 is therefore
-  reopened. A fresh correction should use a narrowly owned pause-menu input
-  adapter outside the protected `InputHandler`, or another command demonstrated
-  to remain available while suspended; do not guess from static subscriptions.
+- The paused-settings accessibility P2 is resolved without touching the
+  protected `InputHandler`. During manual pause, the presentation reads only
+  Enter or gamepad South from connected roster-owned paired devices; its normal
+  Confirm event path explicitly ignores manual pause to prevent double
+  activation. Focused queued-input coverage passes 8/8 for keyboard and gamepad,
+  including gameplay suspension, outsider rejection, held-input debouncing,
+  sibling ownership, persistence, suppressed Fire, resume, and disconnect.
+  Evidence is under
+  `/private/tmp/re-re-volt-stage9-pause-input-verify.68PpNR/`.
 - The three brittle Unity assertions are reconciled and independently executed.
   Presentation now compares Rigidbody position/rotation to their own baselines;
   bot release uses Unity destroyed-object semantics; paused AI compares the
@@ -123,15 +126,16 @@ wheel-child transforms; it never writes gameplay authority.
 
 Second, Camera Motion, Vehicle Motion, and VFX Density were displayed but not
 player-changeable. The existing manual pause modal now shows a `>` selected row.
-Confirm (`Enter / A / Cross`) cycles that row's Off/Reduced/Full value through
+Enter or gamepad South cycles that row's Off/Reduced/Full value through
 `DemoFlowPreferences`, then selects the next row in the same press. Repeated
-rounds reach every value on all three rows. Confirm remains available during
-gameplay suspension; Fire is suppressed during pause and is not used for settings.
-Keyboard Back already shares Escape with Pause.
-Pause still resumes, V/R3 still changes visual style, and lobby/results
-Confirm/Back are unchanged. Editing requires a connected roster-owned player,
-manual pause, and no disconnected player. The existing Confirm subscription is
-reused, and gameplay Fire remains suppressed during pause.
+rounds reach every value on all three rows. Because gameplay Confirm is correctly
+suppressed while suspended, this pause-only UI path polls only roster-owned paired
+devices outside `InputHandler`; the normal Confirm event is ignored during manual
+pause so one press cannot activate twice. Fire remains suppressed during pause.
+Keyboard Back already shares Escape with Pause. Pause still resumes, V/R3 still
+changes visual style, and lobby/results Confirm/Back are unchanged. Editing
+requires a connected roster-owned player, manual pause, and no disconnected
+player.
 
 Focused PlayMode source uses simulated keyboard/gamepad mappings to cover all
 three rows and levels, advance after each change, selection wrap, reload persistence
