@@ -81,6 +81,8 @@ namespace Tests.PlayMode
             Quaternion baseRotation = pivot.localRotation;
             Vector3 rootPosition = car.position;
             Quaternion rootRotation = car.rotation;
+            Vector3 bodyPosition = body.position;
+            Quaternion bodyRotation = body.rotation;
             Vector3 velocity = body.linearVelocity;
             Vector3 angularVelocity = body.angularVelocity;
             bool kinematic = body.isKinematic;
@@ -114,8 +116,9 @@ namespace Tests.PlayMode
                     baseRotation * Quaternion.Euler(0f, 0f, -8f * scale)), Is.LessThan(.01f));
                 Assert.That(car.position, Is.EqualTo(rootPosition));
                 Assert.That(car.rotation, Is.EqualTo(rootRotation));
-                Assert.That(body.position, Is.EqualTo(rootPosition));
-                Assert.That(body.rotation, Is.EqualTo(rootRotation));
+                // Compare the physics pose to its own baseline, allowing only tiny floating-point rounding.
+                Assert.That(Vector3.Distance(body.position, bodyPosition), Is.LessThan(.000001f));
+                Assert.That(Quaternion.Angle(body.rotation, bodyRotation), Is.LessThan(.001f));
                 Assert.That(body.linearVelocity, Is.EqualTo(velocity));
                 Assert.That(body.angularVelocity, Is.EqualTo(angularVelocity));
                 Assert.That(body.isKinematic, Is.EqualTo(kinematic));

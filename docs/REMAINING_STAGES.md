@@ -46,9 +46,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      PlayMode fixture passes 6/6 after moving native MaterialPropertyBlock creation
      into `Configure`. The earlier broad target was cut off before completion by
      an undersized global budget. Subsequent bounded fixtures produced 19 passes
-     and 6 failures: paused settings input is still unreachable, three assertions
-     need Unity-safe baseline/tolerance semantics, and the autonomous AI race
-     fails to complete after repeated recoveries. The freeze gate remains failed.
+     and 6 failures. The three assertion-only failures are now reconciled:
+     presentation passes 6/6 and AI passes 4/5. Paused settings input remains
+     unreachable, and the autonomous AI race still fails after repeated
+     recoveries. The freeze gate remains failed.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

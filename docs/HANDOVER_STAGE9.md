@@ -98,13 +98,12 @@ The freeze gate remains failed on these evidenced items:
   reopened. A fresh correction should use a narrowly owned pause-menu input
   adapter outside the protected `InputHandler`, or another command demonstrated
   to remain available while suspended; do not guess from static subscriptions.
-- `GroundedAndAirborneMotionLevelsOnlyDisplaceTheVisualPivot` compares an
-  interpolated Rigidbody position exactly against a separately sampled Transform
-  position. The formatted values match; preserve the authority assertion while
-  comparing like-for-like baselines with appropriate numeric tolerance.
-- Two AI tests contain similarly brittle Unity semantics: `Is.Null` on a retained
-  destroyed Unity object, and exact Transform position equality across input
-  frames. Correct the assertions without weakening release or pause authority.
+- The three brittle Unity assertions are reconciled and independently executed.
+  Presentation now compares Rigidbody position/rotation to their own baselines;
+  bot release uses Unity destroyed-object semantics; paused AI compares the
+  Rigidbody pose rather than its interpolated Transform. Presentation passes 6/6
+  and AI passes 4/5, with both release and pause-authority tests green. Evidence
+  is under `/private/tmp/stage9-assertion-residual-verify.2CieQ7/`.
 - The three-lap autonomous AI test is a real unresolved behavior failure. It
   timed out at lap 3/3 with checkpoint 0, 16/24 accepted crossings, 0.1 km/h,
   13 recoveries, and position `(-10.41, 0.60, -12.10)`. Diagnose navigation and

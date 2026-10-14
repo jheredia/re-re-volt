@@ -108,7 +108,8 @@ namespace Tests.PlayMode
             Assert.That(ai.SelectedBotCount, Is.EqualTo(2));
             Assert.That(race.Racers, Has.Count.EqualTo(1));
             Assert.That(race.Racers[0], Is.SameAs(human.Racer));
-            for (int i = 0; i < botObjects.Length; i++) Assert.That(botObjects[i], Is.Null);
+            for (int i = 0; i < botObjects.Length; i++)
+                Assert.That(botObjects[i] == null, Is.True, "Released bot objects must be destroyed by Unity.");
         }
 
         [UnityTest]
@@ -154,12 +155,14 @@ namespace Tests.PlayMode
             Assert.That(recoveryDriver.RecoveryCount, Is.EqualTo(1),
                 "A deterministic off-track timeout should use the shared checkpoint recovery authority.");
 
-            Vector3 beforePause = ai.Drivers[0].transform.position;
+            Rigidbody botBody = ai.Drivers[0].Vehicle.GetComponent<Rigidbody>();
+            Vector3 beforePause = botBody.position;
             yield return PressAndRelease(keyboard, Key.Escape);
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(ai.Drivers[0].Vehicle.ThrottleInput, Is.Zero);
             yield return null;
-            Assert.That(ai.Drivers[0].transform.position, Is.EqualTo(beforePause));
+            // Check the physics pose directly; the interpolated Transform can settle across input frames.
+            Assert.That(Vector3.Distance(botBody.position, beforePause), Is.LessThan(.000001f));
             yield return PressAndRelease(keyboard, Key.Escape);
             Assert.That(Time.timeScale, Is.EqualTo(1f));
             Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));

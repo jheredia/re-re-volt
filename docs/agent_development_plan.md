@@ -221,8 +221,11 @@ and the full VFX fixture passes 6/6. The next bounded fixture pass recorded 19
 passes and 6 failures: pause-time Confirm does not reach the settings presenter,
 three assertions use brittle Transform/Rigidbody or Unity destroyed-object exact
 semantics, and the autonomous AI race fails after repeated recoveries. The freeze
-gate remains failed; these must be split across fresh correction/AI agents before
-the affected fixtures and full non-capture PlayMode suite are rerun. All later
+gate remains failed. The three assertion-only failures are now fixed and
+independently verified: presentation passes 6/6, AI release and pause-authority
+tests pass, and the AI fixture is 4/5 with only the autonomous race still failing.
+Paused-settings input and autonomous AI completion remain separate fresh-agent
+deliverables before the full non-capture PlayMode suite is rerun. All later
 runtime/visual/build evidence remains open.
 
 #### Stage 9A — AI-controlled test opponents
