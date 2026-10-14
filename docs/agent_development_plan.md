@@ -232,8 +232,12 @@ fresh-agent deliverable before the full non-capture PlayMode suite is rerun. All
 later runtime/visual/build evidence remains open. The first uncommitted
 lane-aligned turn-guidance attempt passed the focused EditMode policy fixture 6/6
 but still failed the real AI fixture 4/5 after stalling on lap 2/3. Preserve that
-diagnostic evidence, but do not accept the experiment until a fresh correction
-agent fixes or replaces it and an independent verifier obtains AI 5/5.
+diagnostic evidence. Grid-side lane selection improved the bot to 22/24 ordered
+crossings, and earlier corner commitment changed its terminal motion, but two
+fresh independent runs still failed 4/5 at checkpoint 6. Do not accept the
+unstaged three-file experiment until a fresh agent discriminates checkpoint-6
+trigger reachability and post-recovery guidance, fixes or replaces it, and an
+independent verifier obtains AI 5/5.
 
 #### Stage 9A — AI-controlled test opponents
 

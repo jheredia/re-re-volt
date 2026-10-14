@@ -53,7 +53,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      after repeated recoveries, so the freeze gate remains failed. A first
      uncommitted lane-aligned turn-guidance experiment passed its EditMode fixture
      6/6 but not the authoritative PlayMode case, which remains 4/5 after a lap
-     2/3 stall. It must be corrected or replaced before acceptance.
+     2/3 stall. Grid-side lane selection then improved progress to 22/24, and an
+     earlier turn threshold kept the bot moving, but two independent PlayMode
+     reruns still failed 4/5 at checkpoint 6. The three-file experiment remains
+     unstaged and must be corrected or replaced before acceptance.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

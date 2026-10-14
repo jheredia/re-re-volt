@@ -119,9 +119,23 @@ The freeze gate remains failed on these evidenced items:
   `(-15.52, 0.60, -8.50)`. Therefore this experiment is not accepted or staged;
   its evidence is under
   `/private/tmp/stage9-ai-race-completion-verify.QPgFh0/`. The next fresh
-  correction agent should inspect why the lane-aligned bot still stalls on the
-  west/south leg, then amend or replace the experiment before another focused
-  AI fixture run.
+  correction derived the lane from the actual grid side instead of bot ordinal,
+  preventing the bot from crossing behind the stationary finished human. This
+  materially improved ordered progress from 8/24 to 22/24, while EditMode policy
+  coverage passed 8/8, but PlayMode remained 4/5: lap 3/3, checkpoint 6,
+  22 accepted crossings, 0 km/h, 10 recoveries, position
+  `(13.17, 0.60, -17.79)`. Evidence is under
+  `/private/tmp/stage9-ai-correction-playmode.XFIvvt/`.
+
+  A final bounded experiment increased perpendicular turn commitment from 3.25
+  to 5 metres to give the checkpoint-5-to-6 corner more steering lead. It again
+  passed EditMode 8/8 but not PlayMode 5/5: the bot remained at checkpoint 6
+  after 22/24 accepted crossings, now moving at 23.9 km/h with 11 recoveries at
+  `(9.37, 0.59, -13.37)`. Evidence is under
+  `/private/tmp/stage9-ai-verify3.8buU9w/`. The full three-file experiment remains
+  unstaged and unaccepted. The next fresh agent must instrument or otherwise
+  discriminate checkpoint-6 trigger reachability, guidance state after recovery,
+  and the unchanged 90-second budget before changing another steering constant.
 
 Do not begin screenshots, profiling, or player builds until these failures are
 reconciled and the affected fixtures plus the full non-capture PlayMode suite pass.
