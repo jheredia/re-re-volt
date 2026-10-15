@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using AI;
 using Core;
 using NUnit.Framework;
 using Presentation;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -18,6 +20,7 @@ namespace Tests.PlayMode
         private GameObject root;
         private RaceManager race;
         private VehicleManager roster;
+        private AIManager ai;
         private Stage3RacePresentation presentation;
         private PrototypeCircuitBuilder.Result circuit;
         private Camera lobbyCamera;
@@ -41,8 +44,11 @@ namespace Tests.PlayMode
             lobbyCamera.transform.rotation = Quaternion.LookRotation(new Vector3(0f, 0f, 1.5f) - lobbyCamera.transform.position);
             Assert.That(roster.Configure(race, circuit.Grid, null, lobbyCamera), Is.True);
             roster.PlayerJoined += player => player.Recovery.ConfigureGroundMask(circuit.DrivableMask);
+            ai = root.AddComponent<AIManager>();
+            Assert.That(ai.Configure(race, roster, circuit.Grid, circuit.Checkpoints, circuit.DrivableMask), Is.True);
+            VisualStyleController visualStyle = root.AddComponent<VisualStyleController>();
             presentation = root.AddComponent<Stage3RacePresentation>();
-            presentation.Configure(race, roster);
+            presentation.Configure(race, roster, visualStyle, aiManager: ai);
             Physics.SyncTransforms();
         }
 
@@ -123,6 +129,8 @@ namespace Tests.PlayMode
             Assert.That(roster.TryJoinGamepad(first, out _), Is.True);
             yield return WaitForPlayerLoop();
             Assert.That(presentation.CurrentPage, Is.EqualTo(Stage3RacePresentation.DemoFlowPage.Setup));
+            AssertSetupContentFits(1, "AI TEST CARS  0 / 3");
+            yield return WaitForPlayerLoop();
             yield return Capture("setup-selections", hidePresentation: false);
             yield return PressAndRelease(first, GamepadButton.South);
             yield return new WaitForSecondsRealtime(4.1f);
@@ -139,6 +147,8 @@ namespace Tests.PlayMode
             }
             yield return WaitForPlayerLoop();
             Assert.That(presentation.HudCount, Is.EqualTo(4));
+            Assert.That(presentation.CurrentPage, Is.EqualTo(Stage3RacePresentation.DemoFlowPage.Setup));
+            AssertSetupContentFits(4, "AI TEST CARS  0 / 0");
             yield return PressAndRelease(first, GamepadButton.South);
             yield return new WaitForSecondsRealtime(4.1f);
             Assert.That(race.RaceRunning, Is.True);
@@ -164,9 +174,32 @@ namespace Tests.PlayMode
             yield return new WaitForEndOfFrame();
             ScreenCapture.CaptureScreenshot(path, 1);
             for (int frame = 0; frame < 120 && !File.Exists(path); frame++) yield return null;
+            // Keep the captured state stable while the high-resolution GPU readback and PNG write finish.
+            float readbackDeadline = Time.realtimeSinceStartup + .5f;
+            while (Time.realtimeSinceStartup < readbackDeadline) yield return null;
             presentation.PresentationCanvas.enabled = true;
             Assert.That(File.Exists(path), Is.True, $"Expected visual review artifact at {path}");
             Assert.That(new FileInfo(path).Length, Is.GreaterThan(1024));
+        }
+
+        private void AssertSetupContentFits(int expectedPlayerCount, string expectedAiCount)
+        {
+            TextMeshProUGUI setup = presentation.PresentationCanvas.transform
+                .Find("Lobby/PlayersAndControls").GetComponent<TextMeshProUGUI>();
+            Canvas.ForceUpdateCanvases();
+            setup.ForceMeshUpdate();
+
+            for (int i = 1; i <= expectedPlayerCount; i++)
+                Assert.That(setup.text, Does.Contain($"P{i}  "));
+            Assert.That(setup.text, Does.Contain("START 3-LAP RACE"));
+            Assert.That(setup.text, Does.Contain(expectedAiCount));
+            Assert.That(setup.text, Does.Contain("VISUAL STYLE  CLEAN 3D  [V / R3]"));
+            Assert.That(setup.text, Does.Contain("LOBBY CAR: UP/DOWN OR W/S"));
+            Assert.That(setup.text, Does.Contain("LOBBY MODEL: LEFT/RIGHT OR Q/E"));
+            Assert.That(setup.text, Does.Contain("DRIVE: WASD/ARROWS"));
+            Assert.That(setup.text, Does.Contain("FIRE: SPACE / X"));
+            Assert.That(setup.isTextOverflowing, Is.False,
+                $"Setup copy must fit its visible panel at {Screen.width}x{Screen.height}.");
         }
 
         private static IEnumerator PressAndRelease(Gamepad pad, GamepadButton button)

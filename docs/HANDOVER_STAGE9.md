@@ -228,18 +228,30 @@ shows only the title page, four-player HUDs consume excessive quadrant space and
 similar gray vehicles lack strong non-color identity, and near-camera combat or
 pickup presentation visibly obstructs the road in the Bolt/Oil states. The
 evidence-tied audit and limits are recorded in
-`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. Resolve these three P2 gates in
-separate bounded deliverables and re-capture only affected states before
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. The Setup P2 is now accepted;
+resolve the two remaining P2 gates in separate bounded deliverables and
+re-capture only affected states before
 profiling/listening/build acceptance advances.
 
-A verified test-only capture extension closes the setup evidence gap. The new
+A verified test-only capture extension first closed the setup evidence gap. Its
 3840×2160 Setup image is under
 `/private/tmp/stage9-setup-capture-verify.KxFz99/01-setup-selections.png`; its
 test passes 1/1. It proves player/vehicle/handling/ready/start and feedback-level
 rows, but reveals that the current AI count, visual-style row, portrait, and
 controller footer are outside the visible text container, while keyboard help is
-ellipsized. Treat this as the first concrete P2 correction rather than accepting
-the setup page from source or functional tests alone.
+ellipsized.
+
+The accepted correction condenses only the Setup copy, expands its lower text
+region, and applies bounded 22–29 point autosizing without changing selection
+commands, ownership, persistence, or race authority. Its focused capture test
+configures real AI and visual-style owners and proves one- and four-player Setup
+text does not overflow. Fresh independent Unity execution passes 1/1 in 13.089
+seconds with no compiler/runtime error, duplicate-listener warning, or
+JobTempAlloc diagnostic; XML, log, and a fresh 3840×2160 image are under
+`/private/tmp/stage9-setup-layout-verify.IvyWXB/`. Independent visual audit finds
+no Setup P1/P2: AI count, visual style, player state, start action, feedback, and
+all selection/driving guidance are visible without clipping or ellipsis. The
+dense lower control block and wrapped `BRAKE` word remain P3 polish.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

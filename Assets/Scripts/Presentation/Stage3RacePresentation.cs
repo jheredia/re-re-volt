@@ -765,19 +765,18 @@ namespace Presentation
                         builder.AppendLine().Append("NOTICE: ").Append(ai.LastRosterError);
                 }
             }
-            builder.AppendLine().AppendLine();
+            builder.AppendLine();
             if (visualStyle != null)
                 builder.Append("VISUAL STYLE  ").Append(GetVisualStyleLabel(visualStyle.Mode))
                     .AppendLine("  [V / R3]");
-            builder.Append("CAMERA MOTION  ").Append(GetResponseLabel(CameraMotionSetting)).Append("   VEHICLE MOTION  ")
-                .Append(GetResponseLabel(VehicleMotionSetting)).AppendLine("  [PAUSE TO CHANGE]");
-            builder.Append("VFX DENSITY  ").Append(GetVfxDensityLabel(VfxDensitySetting))
-                .AppendLine("  [PAUSE TO CHANGE]");
+            builder.Append("FEEDBACK  CAMERA ").Append(GetResponseLabel(CameraMotionSetting)).Append("   VEHICLE ")
+                .Append(GetResponseLabel(VehicleMotionSetting)).Append("   VFX ")
+                .Append(GetVfxDensityLabel(VfxDensitySetting)).AppendLine("  [PAUSE MENU]");
             builder.Append("LOBBY CAR: UP/DOWN OR W/S   GAMEPAD DPAD UP/DOWN\n" +
                            "LOBBY MODEL: LEFT/RIGHT OR Q/E   GAMEPAD DPAD OR LB/RB\n" +
-                           "AI TEST CARS: B   GAMEPAD L3\n" +
-                           "WASD / ARROWS DRIVE   SHIFT BRAKE/DRIFT\nSPACE FIRE   R RECOVER   ESC PAUSE / LEAVE LOBBY\n" +
-                           "RT/LT DRIVE   STICK STEER   A BRAKE   X FIRE\nY RECOVER   MENU PAUSE   VIEW LEAVE LOBBY");
+                           "AI TEST CARS: B / L3   STYLE: V / R3   LEAVE LOBBY: ESC / VIEW\n" +
+                           "DRIVE: WASD/ARROWS, SHIFT BRAKE   GAMEPAD RT/LT, STICK, A BRAKE\n" +
+                           "FIRE: SPACE / X   RECOVER: R / Y   PAUSE: ESC / MENU");
             lobbyPlayers.text = builder.ToString();
         }
 
@@ -906,14 +905,17 @@ namespace Presentation
 
             lobbyPlayers = CreateText("PlayersAndControls", lobbyPanel.transform, 29f, Color.white,
                 TextAlignmentOptions.TopLeft, FontStyles.Bold);
-            lobbyPlayers.rectTransform.anchorMin = new Vector2(0f, .08f);
+            lobbyPlayers.enableAutoSizing = true;
+            lobbyPlayers.fontSizeMin = 22f;
+            lobbyPlayers.fontSizeMax = 29f;
+            lobbyPlayers.rectTransform.anchorMin = new Vector2(0f, .06f);
             lobbyPlayers.rectTransform.anchorMax = new Vector2(1f, .66f);
             lobbyPlayers.rectTransform.offsetMin = new Vector2(58f, 10f);
             lobbyPlayers.rectTransform.offsetMax = new Vector2(-45f, -10f);
 
             lobbyPortraitRoot = CreateUiObject("LobbyPortraits", lobbyPanel.transform);
             RectTransform lobbyPortraitRect = lobbyPortraitRoot.GetComponent<RectTransform>();
-            lobbyPortraitRect.anchorMin = new Vector2(0f, .08f);
+            lobbyPortraitRect.anchorMin = new Vector2(0f, .06f);
             lobbyPortraitRect.anchorMax = new Vector2(1f, .66f);
             lobbyPortraitRect.offsetMin = new Vector2(58f, 10f);
             lobbyPortraitRect.offsetMax = new Vector2(-45f, -10f);

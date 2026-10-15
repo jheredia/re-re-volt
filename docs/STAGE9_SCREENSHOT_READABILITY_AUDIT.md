@@ -4,7 +4,7 @@
 
 Conditional pass. The authored capture tests pass and produced the original
 seven valid 3840×2160 images plus a verified setup-state capture, but the visual
-freeze is not yet accepted. There are no P1 findings. Three visible P2 issues
+freeze is not yet accepted. There are no P1 findings. Two visible P2 issues
 remain.
 
 Evidence is under
@@ -40,7 +40,7 @@ Evidence is under
 
 ## Required reconciliation
 
-An independently verified extension now captures the actual setup state at
+The original independently verified extension captured the actual setup state at
 `/private/tmp/stage9-setup-capture-verify.KxFz99/01-setup-selections.png`.
 It proves `DemoFlowPage.Setup`, P1/gamepad/Mica identity, Model A, Touring,
 Ready, three laps, Start, and the three Full feedback levels. It also exposes a
@@ -49,14 +49,21 @@ controller-help lines are not visible, while the keyboard footer ends in an
 ellipsis. The count and visual-style strings exist in source but overflow the
 visible setup container.
 
-1. Reflow or simplify the actual setup page so the current AI count and essential
-   start/selection guidance remain visible without truncation. Secondary driving
-   help may move to a dedicated help/pause surface.
-2. Reduce four-player HUD footprint and add persistent non-color player identity
+The Setup P2 is now accepted. The page uses bounded autosizing and condensed
+copy while retaining the existing keyboard/gamepad commands. Independent Unity
+execution passes the focused capture method 1/1 in 13.089 seconds; XML, log, and
+the fresh 3840×2160 image are under
+`/private/tmp/stage9-setup-layout-verify.IvyWXB/`. Independent visual review
+confirms that player state, start guidance, `AI TEST CARS 0 / 3`, `VISUAL STYLE
+CLEAN 3D`, feedback settings, and selection/driving controls are visible with no
+ellipsis or clipping. The dense lower control block and its wrapped `BRAKE` word
+remain P3 polish, not an acceptance blocker.
+
+1. Reduce four-player HUD footprint and add persistent non-color player identity
    to both HUD and vehicle.
-3. Bound, fade, or hide near-camera presentation/decoration so the owning car and
+2. Bound, fade, or hide near-camera presentation/decoration so the owning car and
    forward road corridor remain readable.
-4. Re-capture only the affected states and obtain a fresh independent visual
+3. Re-capture only the affected states and obtain a fresh independent visual
    audit before accepting the screenshot gate.
 
 ## Evidence limits
