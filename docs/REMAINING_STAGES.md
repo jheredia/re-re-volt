@@ -60,8 +60,12 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      only 5–6 metres before the corner while arriving at 39–45 km/h. Preparing
      one checkpoint ahead now passes policy EditMode 9/9 and the full AI fixture
      5/5; the autonomous bot completes 24/24 ordered crossings in 53.351 seconds
-     within the unchanged 90-second limit. The next gate is one full non-capture
-     PlayMode suite run.
+     within the unchanged 90-second limit. One full non-capture PlayMode run then
+     executed 85 tests: 79 passed and 6 failed. AI remained green 5/5. Remaining
+     failures are one Stage 8 combat-readability scenario, two vehicle-family
+     selection scenarios, and three visual-style runtime scenarios. The run also
+     exposed 117,800 duplicate-audio-listener warnings. These must be reconciled
+     in separate bounded deliverables before repeating the full gate.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

@@ -242,7 +242,13 @@ at 39–45 km/h before guidance became available. The accepted correction prepar
 one checkpoint ahead without touching progress authority. Independent execution
 passes policy EditMode 9/9 and the AI fixture 5/5; the bot completes 24 ordered
 crossings in 53.351 seconds inside the unchanged 90-second contract. The next
-freeze action is one full non-capture PlayMode suite run.
+freeze action ran 85 non-capture PlayMode tests: 79 passed and 6 failed, while AI
+remained green 5/5. The remaining failures divide into one combat-readability
+scenario and five vehicle-family/visual-style scenarios. Fresh diagnostic agents
+must classify those surfaces separately, followed by independent focused
+verification. The same run emitted 117,800 duplicate-audio-listener warnings;
+investigate that lifecycle/noise issue as its own bounded deliverable after the
+functional failures. Only then rerun the full non-capture PlayMode gate.
 
 #### Stage 9A — AI-controlled test opponents
 

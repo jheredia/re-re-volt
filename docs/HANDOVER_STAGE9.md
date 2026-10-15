@@ -155,9 +155,33 @@ The freeze gate remains failed on these evidenced items:
   the sole progress authority; recovery, pause, collision, roster, and input
   ownership assertions also pass.
 
-The bounded Stage 9 fixtures are now reconciled. Run the full non-capture
-PlayMode suite once with a generous budget before screenshots, profiling, or
-player builds.
+The bounded Stage 9 fixtures are reconciled, and the AI correction remains green
+inside the consolidated run. One full non-capture PlayMode execution at
+`d214f4d` ran 85 tests in 219.983 seconds, excluding exactly the two authored
+capture methods. It passed 79 and failed 6; XML and logs are under
+`/private/tmp/stage9-full-playmode.fDtUwI/`.
+
+The AI fixture passed 5/5 inside that run, including autonomous completion in
+53.341 seconds. The remaining freeze failures are:
+
+- `Stage8CombatReadabilityIntegrationTests` has one failed fire/hit scenario:
+  its authoritative modifier assertion fails at line 197, followed by repeated
+  hit-pulse assertion errors at line 202. The run also reports two JobTempAlloc
+  lifetime diagnostics after this failure. A fresh combat-only diagnostic must
+  determine whether this is an event-ordering/runtime regression or a stale
+  assertion before changing production code.
+- `VehicleFamilySelectionIntegrationTests` has two failures: one null reference
+  at line 204 and one color equality failure at line 95/helper line 265.
+- `VisualStyleRuntimeIntegrationTests` has three null references at lines 257,
+  90, and 167. A fresh vehicle-visual hierarchy diagnostic should compare these
+  five failures with the accepted `PresentationVisualPivot` migration before
+  deciding whether source or assertions are stale.
+
+No compiler errors occurred. The run emitted 117,800 duplicate-audio-listener
+warnings, which must be investigated as a separate bounded lifecycle/noise issue
+after the six functional failures are classified. Do not begin screenshots,
+profiling, or player builds until the six failures are reconciled and the full
+non-capture PlayMode suite passes.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 
