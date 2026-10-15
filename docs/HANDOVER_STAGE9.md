@@ -253,6 +253,46 @@ no Setup P1/P2: AI count, visual style, player state, start action, feedback, an
 all selection/driving guidance are visible without clipping or ellipsis. The
 dense lower control block and wrapped `BRAKE` word remain P3 polish.
 
+## Usage handover — four-player HUD and non-color identity P2
+
+The Setup correction is accepted and committed at `77bf8b3`. A fresh bounded
+agent then began the next visual P2, but the five-hour window reached 78% before
+validation, so the work was interrupted and intentionally left unstaged and
+uncommitted. Do not treat this slice as accepted and do not begin the separate
+near-camera obstruction work until it is reconciled.
+
+The current seven-file experiment is limited to:
+
+- `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
+- `Assets/Scripts/Vehicle/PrototypeVehicleFactory.cs`
+- `Assets/Scripts/Vehicle/VehicleManager.cs`
+- `Assets/Tests/PlayMode/DriverPersonaPresentationIntegrationTests.cs`
+- `Assets/Tests/PlayMode/Stage3PresentationIntegrationTests.cs`
+- `Assets/Tests/PlayMode/Stage8CombatReadabilityIntegrationTests.cs`
+- `Assets/Tests/PlayMode/VehicleFamilySelectionIntegrationTests.cs`
+
+The experiment makes only four-human HUD badges compact (`420×88`, 64-pixel
+portrait, smaller weapon block and bounded text), preserving the existing
+one-to-three-player layout. It creates a high-contrast geometric P1–P4 roof
+digit beneath `PresentationVisualPivot` after family/style registration. The
+marker uses collider-disabled presentation primitives, remains outside
+`VehicleFamilyVisual.SourceRenderers` so family replacement preserves it, and
+is destroyed with the owned vehicle. Focused assertions were drafted for HUD
+bounds/overflow, stable player labels, marker presence, collider exclusion,
+family-swap persistence, style-mode survival, rematch, and leave/rejoin cleanup.
+
+No Unity compile, PlayMode fixture, screenshot capture, independent technical
+review, or visual audit completed for this experiment. On resume, use a fresh
+bounded agent to audit the unstaged diff before editing. In particular verify
+that the style-independent marker remains readable in Clean 3D, Ink Lite, and
+Full Ink without entering style-authority renderer ownership; that every digit
+is legible from chase-camera distance; that compact race/weapon text does not
+overflow in all four quadrants; and that release/family replacement leaves no
+marker or renderer leak. Then run only the affected focused fixtures and the
+existing four-player capture, obtain independent visual review, reconcile and
+commit. Preserve the user's protected `InputHandler` edit and all other baseline
+noise exactly.
+
 ## Stage 9B independent accessibility/performance static audit — corrections
 
 The independent audit confirmed no P1s and two P2s. First, the airborne chassis
