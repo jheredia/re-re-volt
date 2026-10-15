@@ -258,8 +258,12 @@ configuration argument erasing the lobby camera discovered during `Awake`, so
 the first player listener activated alongside the main listener. Preserving the
 discovered/prior camera for null configuration closes the defect; independent
 focused execution passes 3/3 with zero duplicate-listener warnings. All bounded
-corrections are now independently green, so rerun the full non-capture PlayMode
-gate exactly once.
+corrections are independently green. The one authorized consolidated
+non-capture PlayMode rerun passes 85/85 in 234.012 seconds. AI remains 5/5 and
+completes its three-lap case in 53.354 seconds; the run contains no duplicate
+AudioListener warning, JobTempAlloc diagnostic, AssertionException, compiler
+error, or unexpected runtime error. Screenshot/readability,
+profiling/listening, and macOS/Web build evidence remain before Stage 9C.
 
 #### Stage 9A — AI-controlled test opponents
 

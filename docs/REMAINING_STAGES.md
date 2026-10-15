@@ -1,8 +1,9 @@
 # Pinned Remaining Roadmap
 
-Status snapshot: `codex/local-multiplayer-prototype` after accepted Stage 9B
-audio commit `b1eadd2`; accessibility/performance static audit corrections are
-independently re-verified and reconciled with no remaining source-level P1/P2.
+Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
+non-capture PlayMode gate. Stage 9B corrections are independently verified and
+the consolidated suite passes 85/85; screenshot, profiling, listening, and
+player-build evidence remain before Stage 9C.
 
 ## How much remains
 
@@ -73,8 +74,12 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      or JobTempAlloc diagnostics. The duplicate-listener flood is also closed:
      preserving `VehicleManager`'s discovered lobby camera prevents the main and
      first-player listeners from remaining active together. Independent focused
-     execution passes 3/3 with zero duplicate-listener warnings. The next gate is
-     one consolidated non-capture PlayMode rerun.
+     execution passes 3/3 with zero duplicate-listener warnings. The one
+     consolidated non-capture rerun passes 85/85 in 234.012 seconds; AI remains
+     5/5 and completes three laps in 53.354 seconds, with zero listener warnings,
+     JobTempAlloc diagnostics, assertion failures, or compiler/runtime errors.
+     Screenshot/readability, profiling/listening, and macOS/Web build evidence
+     remain for the local baseline.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

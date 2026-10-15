@@ -206,9 +206,19 @@ seconds with zero duplicate-listener warnings, compiler errors, assertions, or
 JobTempAlloc diagnostics. Evidence is under
 `/private/tmp/stage9-audio-listener-lifecycle-verify.5gWr4A/`.
 
-The six consolidated failures and listener flood are now reconciled. Rerun the
-full non-capture PlayMode suite exactly once before screenshots, profiling, or
-player builds.
+The six consolidated failures and listener flood are now reconciled. The one
+authorized full non-capture PlayMode rerun at `7b419c9` passed all 85 tests in
+234.012 seconds, excluding exactly the two authored capture methods. The AI
+fixture passed 5/5 and completed its autonomous three-lap case in 53.354 seconds
+inside the unchanged 90-second contract. The run recorded zero failures, skips,
+inconclusive tests, duplicate AudioListener warnings, JobTempAlloc diagnostics,
+AssertionExceptions, compiler errors, or unexpected runtime errors. Unity exited
+cleanly. XML and log evidence are under
+`/private/tmp/stage9-full-playmode.Nh5IPF/`.
+
+The Stage 9 compilation/EditMode/non-capture PlayMode gate is green. Screenshot
+readability, representative profiling, live listening, and macOS/Web player-build
+evidence remain separate freeze gates before Stage 9C track implementation.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 
