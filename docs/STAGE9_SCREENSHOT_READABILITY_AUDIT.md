@@ -2,9 +2,10 @@
 
 ## Status
 
-Conditional pass. The authored capture tests pass 2/2 and produced seven valid
-3840×2160 images, but the visual freeze is not yet accepted. There are no P1
-findings. Two visible P2 issues and one P2 evidence gap remain.
+Conditional pass. The authored capture tests pass and produced the original
+seven valid 3840×2160 images plus a verified setup-state capture, but the visual
+freeze is not yet accepted. There are no P1 findings. Three visible P2 issues
+remain.
 
 Evidence is under
 `/private/tmp/stage9-screenshot-capture-20261015T115047d/`:
@@ -14,10 +15,8 @@ Evidence is under
    racing surface through color and geometry. Sparse outer dressing and the dark
    void are P3 polish.
 2. `02-lobby-setup.png` — entry instructions are readable, but this is the title
-   page rather than the actual setup state. It does not prove track, vehicle,
-   handling, bot-count, ready, or Start separation. The dense all-caps copy and
-   controller-specific `Menu / Start` wording are P3 concerns; the missing setup
-   evidence is P2.
+   page rather than the actual setup state. The dense all-caps copy and
+   controller-specific `Menu / Start` wording are P3 concerns.
 3. `03-one-player-hud.png` — healthy with P3 polish. The route and car remain
    visible and the high-contrast panel communicates player, vehicle, handling,
    position, driver, lap, time, and inventory. Nearly uniform type hierarchy and
@@ -41,8 +40,18 @@ Evidence is under
 
 ## Required reconciliation
 
-1. Capture the actual setup screen and verify track, vehicle, handling, bot
-   count, ready state, and Start are visibly separate.
+An independently verified extension now captures the actual setup state at
+`/private/tmp/stage9-setup-capture-verify.KxFz99/01-setup-selections.png`.
+It proves `DemoFlowPage.Setup`, P1/gamepad/Mica identity, Model A, Touring,
+Ready, three laps, Start, and the three Full feedback levels. It also exposes a
+P2 layout defect: the current AI count, visual-style row, portrait, and final
+controller-help lines are not visible, while the keyboard footer ends in an
+ellipsis. The count and visual-style strings exist in source but overflow the
+visible setup container.
+
+1. Reflow or simplify the actual setup page so the current AI count and essential
+   start/selection guidance remain visible without truncation. Secondary driving
+   help may move to a dedicated help/pause surface.
 2. Reduce four-player HUD footprint and add persistent non-color player identity
    to both HUD and vehicle.
 3. Bound, fade, or hide near-camera presentation/decoration so the owning car and

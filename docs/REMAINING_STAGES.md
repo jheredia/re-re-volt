@@ -83,9 +83,11 @@ conditional pass with three P2 gates documented in
      Screenshot/readability, profiling/listening, and macOS/Web build evidence
      remain for the local baseline.
    - The first seven-state screenshot audit found no P1s, but actual setup-state
-     evidence is missing, four-player HUD/identity readability needs correction,
-     and near-camera combat/pickup presentation obstructs the road. Resolve and
-     independently re-audit those P2s before accepting the visual freeze.
+     evidence was missing. A verified setup capture now proves the page but shows
+     its AI count, visual-style row, and controller footer are clipped. This
+     layout, four-player HUD/identity readability, and near-camera combat/pickup
+     obstruction remain the three P2 gates. Resolve and independently re-audit
+     them before accepting the visual freeze.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

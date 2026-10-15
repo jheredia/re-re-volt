@@ -267,9 +267,11 @@ profiling/listening, and macOS/Web build evidence remain before Stage 9C.
 
 The first screenshot gate executes both authored capture methods 2/2 and yields
 seven valid 3840×2160 states. Independent visual audit finds no P1 but keeps the
-freeze conditional on three P2s: prove the actual setup selections rather than
-only the title page, compact four-player HUDs and reinforce non-color identity,
-and protect the forward road corridor from near-camera combat/pickup occlusion.
+freeze conditional on three P2s. A verified test-only extension now captures the
+actual Setup page and proves its state, but also shows the AI count, visual-style
+row, and controller footer clipped outside the visible container. Compact
+four-player HUDs and reinforce non-color identity, and protect the forward road
+corridor from near-camera combat/pickup occlusion.
 `docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md` owns the evidence and exact
 reconciliation contract.
 

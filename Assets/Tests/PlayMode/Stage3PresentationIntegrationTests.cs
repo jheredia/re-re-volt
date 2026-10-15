@@ -122,6 +122,8 @@ namespace Tests.PlayMode
             pads.Add(first);
             Assert.That(roster.TryJoinGamepad(first, out _), Is.True);
             yield return WaitForPlayerLoop();
+            Assert.That(presentation.CurrentPage, Is.EqualTo(Stage3RacePresentation.DemoFlowPage.Setup));
+            yield return Capture("setup-selections", hidePresentation: false);
             yield return PressAndRelease(first, GamepadButton.South);
             yield return new WaitForSecondsRealtime(4.1f);
             Assert.That(race.RaceRunning, Is.True);
