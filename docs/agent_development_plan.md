@@ -253,9 +253,13 @@ vehicle modifiers were applied afterward. The bounded correction preserves the
 same values and duration while applying the modifier before publication;
 independent focused execution passes 8/8 without the assertion cascade or
 JobTempAlloc diagnostics. The same consolidated run emitted 117,800
-duplicate-audio-listener warnings; that lifecycle/noise issue is now the sole
-remaining bounded correction before rerunning the full non-capture PlayMode gate
-exactly once.
+duplicate-audio-listener warnings. The confirmed lifecycle cause was a null
+configuration argument erasing the lobby camera discovered during `Awake`, so
+the first player listener activated alongside the main listener. Preserving the
+discovered/prior camera for null configuration closes the defect; independent
+focused execution passes 3/3 with zero duplicate-listener warnings. All bounded
+corrections are now independently green, so rerun the full non-capture PlayMode
+gate exactly once.
 
 #### Stage 9A — AI-controlled test opponents
 

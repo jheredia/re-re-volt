@@ -54,6 +54,7 @@ namespace Tests.PlayMode
             Assert.That(roster.TryJoinKeyboard(keyboard, out LocalPlayer keyboardPlayer), Is.True);
             Assert.That(roster.TryJoinGamepad(pad, out LocalPlayer gamepadPlayer), Is.True);
             yield return Frames();
+            AssertSingleEnabledAudioListener("after joining two players with the configured camera fallback");
 
             VehicleController vehicle = keyboardPlayer.Vehicle;
             Rigidbody body = vehicle.GetComponent<Rigidbody>();
@@ -185,6 +186,7 @@ namespace Tests.PlayMode
             root = new GameObject("MarkerlessBootstrapTest");
             Stage3Bootstrap bootstrap = root.AddComponent<Stage3Bootstrap>();
             Assert.That(bootstrap.InitializeNow(), Is.True);
+            AssertSingleEnabledAudioListener("after bootstrap initialization");
             bootstrapGameManager = GameManager.Instance != null ? GameManager.Instance.gameObject : null;
 
             GameObject authoredPrefab = PrototypeVehicleFactory.Create(
@@ -204,8 +206,10 @@ namespace Tests.PlayMode
                 : Object.FindAnyObjectByType<Camera>();
             Assert.That(bootstrap.VehicleManager.Configure(bootstrap.RaceManager, bootstrap.Grid, authoredPrefab,
                 lobbyCamera, bootstrap.VisualStyle), Is.True);
+            AssertSingleEnabledAudioListener("after roster reconfiguration");
 
             Assert.That(bootstrap.VehicleManager.TryJoinKeyboard(keyboard, out LocalPlayer player), Is.True);
+            AssertSingleEnabledAudioListener("after the first player joins");
             Assert.That(player.FamilyVisual, Is.Null);
             Transform authoredBody = player.Vehicle.transform.Find("Body");
             Assert.That(authoredBody, Is.Not.Null,
@@ -275,6 +279,16 @@ namespace Tests.PlayMode
             ColorEqualityComparer comparer = new ColorEqualityComparer(.00001f);
             Assert.That(properties.GetColor("_BaseColor"), Is.EqualTo(expected).Using(comparer));
             Assert.That(properties.GetColor("_Color"), Is.EqualTo(expected).Using(comparer));
+        }
+
+        private static void AssertSingleEnabledAudioListener(string checkpoint)
+        {
+            AudioListener[] listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include);
+            var enabledNames = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < listeners.Length; i++)
+                if (listeners[i].isActiveAndEnabled) enabledNames.Add(listeners[i].gameObject.name);
+            Assert.That(enabledNames, Has.Count.EqualTo(1),
+                $"Expected one active listener {checkpoint}; found: {string.Join(", ", enabledNames)}");
         }
 
         private static IEnumerator Frames()

@@ -192,13 +192,23 @@ lifecycle/noise defect after focused reconciliation:
   `/private/tmp/stage9-vehicle-family-verify.567RBJ/` and
   `/private/tmp/stage9-visual-style-verify.XeRAPq/`.
 
-No compiler errors occurred. Focused vehicle-family validation again emitted
-111,689 duplicate-audio-listener warnings, corroborating the consolidated run's
-117,800-warning flood. That lifecycle/noise defect is now the sole remaining
-bounded Stage 9 functional gate. Investigate and verify it with separate fresh
-agents, then rerun the full non-capture PlayMode suite exactly once. Do not begin
-screenshots, profiling, or player builds until the listener flood is reconciled
-and that suite passes.
+No compiler errors occurred. Focused vehicle-family validation originally
+emitted 111,689 duplicate-audio-listener warnings, corroborating the consolidated
+run's 117,800-warning flood. The confirmed cause was a null configuration
+argument erasing the lobby camera discovered by `VehicleManager.Awake`; the
+first player camera could then activate without disabling the main camera's
+listener. Null configuration now preserves the discovered or prior explicit
+lobby camera and reacquires `Camera.main` only if no camera is owned. Explicit
+overrides still win. Focused regression coverage observes bootstrap,
+reconfiguration, one-player, and two-player listener ownership. Independent
+Unity execution passes `VehicleFamilySelectionIntegrationTests` 3/3 in 7.013
+seconds with zero duplicate-listener warnings, compiler errors, assertions, or
+JobTempAlloc diagnostics. Evidence is under
+`/private/tmp/stage9-audio-listener-lifecycle-verify.5gWr4A/`.
+
+The six consolidated failures and listener flood are now reconciled. Rerun the
+full non-capture PlayMode suite exactly once before screenshots, profiling, or
+player builds.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

@@ -65,7 +65,10 @@ namespace Vehicle
             raceManager = race;
             spawnPoints = grid == null ? null : (Transform[])grid.Clone();
             playerVehiclePrefab = prefab;
-            lobbyCamera = backgroundCamera;
+            // A null override keeps the camera discovered during Awake (or a prior explicit configuration).
+            // Losing that ownership leaves its listener enabled when the first player listener takes over.
+            if (backgroundCamera != null) lobbyCamera = backgroundCamera;
+            else if (lobbyCamera == null) lobbyCamera = Camera.main;
             visualStyle = visualStyleController;
             if (isActiveAndEnabled) Subscribe();
             return true;

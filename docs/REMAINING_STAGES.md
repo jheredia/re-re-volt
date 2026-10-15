@@ -70,8 +70,11 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      and 6/6. The combat scenario is also closed: a confirmed event-ordering fix
      applies the already-authoritative hit modifier before publishing `WeaponHit`,
      and independent focused execution passes 8/8 without the assertion cascade
-     or JobTempAlloc diagnostics. The duplicate-listener warning flood is the
-     remaining bounded gate before repeating the full suite once.
+     or JobTempAlloc diagnostics. The duplicate-listener flood is also closed:
+     preserving `VehicleManager`'s discovered lobby camera prevents the main and
+     first-player listeners from remaining active together. Independent focused
+     execution passes 3/3 with zero duplicate-listener warnings. The next gate is
+     one consolidated non-capture PlayMode rerun.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 
