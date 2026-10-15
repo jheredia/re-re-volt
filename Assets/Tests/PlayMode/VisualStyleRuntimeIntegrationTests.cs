@@ -87,7 +87,7 @@ namespace Tests.PlayMode
             presentation.enabled = true;
             yield return Frames();
 
-            Renderer body = keyboardPlayer.Vehicle.transform.Find("Body").GetComponent<Renderer>();
+            Renderer body = GetFamilyBodyRenderer(keyboardPlayer);
             MaterialPropertyBlock playerColor = new MaterialPropertyBlock();
             playerColor.SetColor("_BaseColor", Color.green);
             body.SetPropertyBlock(playerColor);
@@ -164,7 +164,7 @@ namespace Tests.PlayMode
             yield return Frames();
             style.SetMode(VisualStyleMode.FullInk);
 
-            Renderer body = player.Vehicle.transform.Find("Body").GetComponent<Renderer>();
+            Renderer body = GetFamilyBodyRenderer(player);
             Assert.That(body.sharedMaterial.shader.name, Is.EqualTo("ReReVolt/InkLit"));
             Assert.That(body.transform.Find("Body_InkOutline"), Is.Not.Null);
             Assert.That(body.transform.Find("Body_InkOutline").gameObject.activeSelf, Is.True);
@@ -242,6 +242,9 @@ namespace Tests.PlayMode
             GameObject prefab = PrototypeVehicleFactory.Create(new Pose(new Vector3(1000f, 1000f, 1000f), Quaternion.identity));
             prefab.name = "AuthoredVehiclePrefab";
             prefab.transform.SetParent(root.transform, true);
+            Object.DestroyImmediate(prefab.GetComponent<VehicleFamilyVisual>());
+            Assert.That(prefab.GetComponent<VehicleFamilyVisual>(), Is.Null,
+                "This authored-prefab fixture must not claim runtime-generated family metadata.");
             GameObject authoredOwner = new GameObject("AuthoredRoster");
             authoredOwner.transform.SetParent(root.transform, false);
             RaceManager authoredRace = authoredOwner.AddComponent<RaceManager>();
@@ -252,9 +255,10 @@ namespace Tests.PlayMode
 
             Gamepad first = InputSystem.AddDevice<Gamepad>();
             Assert.That(authoredRoster.TryJoinGamepad(first, out LocalPlayer firstPlayer), Is.True);
+            Assert.That(firstPlayer.FamilyVisual, Is.Null);
             int firstRendererCount = CountSourceRenderers(firstPlayer.Vehicle.gameObject);
             Assert.That(style.RegisteredRendererCount, Is.EqualTo(baseline + firstRendererCount));
-            Renderer firstBody = firstPlayer.Vehicle.transform.Find("Body").GetComponent<Renderer>();
+            Renderer firstBody = GetAuthoredBodyRenderer(firstPlayer);
             Assert.That(firstBody.transform.Find("Body_InkOutline"), Is.Not.Null,
                 "A real authored MeshRenderer shell must remain outline eligible.");
             Assert.That(authoredRoster.TryLeavePlayer(firstPlayer.PlayerIndex), Is.True);
@@ -428,6 +432,36 @@ namespace Tests.PlayMode
             for (int i = 0; i < renderers.Length; i++)
                 if (!renderers[i].gameObject.name.EndsWith("_InkOutline")) count++;
             return count;
+        }
+
+        private static Renderer GetFamilyBodyRenderer(LocalPlayer player)
+        {
+            Assert.That(player, Is.Not.Null);
+            Assert.That(player.FamilyVisual, Is.Not.Null,
+                "Generated and prototype-authored family vehicles must retain their family marker.");
+            Transform presentationPivot = player.FamilyVisual.PresentationPivot;
+            Assert.That(presentationPivot, Is.Not.Null,
+                "Family silhouettes must remain below their presentation-only pivot.");
+            Transform body = presentationPivot.Find("Body");
+            Assert.That(body, Is.Not.Null, "The selected family must retain its authored Body identity.");
+            Renderer renderer = body.GetComponent<Renderer>();
+            Assert.That(renderer, Is.Not.Null, "The selected family Body must remain renderable.");
+            return renderer;
+        }
+
+        private static Renderer GetAuthoredBodyRenderer(LocalPlayer player)
+        {
+            Assert.That(player, Is.Not.Null);
+            Assert.That(player.FamilyVisual, Is.Null,
+                "An authored fixture without generated-family metadata must remain markerless after cloning.");
+            Transform presentationPivot = player.Vehicle.transform.Find("PresentationVisualPivot");
+            Assert.That(presentationPivot, Is.Not.Null,
+                "The authored shell must retain its presentation-only hierarchy.");
+            Transform body = presentationPivot.Find("Body");
+            Assert.That(body, Is.Not.Null, "The authored shell must retain its Body identity.");
+            Renderer renderer = body.GetComponent<Renderer>();
+            Assert.That(renderer, Is.Not.Null, "The authored Body must remain renderable.");
+            return renderer;
         }
 
         private IEnumerator Press(params Key[] keys)

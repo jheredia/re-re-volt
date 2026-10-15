@@ -65,7 +65,10 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      failures are one Stage 8 combat-readability scenario, two vehicle-family
      selection scenarios, and three visual-style runtime scenarios. The run also
      exposed 117,800 duplicate-audio-listener warnings. These must be reconciled
-     in separate bounded deliverables before repeating the full gate.
+     in separate bounded deliverables before repeating the full gate. The five
+     vehicle-family/visual-style failures are now closed as stale fixture
+     assumptions with production source unchanged; focused execution passes 3/3
+     and 6/6. The combat scenario and duplicate-listener warning flood remain.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

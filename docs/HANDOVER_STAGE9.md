@@ -170,18 +170,27 @@ The AI fixture passed 5/5 inside that run, including autonomous completion in
   lifetime diagnostics after this failure. A fresh combat-only diagnostic must
   determine whether this is an event-ordering/runtime regression or a stale
   assertion before changing production code.
-- `VehicleFamilySelectionIntegrationTests` has two failures: one null reference
-  at line 204 and one color equality failure at line 95/helper line 265.
-- `VisualStyleRuntimeIntegrationTests` has three null references at lines 257,
-  90, and 167. A fresh vehicle-visual hierarchy diagnostic should compare these
-  five failures with the accepted `PresentationVisualPivot` migration before
-  deciding whether source or assertions are stale.
+- The five vehicle-family/visual-style failures are reconciled as stale fixture
+  assumptions after the accepted `PresentationVisualPivot` migration. Four
+  assertions still searched the physics root for `Body`; the fifth used exact
+  floating-point `Color.Equals` after a native property-block round trip. The
+  markerless Stage 7 compatibility fixture now explicitly exposes its accepted
+  direct-root `Body`, while generated families resolve their body through
+  `FamilyVisual.PresentationPivot`; the authored transaction fixture remains
+  explicitly markerless and verifies its named pivot/body hierarchy. No runtime
+  source changed. Independent Unity execution passes
+  `VehicleFamilySelectionIntegrationTests` 3/3 and
+  `VisualStyleRuntimeIntegrationTests` 6/6. Evidence is under
+  `/private/tmp/stage9-vehicle-family-verify.567RBJ/` and
+  `/private/tmp/stage9-visual-style-verify.XeRAPq/`.
 
-No compiler errors occurred. The run emitted 117,800 duplicate-audio-listener
+No compiler errors occurred. Focused vehicle-family validation again emitted
+111,689 duplicate-audio-listener warnings, corroborating the consolidated run's
+117,800-warning flood. That lifecycle/noise issue
 warnings, which must be investigated as a separate bounded lifecycle/noise issue
-after the six functional failures are classified. Do not begin screenshots,
-profiling, or player builds until the six failures are reconciled and the full
-non-capture PlayMode suite passes.
+remains a separate bounded deliverable after the remaining combat failure. Do
+not begin screenshots, profiling, or player builds until the combat failure and
+listener flood are reconciled and the full non-capture PlayMode suite passes.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

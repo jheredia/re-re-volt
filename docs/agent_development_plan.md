@@ -246,9 +246,12 @@ freeze action ran 85 non-capture PlayMode tests: 79 passed and 6 failed, while A
 remained green 5/5. The remaining failures divide into one combat-readability
 scenario and five vehicle-family/visual-style scenarios. Fresh diagnostic agents
 must classify those surfaces separately, followed by independent focused
-verification. The same run emitted 117,800 duplicate-audio-listener warnings;
-investigate that lifecycle/noise issue as its own bounded deliverable after the
-functional failures. Only then rerun the full non-capture PlayMode gate.
+verification. The five visual scenarios are now reconciled as stale hierarchy
+and exact-color fixture assumptions; production source is unchanged and focused
+execution passes 3/3 plus 6/6. The same run emitted 117,800
+duplicate-audio-listener warnings; investigate that lifecycle/noise issue as its
+own bounded deliverable after the remaining combat failure. Only then rerun the
+full non-capture PlayMode gate.
 
 #### Stage 9A — AI-controlled test opponents
 

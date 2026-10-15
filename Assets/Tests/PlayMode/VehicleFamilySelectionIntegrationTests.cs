@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Users;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Utils;
 using Vehicle;
 
 namespace Tests.PlayMode
@@ -191,6 +192,11 @@ namespace Tests.PlayMode
             authoredPrefab.name = "MarkerlessAuthoredVehicle";
             authoredPrefab.transform.SetParent(root.transform, true);
             Object.DestroyImmediate(authoredPrefab.GetComponent<VehicleFamilyVisual>());
+            Transform generatedPivot = authoredPrefab.transform.Find("PresentationVisualPivot");
+            Assert.That(generatedPivot, Is.Not.Null);
+            Transform directBody = generatedPivot.Find("Body");
+            Assert.That(directBody, Is.Not.Null);
+            directBody.SetParent(authoredPrefab.transform, false);
             Assert.That(authoredPrefab.GetComponent<VehicleController>().IsConfigured, Is.True);
             Assert.That(authoredPrefab.GetComponent<VehicleFamilyVisual>(), Is.Null);
             Camera lobbyCamera = Camera.main != null
@@ -201,7 +207,11 @@ namespace Tests.PlayMode
 
             Assert.That(bootstrap.VehicleManager.TryJoinKeyboard(keyboard, out LocalPlayer player), Is.True);
             Assert.That(player.FamilyVisual, Is.Null);
-            Renderer body = player.Vehicle.transform.Find("Body").GetComponent<Renderer>();
+            Transform authoredBody = player.Vehicle.transform.Find("Body");
+            Assert.That(authoredBody, Is.Not.Null,
+                "Markerless authored vehicles expose the legacy direct Body color seam.");
+            Renderer body = authoredBody.GetComponent<Renderer>();
+            Assert.That(body, Is.Not.Null, "The authored Body must remain renderable after joining.");
             AssertPropertyColor(body, new Color(.95f, .2f, .12f));
             yield return null;
         }
@@ -262,8 +272,9 @@ namespace Tests.PlayMode
         {
             MaterialPropertyBlock properties = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(properties);
-            Assert.That(properties.GetColor("_BaseColor"), Is.EqualTo(expected));
-            Assert.That(properties.GetColor("_Color"), Is.EqualTo(expected));
+            ColorEqualityComparer comparer = new ColorEqualityComparer(.00001f);
+            Assert.That(properties.GetColor("_BaseColor"), Is.EqualTo(expected).Using(comparer));
+            Assert.That(properties.GetColor("_Color"), Is.EqualTo(expected).Using(comparer));
         }
 
         private static IEnumerator Frames()
