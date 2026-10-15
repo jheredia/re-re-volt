@@ -23,14 +23,67 @@ namespace AI
     /// <summary>Shared neutral driving policy for the Stage 9A test opponents.</summary>
     public static class AIDrivingPolicy
     {
-        public static AIDrivingDecision Evaluate(Vector3 localTarget, float speedKilometresPerHour)
+        private const float LaneOffset = .65f;
+
+        public static AIDrivingDecision Evaluate(Vector3 localTarget, float speedKilometresPerHour,
+            bool prepareForUpcomingTurn = false)
         {
             float targetAngle = Mathf.Atan2(localTarget.x, localTarget.z) * Mathf.Rad2Deg;
             float absoluteAngle = Mathf.Abs(targetAngle);
             float steer = Mathf.Clamp(targetAngle / 32f, -1f, 1f);
             float throttle = absoluteAngle > 70f ? .28f : absoluteAngle > 42f ? .52f : .92f;
             float brake = absoluteAngle > 58f && speedKilometresPerHour > 20f ? .65f : 0f;
+            if (prepareForUpcomingTurn)
+            {
+                throttle = Mathf.Min(throttle, .52f);
+                if (speedKilometresPerHour > 20f) brake = Mathf.Max(brake, .65f);
+            }
             return new AIDrivingDecision(throttle, steer, brake);
+        }
+
+        /// <summary>
+        /// Keeps a spawned bot on the same side of the first straight as its grid position. This avoids
+        /// crossing through another grid occupant before the route has had room to separate the cars.
+        /// </summary>
+        public static float CalculateSpawnLaneOffset(Vector3 gridPosition, Vector3 firstCheckpointPosition,
+            Vector3 firstCheckpointRight)
+        {
+            firstCheckpointRight.y = 0f;
+            if (firstCheckpointRight.sqrMagnitude < .001f) return 0f;
+            firstCheckpointRight.Normalize();
+            Vector3 fromCheckpoint = gridPosition - firstCheckpointPosition;
+            fromCheckpoint.y = 0f;
+            float signedLateralOffset = Vector3.Dot(fromCheckpoint, firstCheckpointRight);
+            return Mathf.Abs(signedLateralOffset) < .01f ? 0f : Mathf.Sign(signedLateralOffset) * LaneOffset;
+        }
+
+        /// <summary>
+        /// Finds the lane-aligned corner between two perpendicular route legs. The point is guidance only:
+        /// authoritative race progress still comes exclusively from ordered checkpoint triggers.
+        /// </summary>
+        public static bool TryCalculateTurnPoint(Vector3 previousPosition, Vector3 previousForward,
+            Vector3 targetPosition, Vector3 targetForward, out Vector3 turnPoint)
+        {
+            turnPoint = default;
+            previousForward.y = 0f;
+            targetForward.y = 0f;
+            if (previousForward.sqrMagnitude < .001f || targetForward.sqrMagnitude < .001f) return false;
+            previousForward.Normalize();
+            targetForward.Normalize();
+            if (Mathf.Abs(Vector3.Dot(previousForward, targetForward)) > .1f) return false;
+
+            float cross = previousForward.x * targetForward.z - previousForward.z * targetForward.x;
+            if (Mathf.Abs(cross) < .1f) return false;
+
+            Vector3 delta = targetPosition - previousPosition;
+            float distanceAlongPrevious = (delta.x * targetForward.z - delta.z * targetForward.x) / cross;
+            Vector3 candidate = previousPosition + previousForward * distanceAlongPrevious;
+            float distanceBeforeTarget = Vector3.Dot(targetPosition - candidate, targetForward);
+            if (distanceAlongPrevious <= .1f || distanceBeforeTarget <= .1f) return false;
+
+            candidate.y = Mathf.Lerp(previousPosition.y, targetPosition.y, .5f);
+            turnPoint = candidate;
+            return true;
         }
     }
 
@@ -46,6 +99,7 @@ namespace AI
         private const float StuckRecoverySeconds = 2.75f;
         private const float OffTrackRecoverySeconds = 1.5f;
         private const float ProgressRecoverySeconds = 8f;
+        private const float TurnCommitDistance = 5f;
 
         private readonly RaycastHit[] surfaceHits = new RaycastHit[8];
         private VehicleController vehicle;
@@ -60,6 +114,10 @@ namespace AI
         private float progressStallSeconds;
         private float bestSegmentProgress;
         private int observedTargetIndex = -1;
+        private int guidanceTargetIndex = -1;
+        private Vector3 turnGuidancePosition;
+        private Vector3 turnIncomingDirection;
+        private bool turnGuidanceActive;
         private bool initialized;
 
         public RacerState Racer => racer;
@@ -123,8 +181,10 @@ namespace AI
             int targetIndex = Mathf.Clamp(racer.NextCheckpointIndex, 0, checkpoints.Length - 1);
             Transform target = checkpoints[targetIndex];
             Vector3 targetPosition = target.position + target.right * laneOffset;
-            Vector3 localTarget = transform.InverseTransformPoint(targetPosition);
-            LastDecision = AIDrivingPolicy.Evaluate(localTarget, vehicle.CurrentSpeed);
+            Vector3 guidancePosition = ResolveGuidancePosition(targetIndex, targetPosition);
+            Vector3 localTarget = transform.InverseTransformPoint(guidancePosition);
+            LastDecision = AIDrivingPolicy.Evaluate(localTarget, vehicle.CurrentSpeed,
+                HasUpcomingPerpendicularTurn(targetIndex, targetPosition));
             vehicle.SetInputEnabled(true);
             vehicle.ThrottleInput = LastDecision.Throttle;
             vehicle.SteerInput = LastDecision.Steer;
@@ -132,6 +192,34 @@ namespace AI
 
             float segmentProgress = CalculateSegmentProgress(targetIndex, targetPosition);
             UpdateRecovery(deltaTime, LastDecision.Throttle, targetIndex, segmentProgress);
+        }
+
+        private Vector3 ResolveGuidancePosition(int targetIndex, Vector3 targetPosition)
+        {
+            if (guidanceTargetIndex != targetIndex)
+            {
+                guidanceTargetIndex = targetIndex;
+                int previousIndex = (targetIndex - 1 + checkpoints.Length) % checkpoints.Length;
+                Transform previous = checkpoints[previousIndex];
+                Vector3 previousPosition = previous.position + previous.right * laneOffset;
+                turnIncomingDirection = Vector3.ProjectOnPlane(previous.forward, Vector3.up).normalized;
+                turnGuidanceActive = AIDrivingPolicy.TryCalculateTurnPoint(previousPosition, previous.forward,
+                    targetPosition, checkpoints[targetIndex].forward, out turnGuidancePosition);
+            }
+
+            if (turnGuidanceActive && Vector3.Dot(transform.position - turnGuidancePosition,
+                    turnIncomingDirection) >= -TurnCommitDistance)
+                turnGuidanceActive = false;
+            return turnGuidanceActive ? turnGuidancePosition : targetPosition;
+        }
+
+        private bool HasUpcomingPerpendicularTurn(int targetIndex, Vector3 targetPosition)
+        {
+            int upcomingIndex = (targetIndex + 1) % checkpoints.Length;
+            Transform upcoming = checkpoints[upcomingIndex];
+            Vector3 upcomingPosition = upcoming.position + upcoming.right * laneOffset;
+            return AIDrivingPolicy.TryCalculateTurnPoint(targetPosition, checkpoints[targetIndex].forward,
+                upcomingPosition, upcoming.forward, out _);
         }
 
         public void ResetToGrid(Pose gridPose)
@@ -195,6 +283,8 @@ namespace AI
             progressStallSeconds = 0f;
             bestSegmentProgress = 0f;
             observedTargetIndex = -1;
+            guidanceTargetIndex = -1;
+            turnGuidanceActive = false;
             LastDecision = default;
             if (vehicle == null) return;
             vehicle.ThrottleInput = 0f;

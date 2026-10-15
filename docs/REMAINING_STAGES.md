@@ -49,14 +49,19 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      and 6 failures. The three assertion-only failures are now reconciled:
      presentation passes 6/6 and AI passes 4/5. Paused settings input is now
      independently verified 8/8 through a pause-only paired-device UI path
-     outside the protected `InputHandler`. The autonomous AI race still fails
-     after repeated recoveries, so the freeze gate remains failed. A first
+     outside the protected `InputHandler`. The autonomous AI race then remained
+     the freeze blocker after repeated recoveries. A first
      uncommitted lane-aligned turn-guidance experiment passed its EditMode fixture
      6/6 but not the authoritative PlayMode case, which remains 4/5 after a lap
      2/3 stall. Grid-side lane selection then improved progress to 22/24, and an
      earlier turn threshold kept the bot moving, but two independent PlayMode
-     reruns still failed 4/5 at checkpoint 6. The three-file experiment remains
-     unstaged and must be corrected or replaced before acceptance.
+     reruns still failed 4/5 at checkpoint 6. Instrumentation then proved every
+     recovery was collision-induced: the bot learned each perpendicular turn
+     only 5–6 metres before the corner while arriving at 39–45 km/h. Preparing
+     one checkpoint ahead now passes policy EditMode 9/9 and the full AI fixture
+     5/5; the autonomous bot completes 24/24 ordered crossings in 53.351 seconds
+     within the unchanged 90-second limit. The next gate is one full non-capture
+     PlayMode suite run.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

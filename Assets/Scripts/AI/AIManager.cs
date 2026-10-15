@@ -261,7 +261,8 @@ namespace AI
                 racerRegistered = true;
 
                 AIDriverController driver = car.AddComponent<AIDriverController>();
-                float laneOffset = GetTargetLaneOffset(botIndex);
+                float laneOffset = AIDrivingPolicy.CalculateSpawnLaneOffset(pose.position,
+                    checkpoints[0].position, checkpoints[0].right);
                 driver.Initialize(race, racer, checkpoints, recovery, drivableMask, laneOffset);
                 renderers = car.GetComponentsInChildren<Renderer>(true);
                 RegisterRenderers(renderers);
@@ -361,13 +362,6 @@ namespace AI
             if (visualStyle == null || renderers == null) return;
             for (int i = 0; i < renderers.Count; i++) visualStyle.UnregisterRenderer(renderers[i]);
         }
-
-        private static float GetTargetLaneOffset(int botIndex) => botIndex switch
-        {
-            0 => -.65f,
-            1 => .65f,
-            _ => 0f
-        };
 
         private void PublishBotPresentationAdded(AIVehiclePresentationHandle handle)
         {

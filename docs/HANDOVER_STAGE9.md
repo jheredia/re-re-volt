@@ -107,7 +107,8 @@ The freeze gate remains failed on these evidenced items:
   Rigidbody pose rather than its interpolated Transform. Presentation passes 6/6
   and AI passes 4/5, with both release and pause-authority tests green. Evidence
   is under `/private/tmp/stage9-assertion-residual-verify.2CieQ7/`.
-- The three-lap autonomous AI test is a real unresolved behavior failure. It
+- The three-lap autonomous AI test exposed a real behavior failure, now resolved.
+  It
   timed out at lap 3/3 with checkpoint 0, 16/24 accepted crossings, 0.1 km/h,
   13 recoveries, and position `(-10.41, 0.60, -12.10)`. Diagnose navigation and
   recovery separately from test-assertion cleanup. A first uncommitted correction
@@ -116,7 +117,7 @@ The freeze gate remains failed on these evidenced items:
   review passed and the focused EditMode fixture passed 6/6, but independent
   PlayMode verification remained 4/5: the bot timed out at lap 2/3,
   checkpoint 0, 8 accepted crossings, 0 km/h, 12 recoveries, and position
-  `(-15.52, 0.60, -8.50)`. Therefore this experiment is not accepted or staged;
+  `(-15.52, 0.60, -8.50)`. That intermediate experiment was not accepted;
   its evidence is under
   `/private/tmp/stage9-ai-race-completion-verify.QPgFh0/`. The next fresh
   correction derived the lane from the actual grid side instead of bot ordinal,
@@ -132,13 +133,31 @@ The freeze gate remains failed on these evidenced items:
   passed EditMode 8/8 but not PlayMode 5/5: the bot remained at checkpoint 6
   after 22/24 accepted crossings, now moving at 23.9 km/h with 11 recoveries at
   `(9.37, 0.59, -13.37)`. Evidence is under
-  `/private/tmp/stage9-ai-verify3.8buU9w/`. The full three-file experiment remains
-  unstaged and unaccepted. The next fresh agent must instrument or otherwise
-  discriminate checkpoint-6 trigger reachability, guidance state after recovery,
-  and the unchanged 90-second budget before changing another steering constant.
+  `/private/tmp/stage9-ai-verify3.8buU9w/`.
 
-Do not begin screenshots, profiling, or player builds until these failures are
-reconciled and the affected fixtures plus the full non-capture PlayMode suite pass.
+  A subsequent instrumented reproduction confirmed all 11 recoveries were
+  collision-induced stuck recoveries; none came from off-track or progress-stall
+  logic. Checkpoint 6 was reachable and recovery rebuilt the correct guidance,
+  but the bot first learned each perpendicular turn only 5–6 metres before the
+  corner while arriving at 39–45 km/h. First approaches struck the outer barrier;
+  the slower post-recovery attempt then crossed correctly. Evidence is under
+  `/private/tmp/stage9-ai-instrumented.M7EGaZ/`.
+
+  The accepted correction preserves the 5-metre turn commitment and prepares
+  one checkpoint early whenever the following leg is perpendicular, capping
+  throttle at `.52` and applying the existing `.65` brake above 20 km/h. Lane
+  selection remains derived from the actual spawn-grid side. Independent Unity
+  execution passes `AIDrivingPolicyTests` 9/9 and the full AI PlayMode fixture
+  5/5. The autonomous bot completed all three laps and 24 ordered trigger
+  crossings in 53.351 seconds inside the unchanged 90-second contract. Evidence
+  is under `/private/tmp/stage9-ai-validator-editmode.tVNwbU/` and
+  `/private/tmp/stage9-ai-validator-playmode.329iUr/`. Checkpoint triggers remain
+  the sole progress authority; recovery, pause, collision, roster, and input
+  ownership assertions also pass.
+
+The bounded Stage 9 fixtures are now reconciled. Run the full non-capture
+PlayMode suite once with a generous budget before screenshots, profiling, or
+player builds.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

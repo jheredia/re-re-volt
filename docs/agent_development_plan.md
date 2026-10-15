@@ -234,10 +234,15 @@ lane-aligned turn-guidance attempt passed the focused EditMode policy fixture 6/
 but still failed the real AI fixture 4/5 after stalling on lap 2/3. Preserve that
 diagnostic evidence. Grid-side lane selection improved the bot to 22/24 ordered
 crossings, and earlier corner commitment changed its terminal motion, but two
-fresh independent runs still failed 4/5 at checkpoint 6. Do not accept the
-unstaged three-file experiment until a fresh agent discriminates checkpoint-6
-trigger reachability and post-recovery guidance, fixes or replaces it, and an
-independent verifier obtains AI 5/5.
+fresh independent runs still failed 4/5 at checkpoint 6. The experiment remained
+unaccepted until a fresh agent discriminated checkpoint-6 trigger reachability
+and post-recovery guidance. That diagnostic found 11/11
+recoveries were collision-induced and that the bot entered perpendicular turns
+at 39–45 km/h before guidance became available. The accepted correction prepares
+one checkpoint ahead without touching progress authority. Independent execution
+passes policy EditMode 9/9 and the AI fixture 5/5; the bot completes 24 ordered
+crossings in 53.351 seconds inside the unchanged 90-second contract. The next
+freeze action is one full non-capture PlayMode suite run.
 
 #### Stage 9A — AI-controlled test opponents
 
