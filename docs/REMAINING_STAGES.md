@@ -61,14 +61,17 @@ independently re-verified and reconciled with no remaining source-level P1/P2.
      one checkpoint ahead now passes policy EditMode 9/9 and the full AI fixture
      5/5; the autonomous bot completes 24/24 ordered crossings in 53.351 seconds
      within the unchanged 90-second limit. One full non-capture PlayMode run then
-     executed 85 tests: 79 passed and 6 failed. AI remained green 5/5. Remaining
-     failures are one Stage 8 combat-readability scenario, two vehicle-family
+     executed 85 tests: 79 passed and 6 failed. AI remained green 5/5. Those
+     failures were one Stage 8 combat-readability scenario, two vehicle-family
      selection scenarios, and three visual-style runtime scenarios. The run also
-     exposed 117,800 duplicate-audio-listener warnings. These must be reconciled
-     in separate bounded deliverables before repeating the full gate. The five
+     exposed 117,800 duplicate-audio-listener warnings. The five
      vehicle-family/visual-style failures are now closed as stale fixture
      assumptions with production source unchanged; focused execution passes 3/3
-     and 6/6. The combat scenario and duplicate-listener warning flood remain.
+     and 6/6. The combat scenario is also closed: a confirmed event-ordering fix
+     applies the already-authoritative hit modifier before publishing `WeaponHit`,
+     and independent focused execution passes 8/8 without the assertion cascade
+     or JobTempAlloc diagnostics. The duplicate-listener warning flood is the
+     remaining bounded gate before repeating the full suite once.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

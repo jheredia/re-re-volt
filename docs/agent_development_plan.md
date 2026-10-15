@@ -243,15 +243,19 @@ one checkpoint ahead without touching progress authority. Independent execution
 passes policy EditMode 9/9 and the AI fixture 5/5; the bot completes 24 ordered
 crossings in 53.351 seconds inside the unchanged 90-second contract. The next
 freeze action ran 85 non-capture PlayMode tests: 79 passed and 6 failed, while AI
-remained green 5/5. The remaining failures divide into one combat-readability
-scenario and five vehicle-family/visual-style scenarios. Fresh diagnostic agents
-must classify those surfaces separately, followed by independent focused
-verification. The five visual scenarios are now reconciled as stale hierarchy
+remained green 5/5. The failures divided into one combat-readability scenario
+and five vehicle-family/visual-style scenarios. The five visual scenarios are
+now reconciled as stale hierarchy
 and exact-color fixture assumptions; production source is unchanged and focused
-execution passes 3/3 plus 6/6. The same run emitted 117,800
-duplicate-audio-listener warnings; investigate that lifecycle/noise issue as its
-own bounded deliverable after the remaining combat failure. Only then rerun the
-full non-capture PlayMode gate.
+execution passes 3/3 plus 6/6. The combat failure was a confirmed event-ordering
+defect: authoritative hit timers were set before `WeaponHit`, but effective
+vehicle modifiers were applied afterward. The bounded correction preserves the
+same values and duration while applying the modifier before publication;
+independent focused execution passes 8/8 without the assertion cascade or
+JobTempAlloc diagnostics. The same consolidated run emitted 117,800
+duplicate-audio-listener warnings; that lifecycle/noise issue is now the sole
+remaining bounded correction before rerunning the full non-capture PlayMode gate
+exactly once.
 
 #### Stage 9A — AI-controlled test opponents
 

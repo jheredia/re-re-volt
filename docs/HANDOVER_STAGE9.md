@@ -162,14 +162,22 @@ capture methods. It passed 79 and failed 6; XML and logs are under
 `/private/tmp/stage9-full-playmode.fDtUwI/`.
 
 The AI fixture passed 5/5 inside that run, including autonomous completion in
-53.341 seconds. The remaining freeze failures are:
+53.341 seconds. Its six failures have now been reduced to a separate listener
+lifecycle/noise defect after focused reconciliation:
 
-- `Stage8CombatReadabilityIntegrationTests` has one failed fire/hit scenario:
-  its authoritative modifier assertion fails at line 197, followed by repeated
-  hit-pulse assertion errors at line 202. The run also reports two JobTempAlloc
-  lifetime diagnostics after this failure. A fresh combat-only diagnostic must
-  determine whether this is an event-ordering/runtime regression or a stale
-  assertion before changing production code.
+- The combat failure was a confirmed runtime ordering defect. `TryHit` set the
+  authoritative `ImpactUntil`/`OilUntil` timer, but effective vehicle modifiers
+  were deferred to the later player loop in the same `FixedUpdate`, so
+  `WeaponHit` observers saw the timer without the corresponding modifier. The
+  failed assertion interrupted projectile resolution and caused the repeated
+  hit-pulse errors and later JobTempAlloc diagnostics. The accepted correction
+  extracts the existing timer-to-modifier calculation and invokes it immediately
+  after the hit timer is set, before feedback and `WeaponHit`; durations, values,
+  inventory, cooldowns, physics, ownership, bounds, and cleanup are unchanged.
+  Independent Unity execution passes the complete
+  `Stage8CombatReadabilityIntegrationTests` fixture 8/8 in 33.466 seconds with
+  no assertion cascade or JobTempAlloc diagnostic. Evidence is under
+  `/private/tmp/stage8-combat-readability-verify.HYqEXZ/`.
 - The five vehicle-family/visual-style failures are reconciled as stale fixture
   assumptions after the accepted `PresentationVisualPivot` migration. Four
   assertions still searched the physics root for `Body`; the fifth used exact
@@ -186,11 +194,11 @@ The AI fixture passed 5/5 inside that run, including autonomous completion in
 
 No compiler errors occurred. Focused vehicle-family validation again emitted
 111,689 duplicate-audio-listener warnings, corroborating the consolidated run's
-117,800-warning flood. That lifecycle/noise issue
-warnings, which must be investigated as a separate bounded lifecycle/noise issue
-remains a separate bounded deliverable after the remaining combat failure. Do
-not begin screenshots, profiling, or player builds until the combat failure and
-listener flood are reconciled and the full non-capture PlayMode suite passes.
+117,800-warning flood. That lifecycle/noise defect is now the sole remaining
+bounded Stage 9 functional gate. Investigate and verify it with separate fresh
+agents, then rerun the full non-capture PlayMode suite exactly once. Do not begin
+screenshots, profiling, or player builds until the listener flood is reconciled
+and that suite passes.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

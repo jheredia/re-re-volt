@@ -298,11 +298,9 @@ namespace Weapons
             foreach (PlayerCombat state in players)
             {
                 if (state == null || state.Player.Vehicle == null) continue;
+                ApplyCombatModifiers(state);
                 bool oil = SimulationTime < state.OilUntil;
                 bool impact = SimulationTime < state.ImpactUntil;
-                state.Player.Vehicle.SetCombatModifiers(oil ? oilGripMultiplier : 1f,
-                    impact ? impactMotorMultiplier : oil ? oilMotorMultiplier : 1f,
-                    Mathf.Min(impact ? impactSteeringMultiplier : 1f, oil ? oilSteeringMultiplier : 1f));
                 if (state.Feedback == null) continue;
                 if (!oil && !impact)
                 {
@@ -339,6 +337,7 @@ namespace Weapons
                 body.AddForce(source.Direction * impactVelocityChange, ForceMode.VelocityChange);
             }
             else state.OilUntil = SimulationTime + oilDuration;
+            ApplyCombatModifiers(state);
             if (state.Feedback != null)
             {
                 UnregisterVisualTree(state.Feedback);
@@ -350,6 +349,15 @@ namespace Weapons
             ShowBurst(target.Vehicle.transform.position + Vector3.up * .7f, source.Kind);
             WeaponHit?.Invoke(target, source.Kind);
             return true;
+        }
+
+        private void ApplyCombatModifiers(PlayerCombat state)
+        {
+            bool oil = SimulationTime < state.OilUntil;
+            bool impact = SimulationTime < state.ImpactUntil;
+            state.Player.Vehicle.SetCombatModifiers(oil ? oilGripMultiplier : 1f,
+                impact ? impactMotorMultiplier : oil ? oilMotorMultiplier : 1f,
+                Mathf.Min(impact ? impactSteeringMultiplier : 1f, oil ? oilSteeringMultiplier : 1f));
         }
 
         internal void NotifyWeaponResolved(LiveCombatWeapon source, LocalPlayer target, Vector3 point,
