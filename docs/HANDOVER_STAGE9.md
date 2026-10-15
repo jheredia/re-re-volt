@@ -220,6 +220,18 @@ The Stage 9 compilation/EditMode/non-capture PlayMode gate is green. Screenshot
 readability, representative profiling, live listening, and macOS/Web player-build
 evidence remain separate freeze gates before Stage 9C track implementation.
 
+The first authored screenshot gate then ran both capture methods 2/2 and produced
+seven valid 3840×2160 states under
+`/private/tmp/stage9-screenshot-capture-20261015T115047d/`. Independent visual
+audit found no P1s but did not accept the freeze: the capture named lobby/setup
+shows only the title page, four-player HUDs consume excessive quadrant space and
+similar gray vehicles lack strong non-color identity, and near-camera combat or
+pickup presentation visibly obstructs the road in the Bolt/Oil states. The
+evidence-tied audit and limits are recorded in
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. Resolve these three P2 gates in
+separate bounded deliverables and re-capture only affected states before
+profiling/listening/build acceptance advances.
+
 ## Stage 9B independent accessibility/performance static audit — corrections
 
 The independent audit confirmed no P1s and two P2s. First, the airborne chassis

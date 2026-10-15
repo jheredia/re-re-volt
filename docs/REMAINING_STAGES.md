@@ -3,7 +3,9 @@
 Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
 non-capture PlayMode gate. Stage 9B corrections are independently verified and
 the consolidated suite passes 85/85; screenshot, profiling, listening, and
-player-build evidence remain before Stage 9C.
+player-build evidence remain before Stage 9C. The first screenshot audit is a
+conditional pass with three P2 gates documented in
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`.
 
 ## How much remains
 
@@ -80,6 +82,10 @@ player-build evidence remain before Stage 9C.
      JobTempAlloc diagnostics, assertion failures, or compiler/runtime errors.
      Screenshot/readability, profiling/listening, and macOS/Web build evidence
      remain for the local baseline.
+   - The first seven-state screenshot audit found no P1s, but actual setup-state
+     evidence is missing, four-player HUD/identity readability needs correction,
+     and near-camera combat/pickup presentation obstructs the road. Resolve and
+     independently re-audit those P2s before accepting the visual freeze.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

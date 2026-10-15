@@ -265,6 +265,14 @@ AudioListener warning, JobTempAlloc diagnostic, AssertionException, compiler
 error, or unexpected runtime error. Screenshot/readability,
 profiling/listening, and macOS/Web build evidence remain before Stage 9C.
 
+The first screenshot gate executes both authored capture methods 2/2 and yields
+seven valid 3840×2160 states. Independent visual audit finds no P1 but keeps the
+freeze conditional on three P2s: prove the actual setup selections rather than
+only the title page, compact four-player HUDs and reinforce non-color identity,
+and protect the forward road corridor from near-camera combat/pickup occlusion.
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md` owns the evidence and exact
+reconciliation contract.
+
 #### Stage 9A — AI-controlled test opponents
 
 Implementation checkpoint accepted after a separate static audit. Stage 9A now
