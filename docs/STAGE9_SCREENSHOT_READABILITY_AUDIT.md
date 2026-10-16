@@ -3,9 +3,9 @@
 ## Status
 
 Conditional pass. The authored capture tests pass and produced the original
-seven valid 3840×2160 images plus a verified setup-state capture, but the visual
-freeze is not yet accepted. There are no P1 findings. Two visible P2 issues
-remain.
+seven valid 3840×2160 images plus verified setup and four-player style captures,
+but the visual freeze is not yet accepted. There are no P1 findings. One visible
+P2 issue remains: near-camera combat/pickup obstruction.
 
 Evidence is under
 `/private/tmp/stage9-screenshot-capture-20261015T115047d/`:
@@ -59,11 +59,18 @@ CLEAN 3D`, feedback settings, and selection/driving controls are visible with no
 ellipsis or clipping. The dense lower control block and its wrapped `BRAKE` word
 remain P3 polish, not an acceptance blocker.
 
-1. Reduce four-player HUD footprint and add persistent non-color player identity
-   to both HUD and vehicle.
+1. Four-player HUD/identity is accepted. Four-player-only badges are compact,
+   every HUD retains a persistent P-number, and collider-disabled geometric roof
+   digits provide non-color identity under `PresentationVisualPivot`. The focused
+   affected suite passed 17/17. Fresh Clean 3D, Ink Lite, and Full Ink captures
+   are healthy at 3840×2160 under
+   `/private/tmp/stage9-ink-lite-hud-fix-20261016/`. Investigation confirmed the
+   earlier Ink Lite clipping was stale Editor screenshot readback, not runtime
+   layout or style authority; the test capture now primes the split-camera buffer
+   and saves the following synchronized frame.
 2. Bound, fade, or hide near-camera presentation/decoration so the owning car and
    forward road corridor remain readable.
-3. Re-capture only the affected states and obtain a fresh independent visual
+3. Re-capture the remaining affected states during the consolidated Stage 9
    audit before accepting the screenshot gate.
 
 ## Evidence limits

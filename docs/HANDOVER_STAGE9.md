@@ -228,8 +228,9 @@ shows only the title page, four-player HUDs consume excessive quadrant space and
 similar gray vehicles lack strong non-color identity, and near-camera combat or
 pickup presentation visibly obstructs the road in the Bolt/Oil states. The
 evidence-tied audit and limits are recorded in
-`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. The Setup P2 is now accepted;
-resolve the two remaining P2 gates in separate bounded deliverables and
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. The Setup and four-player
+HUD/identity P2s are now accepted. Near-camera combat/pickup obstruction is the
+only remaining visual P2; resolve it before the consolidated Stage 9 audit and
 re-capture only affected states before
 profiling/listening/build acceptance advances.
 
@@ -253,15 +254,18 @@ no Setup P1/P2: AI count, visual style, player state, start action, feedback, an
 all selection/driving guidance are visible without clipping or ellipsis. The
 dense lower control block and wrapped `BRAKE` word remain P3 polish.
 
-## Usage handover — four-player HUD and non-color identity P2
+## Accepted checkpoint — four-player HUD and non-color identity P2
 
-The Setup correction is accepted and committed at `77bf8b3`. A fresh bounded
-agent then began the next visual P2, but the five-hour window reached 78% before
-validation, so the work was interrupted and intentionally left unstaged and
-uncommitted. Do not treat this slice as accepted and do not begin the separate
-near-camera obstruction work until it is reconciled.
+The Setup correction is accepted at `77bf8b3`. The next bounded slice compacts
+only the four-human HUD to `420×88` with a 64-pixel portrait, bounded race text,
+and a smaller weapon block; one-to-three-player layouts are unchanged. Every HUD
+keeps a stable P-number, and every local vehicle adds a high-contrast geometric
+P1–P4 roof digit beneath `PresentationVisualPivot` before visual-style
+registration. Marker primitives have disabled colliders, remain outside
+`VehicleFamilyVisual.SourceRenderers` so family replacement preserves them, and
+are destroyed with the owned vehicle.
 
-The current seven-file experiment is limited to:
+The accepted seven-file implementation is limited to:
 
 - `Assets/Scripts/Presentation/Stage3RacePresentation.cs`
 - `Assets/Scripts/Vehicle/PrototypeVehicleFactory.cs`
@@ -271,27 +275,22 @@ The current seven-file experiment is limited to:
 - `Assets/Tests/PlayMode/Stage8CombatReadabilityIntegrationTests.cs`
 - `Assets/Tests/PlayMode/VehicleFamilySelectionIntegrationTests.cs`
 
-The experiment makes only four-human HUD badges compact (`420×88`, 64-pixel
-portrait, smaller weapon block and bounded text), preserving the existing
-one-to-three-player layout. It creates a high-contrast geometric P1–P4 roof
-digit beneath `PresentationVisualPivot` after family/style registration. The
-marker uses collider-disabled presentation primitives, remains outside
-`VehicleFamilyVisual.SourceRenderers` so family replacement preserves it, and
-is destroyed with the owned vehicle. Focused assertions were drafted for HUD
-bounds/overflow, stable player labels, marker presence, collider exclusion,
-family-swap persistence, style-mode survival, rematch, and leave/rejoin cleanup.
+Focused affected execution passes 17/17, covering HUD bounds/overflow, stable
+labels, marker presence, collider exclusion, style transitions, family-swap
+persistence, rematch, and leave/rejoin cleanup. A focused three-style capture
+passes 1/1 in 13.58 seconds. Fresh Clean 3D, Ink Lite, and Full Ink images at
+3840×2160 under `/private/tmp/stage9-ink-lite-hud-fix-20261016/` show all four
+HUDs within their quadrants and readable roof digits at chase-camera distance.
 
-No Unity compile, PlayMode fixture, screenshot capture, independent technical
-review, or visual audit completed for this experiment. On resume, use a fresh
-bounded agent to audit the unstaged diff before editing. In particular verify
-that the style-independent marker remains readable in Clean 3D, Ink Lite, and
-Full Ink without entering style-authority renderer ownership; that every digit
-is legible from chase-camera distance; that compact race/weapon text does not
-overflow in all four quadrants; and that release/family replacement leaves no
-marker or renderer leak. Then run only the affected focused fixtures and the
-existing four-player capture, obtain independent visual review, reconcile and
-commit. Preserve the user's protected `InputHandler` edit and all other baseline
-noise exactly.
+The earlier Ink Lite-only clipping was not a runtime HUD/style defect. Repeated
+evidence moved the clipping between style captures while RectTransform and TMP
+assertions remained valid; `VisualStyleController` never mutates UI. The Unity
+Editor's synchronous four-camera readback alternated stale/current overlay
+buffers. The test-only capture path now primes and discards one split-camera
+readback, rebuilds canvases, and saves the following end-of-frame texture. No
+runtime presentation authority changed. Near-camera obstruction is the next
+implementation slice; defer broad suites and independent audit until the Stage 9
+boundary.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

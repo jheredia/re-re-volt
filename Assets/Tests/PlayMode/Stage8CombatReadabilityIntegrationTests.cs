@@ -104,7 +104,10 @@ namespace Tests.PlayMode
             {
                 style.SetMode(mode);
                 for (int i = 0; i < players.Length; i++)
+                {
                     AssertHudIdentity(i, i % 2 == 0 ? WeaponKind.Bolt : WeaponKind.Oil);
+                    AssertVehicleIdentityMarker(i, mode);
+                }
             }
         }
 
@@ -319,15 +322,44 @@ namespace Tests.PlayMode
                 float viewportWidth = expected.Width * 1920f;
                 float availableRaceDataWidth = badge.sizeDelta.x - raceData.offsetMin.x + raceData.offsetMax.x;
 
-                Assert.That(badge.sizeDelta, Is.EqualTo(new Vector2(540f, 108f)));
+                Assert.That(badge.sizeDelta, Is.EqualTo(new Vector2(420f, 88f)),
+                    "Four-player HUDs use the compact quadrant layout.");
                 Assert.That(badge.anchoredPosition.x, Is.GreaterThanOrEqualTo(0f));
                 Assert.That(badge.anchoredPosition.x + badge.sizeDelta.x, Is.LessThanOrEqualTo(viewportWidth),
                     $"P{playerIndex + 1} badge must stay inside its four-player viewport.");
-                Assert.That(raceData.offsetMin.x, Is.EqualTo(108f), "Portrait-backed text keeps its left inset.");
-                Assert.That(raceData.offsetMax.x, Is.EqualTo(-112f), "Weapon identity keeps its right reserve.");
-                Assert.That(availableRaceDataWidth, Is.GreaterThanOrEqualTo(310f),
-                    $"P{playerIndex + 1} RaceData must retain at least its pre-Stage8 preferred width.");
+                Assert.That(raceData.offsetMin.x, Is.EqualTo(82f), "Compact portrait keeps its bounded left inset.");
+                Assert.That(raceData.offsetMax.x, Is.EqualTo(-80f), "Compact weapon identity keeps its right reserve.");
+                Assert.That(availableRaceDataWidth, Is.GreaterThanOrEqualTo(250f),
+                    $"P{playerIndex + 1} RaceData must retain a readable compact width.");
                 Assert.That(raceData.rect.width, Is.EqualTo(availableRaceDataWidth).Within(.01f));
+                TextMeshProUGUI raceLabel = raceData.GetComponent<TextMeshProUGUI>();
+                raceLabel.ForceMeshUpdate();
+                Assert.That(raceLabel.isTextOverflowing, Is.False,
+                    $"P{playerIndex + 1} essential HUD copy must fit its compact badge.");
+            }
+        }
+
+        private void AssertVehicleIdentityMarker(int playerIndex, VisualStyleMode mode)
+        {
+            VehicleFamilyVisual family = players[playerIndex].FamilyVisual;
+            Transform marker = family.PresentationPivot.Find($"PlayerIdentityMarker_P{playerIndex + 1}");
+            Assert.That(marker, Is.Not.Null, "Stable player identity must live on the presentation pivot.");
+            Assert.That(marker.Find("IdentityPlate"), Is.Not.Null);
+            Assert.That(marker.GetComponentsInChildren<Renderer>(true).Length, Is.GreaterThan(2),
+                "A player marker combines a contrast plate with a geometric digit.");
+            foreach (Collider markerCollider in marker.GetComponentsInChildren<Collider>(true))
+                Assert.That(markerCollider.enabled, Is.False, "Identity geometry must never change collision authority.");
+            foreach (Renderer markerRenderer in marker.GetComponentsInChildren<Renderer>(true))
+            {
+                Assert.That(family.SourceRenderers, Has.None.SameAs(markerRenderer),
+                    "Family replacement must not own the persistent player marker.");
+                if (markerRenderer.gameObject.name.EndsWith("_InkOutline")) continue;
+                if (mode == VisualStyleMode.Clean3D)
+                    Assert.That(markerRenderer.sharedMaterial.shader.name, Is.Not.EqualTo("ReReVolt/InkLit"),
+                        $"The stable P{playerIndex + 1} marker must restore its clean source material.");
+                else
+                    Assert.That(markerRenderer.sharedMaterial.shader.name, Is.EqualTo("ReReVolt/InkLit"),
+                        $"The stable P{playerIndex + 1} marker must follow {mode} with the car.");
             }
         }
 

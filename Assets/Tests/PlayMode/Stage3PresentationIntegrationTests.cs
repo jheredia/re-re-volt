@@ -22,6 +22,7 @@ namespace Tests.PlayMode
         private VehicleManager roster;
         private AIManager ai;
         private Stage3RacePresentation presentation;
+        private VisualStyleController visualStyle;
         private PrototypeCircuitBuilder.Result circuit;
         private Camera lobbyCamera;
 
@@ -46,7 +47,7 @@ namespace Tests.PlayMode
             roster.PlayerJoined += player => player.Recovery.ConfigureGroundMask(circuit.DrivableMask);
             ai = root.AddComponent<AIManager>();
             Assert.That(ai.Configure(race, roster, circuit.Grid, circuit.Checkpoints, circuit.DrivableMask), Is.True);
-            VisualStyleController visualStyle = root.AddComponent<VisualStyleController>();
+            visualStyle = root.AddComponent<VisualStyleController>();
             presentation = root.AddComponent<Stage3RacePresentation>();
             presentation.Configure(race, roster, visualStyle, aiManager: ai);
             Physics.SyncTransforms();
@@ -152,7 +153,17 @@ namespace Tests.PlayMode
             yield return PressAndRelease(first, GamepadButton.South);
             yield return new WaitForSecondsRealtime(4.1f);
             Assert.That(race.RaceRunning, Is.True);
+            AssertCompactFourPlayerIdentity();
             yield return Capture("four-player-split", hidePresentation: false);
+            visualStyle.SetMode(VisualStyleMode.InkLite);
+            Assert.That(visualStyle.Mode, Is.EqualTo(VisualStyleMode.InkLite));
+            AssertCompactFourPlayerIdentity();
+            yield return Capture("four-player-split-ink-lite", hidePresentation: false);
+            visualStyle.SetMode(VisualStyleMode.FullInk);
+            Assert.That(visualStyle.Mode, Is.EqualTo(VisualStyleMode.FullInk));
+            AssertCompactFourPlayerIdentity();
+            yield return Capture("four-player-split-full-ink", hidePresentation: false);
+            visualStyle.SetMode(VisualStyleMode.Clean3D);
 
             for (int playerIndex = 0; playerIndex < roster.Players.Count; playerIndex++)
             {
@@ -171,12 +182,26 @@ namespace Tests.PlayMode
             string path = ArtifactPrefix + suffix + ".png";
             if (File.Exists(path)) File.Delete(path);
             presentation.PresentationCanvas.enabled = !hidePresentation;
+            Canvas.ForceUpdateCanvases();
             yield return new WaitForEndOfFrame();
-            ScreenCapture.CaptureScreenshot(path, 1);
-            for (int frame = 0; frame < 120 && !File.Exists(path); frame++) yield return null;
-            // Keep the captured state stable while the high-resolution GPU readback and PNG write finish.
-            float readbackDeadline = Time.realtimeSinceStartup + .5f;
-            while (Time.realtimeSinceStartup < readbackDeadline) yield return null;
+
+            if (!hidePresentation && presentation.HudCount == LocalPlayerRules.MaximumPlayers && race.RaceRunning)
+            {
+                // Four split cameras alternate the Editor readback buffer that contains the overlay canvas.
+                // Prime that buffer once, then rebuild and save the following fully rendered frame.
+                Texture2D warmup = ScreenCapture.CaptureScreenshotAsTexture();
+                Assert.That(warmup, Is.Not.Null);
+                Object.Destroy(warmup);
+                Canvas.ForceUpdateCanvases();
+                yield return new WaitForEndOfFrame();
+            }
+
+            // Read the fully rendered frame synchronously so a queued PNG write cannot overlap the next style state.
+            Texture2D screenshot = ScreenCapture.CaptureScreenshotAsTexture();
+            Assert.That(screenshot, Is.Not.Null);
+            File.WriteAllBytes(path, screenshot.EncodeToPNG());
+            Object.Destroy(screenshot);
+
             presentation.PresentationCanvas.enabled = true;
             Assert.That(File.Exists(path), Is.True, $"Expected visual review artifact at {path}");
             Assert.That(new FileInfo(path).Length, Is.GreaterThan(1024));
@@ -200,6 +225,26 @@ namespace Tests.PlayMode
             Assert.That(setup.text, Does.Contain("FIRE: SPACE / X"));
             Assert.That(setup.isTextOverflowing, Is.False,
                 $"Setup copy must fit its visible panel at {Screen.width}x{Screen.height}.");
+        }
+
+        private void AssertCompactFourPlayerIdentity()
+        {
+            Canvas.ForceUpdateCanvases();
+            for (int playerIndex = 0; playerIndex < roster.Players.Count; playerIndex++)
+            {
+                Transform badge = presentation.PresentationCanvas.transform.Find(
+                    $"SplitHUD/Player_{playerIndex + 1}_HUD/WorkshopLabel");
+                Assert.That(badge.GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(420f, 88f)));
+                TextMeshProUGUI raceData = badge.Find("RaceData").GetComponent<TextMeshProUGUI>();
+                raceData.ForceMeshUpdate();
+                Assert.That(raceData.text, Does.Contain($"P{playerIndex + 1}"));
+                Assert.That(raceData.text, Does.Contain(
+                    DriverPersonaCatalog.GetForPlayerSlot(playerIndex).Callsign));
+                Assert.That(raceData.isTextOverflowing, Is.False);
+
+                VehicleFamilyVisual family = roster.Players[playerIndex].FamilyVisual;
+                Assert.That(family.PresentationPivot.Find($"PlayerIdentityMarker_P{playerIndex + 1}"), Is.Not.Null);
+            }
         }
 
         private static IEnumerator PressAndRelease(Gamepad pad, GamepadButton button)

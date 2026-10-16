@@ -139,9 +139,13 @@ namespace Tests.PlayMode
             Assert.That(second.PlayerIndex, Is.EqualTo(1));
             yield return SettleUi();
             AssertExactUiOwnership(0, 1);
+            Transform releasedMarker = first.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1");
+            Assert.That(releasedMarker, Is.Not.Null);
 
             Assert.That(roster.TryLeavePlayer(first.PlayerIndex), Is.True);
             yield return SettleUi();
+            Assert.That(releasedMarker == null, Is.True,
+                "Releasing a player vehicle must clean up its presentation-only identity marker.");
             Assert.That(roster.Players, Has.Count.EqualTo(1));
             Assert.That(roster.Players[0], Is.SameAs(second));
             AssertExactUiOwnership(1);
@@ -152,6 +156,7 @@ namespace Tests.PlayMode
             Assert.That(roster.Players, Has.Count.EqualTo(2));
             Assert.That(roster.Players[0], Is.SameAs(rejoined));
             Assert.That(roster.Players[1], Is.SameAs(second));
+            Assert.That(rejoined.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1"), Is.Not.Null);
             AssertExactUiOwnership(0, 1);
         }
 
@@ -191,9 +196,13 @@ namespace Tests.PlayMode
                 Assert.That(lobbyPortrait.uvRect, Is.EqualTo(persona.PortraitUv));
                 Assert.That(hudPortrait.uvRect, Is.EqualTo(persona.PortraitUv));
                 Assert.That(lobbyPortrait.rectTransform.sizeDelta, Is.EqualTo(new Vector2(32f, 32f)));
-                Assert.That(hudPortrait.rectTransform.sizeDelta, Is.EqualTo(new Vector2(88f, 88f)));
+                Vector2 expectedPortraitSize = playerCount == LocalPlayerRules.MaximumPlayers
+                    ? new Vector2(64f, 64f)
+                    : new Vector2(88f, 88f);
+                Assert.That(hudPortrait.rectTransform.sizeDelta, Is.EqualTo(expectedPortraitSize));
                 Assert.That(FindText("PlayersAndControls"), Does.Contain(persona.Callsign));
                 Assert.That(FindHudText(playerIndex), Does.Contain(persona.Callsign));
+                Assert.That(FindHudText(playerIndex), Does.Contain($"P{playerIndex + 1}"));
 
                 RectTransform viewport = FindRect($"Player_{playerIndex + 1}_HUD");
                 RectTransform badge = viewport.Find("WorkshopLabel").GetComponent<RectTransform>();
@@ -201,7 +210,10 @@ namespace Tests.PlayMode
                 Assert.That(viewport.anchorMin, Is.EqualTo(new Vector2(expected.X, expected.Y)));
                 Assert.That(viewport.anchorMax,
                     Is.EqualTo(new Vector2(expected.X + expected.Width, expected.Y + expected.Height)));
-                Assert.That(badge.sizeDelta, Is.EqualTo(new Vector2(540f, 108f)));
+                Vector2 expectedBadgeSize = playerCount == LocalPlayerRules.MaximumPlayers
+                    ? new Vector2(420f, 88f)
+                    : new Vector2(540f, 108f);
+                Assert.That(badge.sizeDelta, Is.EqualTo(expectedBadgeSize));
                 Assert.That(badge.anchoredPosition.x + badge.sizeDelta.x,
                     Is.LessThan(expected.Width * 1920f), "HUD badge must stay inside its viewport width.");
                 Assert.That(-badge.anchoredPosition.y + badge.sizeDelta.y,

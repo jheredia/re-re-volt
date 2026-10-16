@@ -160,6 +160,11 @@ namespace Vehicle
                 return false;
             }
 
+            // The stable slot marker is presentation-only and remains outside family-owned geometry, but it must
+            // join the same visual-style registration transaction as the rest of the car so every style mode and
+            // release path retains one coherent renderer owner.
+            PrototypeVehicleFactory.CreatePlayerIdentityMarker(car, index);
+
             if (!TryRegisterVehicleRenderers(car, out string registrationError))
             {
                 raceManager.UnregisterRacer(car);

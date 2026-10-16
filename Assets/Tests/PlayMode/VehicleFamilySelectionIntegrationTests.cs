@@ -62,6 +62,8 @@ namespace Tests.PlayMode
             RacerState racer = keyboardPlayer.Racer;
             ChaseCamera chase = keyboardPlayer.ChaseCamera;
             HandlingModelId handling = vehicle.SelectedHandlingModel;
+            Transform identityMarker = keyboardPlayer.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1");
+            Assert.That(identityMarker, Is.Not.Null);
             Renderer wheelVisual = vehicle.transform.Find("Wheel_FL/WheelVisual").GetComponent<Renderer>();
             Transform wheelOutline = wheelVisual.transform.Find("WheelVisual_InkOutline");
             Assert.That(wheelOutline, Is.Not.Null);
@@ -102,6 +104,10 @@ namespace Tests.PlayMode
             Assert.That(keyboardPlayer.Racer, Is.SameAs(racer));
             Assert.That(keyboardPlayer.ChaseCamera, Is.SameAs(chase));
             Assert.That(vehicle.SelectedHandlingModel, Is.EqualTo(handling));
+            Assert.That(keyboardPlayer.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1"),
+                Is.SameAs(identityMarker), "Family replacement must preserve the stable player marker.");
+            foreach (Renderer markerRenderer in identityMarker.GetComponentsInChildren<Renderer>(true))
+                Assert.That(keyboardPlayer.FamilyVisual.SourceRenderers, Has.None.SameAs(markerRenderer));
 
             yield return PressPad(pad, GamepadButton.DpadDown);
             Assert.That(keyboardPlayer.FamilyVisual.FamilyId, Is.EqualTo(VehicleFamilyId.Drift));
@@ -123,6 +129,10 @@ namespace Tests.PlayMode
             Assert.That(roster.TryJoinKeyboard(keyboard, out LocalPlayer first), Is.True);
             Assert.That(roster.TryJoinGamepad(pad, out LocalPlayer second), Is.True);
             yield return Frames();
+            Transform firstIdentity = first.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1");
+            Transform secondIdentity = second.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P2");
+            Assert.That(firstIdentity, Is.Not.Null);
+            Assert.That(secondIdentity, Is.Not.Null);
             Assert.That(roster.TryCycleVehicleFamily(first.PlayerIndex, 1), Is.True);
             Assert.That(roster.TryCycleVehicleFamily(second.PlayerIndex, -1), Is.True);
             AssertFamilies(VehicleFamilyId.Buggy, VehicleFamilyId.Drift);
@@ -176,6 +186,8 @@ namespace Tests.PlayMode
             yield return Press(Key.Escape);
             Assert.That(race.CurrentState, Is.EqualTo(RaceManager.RaceState.Idle));
             AssertFamilies(VehicleFamilyId.Buggy, VehicleFamilyId.Drift);
+            Assert.That(first.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1"), Is.SameAs(firstIdentity));
+            Assert.That(second.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P2"), Is.SameAs(secondIdentity));
             Assert.That(FindText("PlayersAndControls"), Does.Contain("MODEL A  READY  BUGGY"));
         }
 

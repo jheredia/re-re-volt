@@ -266,13 +266,17 @@ error, or unexpected runtime error. Screenshot/readability,
 profiling/listening, and macOS/Web build evidence remain before Stage 9C.
 
 The first screenshot gate executes both authored capture methods 2/2 and yields
-seven valid 3840×2160 states. Independent visual audit finds no P1 but keeps the
-freeze conditional on two remaining P2s. A verified test-only extension captured
+seven valid 3840×2160 states. Independent visual audit finds no P1. A verified
+test-only extension captured
 the actual Setup page and exposed clipped AI count, visual-style, and control
 guidance. The bounded copy/layout correction now passes its focused capture 1/1,
 and a fresh independent visual audit accepts the corrected 3840×2160 Setup state
-with no P1/P2. Compact four-player HUDs and reinforce non-color identity, and
-protect the forward road corridor from near-camera combat/pickup occlusion.
+with no P1/P2. The four-player HUD/identity correction is now accepted: compact
+badges preserve one-to-three-player layouts, persistent P-number text and
+collider-disabled roof digits provide non-color identity, focused execution
+passed 17/17, and fresh Clean 3D, Ink Lite, and Full Ink captures are healthy.
+The remaining visual P2 is protecting the forward road corridor from near-camera
+combat/pickup occlusion.
 `docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md` owns the evidence and exact
 reconciliation contract.
 

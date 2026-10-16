@@ -573,6 +573,7 @@ namespace Presentation
             for (int displayIndex = 0; displayIndex < vehicles.Players.Count; displayIndex++)
             {
                 LocalPlayer player = vehicles.Players[displayIndex];
+                bool compact = vehicles.Players.Count == LocalPlayerRules.MaximumPlayers;
                 Viewport viewport = LocalPlayerRules.GetViewport(vehicles.Players.Count, displayIndex);
                 GameObject viewportRoot = CreateUiObject($"Player_{player.PlayerIndex + 1}_HUD", hudRoot.transform);
                 RectTransform viewportRect = viewportRoot.GetComponent<RectTransform>();
@@ -587,10 +588,10 @@ namespace Presentation
                 badgeRect.anchorMin = new Vector2(0f, 1f);
                 badgeRect.anchorMax = new Vector2(0f, 1f);
                 badgeRect.pivot = new Vector2(0f, 1f);
-                badgeRect.anchoredPosition = new Vector2(18f, -18f);
-                badgeRect.sizeDelta = new Vector2(540f, 108f);
+                badgeRect.anchoredPosition = compact ? new Vector2(12f, -12f) : new Vector2(18f, -18f);
+                badgeRect.sizeDelta = compact ? new Vector2(420f, 88f) : new Vector2(540f, 108f);
 
-                float textInset = 16f;
+                float textInset = compact ? 12f : 16f;
                 DriverPersonaDefinition persona = DriverPersonaCatalog.GetForPlayerSlot(player.PlayerIndex);
                 Texture portraitTexture = GetPortraitTexture(persona);
                 if (portraitTexture != null)
@@ -601,20 +602,27 @@ namespace Presentation
                     portraitRect.anchorMin = new Vector2(0f, 1f);
                     portraitRect.anchorMax = new Vector2(0f, 1f);
                     portraitRect.pivot = new Vector2(0f, 1f);
-                    portraitRect.anchoredPosition = new Vector2(10f, -10f);
-                    portraitRect.sizeDelta = new Vector2(88f, 88f);
+                    portraitRect.anchoredPosition = compact ? new Vector2(8f, -12f) : new Vector2(10f, -10f);
+                    portraitRect.sizeDelta = compact ? new Vector2(64f, 64f) : new Vector2(88f, 88f);
                     hudPortraits[player.PlayerIndex] = portrait;
-                    textInset = 108f;
+                    textInset = compact ? 82f : 108f;
                 }
 
-                TextMeshProUGUI label = CreateText("RaceData", badge.transform, 22f, Color.white,
+                TextMeshProUGUI label = CreateText("RaceData", badge.transform, compact ? 17f : 22f, Color.white,
                     TextAlignmentOptions.TopLeft, FontStyles.Bold);
+                label.enableAutoSizing = compact;
+                if (compact)
+                {
+                    label.fontSizeMin = 14f;
+                    label.fontSizeMax = 17f;
+                    label.lineSpacing = -8f;
+                }
                 RectTransform textRect = label.rectTransform;
                 Stretch(textRect);
-                textRect.offsetMin = new Vector2(textInset, 8f);
-                textRect.offsetMax = new Vector2(-112f, -9f);
+                textRect.offsetMin = new Vector2(textInset, compact ? 6f : 8f);
+                textRect.offsetMax = new Vector2(compact ? -80f : -112f, compact ? -6f : -9f);
                 hudLabels[player.PlayerIndex] = label;
-                weaponIdentities[player.PlayerIndex] = CreateWeaponIdentity(badge.transform);
+                weaponIdentities[player.PlayerIndex] = CreateWeaponIdentity(badge.transform, compact);
                 RefreshWeaponIdentity(player.PlayerIndex);
             }
             RebuildLobbyPortraits();
@@ -644,18 +652,18 @@ namespace Presentation
             }
         }
 
-        private WeaponHudIdentity CreateWeaponIdentity(Transform parent)
+        private WeaponHudIdentity CreateWeaponIdentity(Transform parent, bool compact)
         {
             GameObject root = CreatePanel("WeaponIdentity", parent, new Color(.015f, .02f, .02f, .82f));
             RectTransform rootRect = root.GetComponent<RectTransform>();
             rootRect.anchorMin = new Vector2(1f, .5f);
             rootRect.anchorMax = new Vector2(1f, .5f);
             rootRect.pivot = new Vector2(1f, .5f);
-            rootRect.anchoredPosition = new Vector2(-8f, 0f);
-            rootRect.sizeDelta = new Vector2(94f, 90f);
+            rootRect.anchoredPosition = new Vector2(compact ? -6f : -8f, 0f);
+            rootRect.sizeDelta = compact ? new Vector2(68f, 68f) : new Vector2(94f, 90f);
 
             GameObject bolt = CreateUiObject("BoltIcon", root.transform);
-            ConfigureIconRoot(bolt.GetComponent<RectTransform>());
+            ConfigureIconRoot(bolt.GetComponent<RectTransform>(), compact);
             CreateIconPart("BoltUpper", bolt.transform, BoltHudColor,
                 new Vector2(8f, 25f), new Vector2(7f, 10f), -28f);
             CreateIconPart("BoltMiddle", bolt.transform, Color.white,
@@ -664,7 +672,7 @@ namespace Presentation
                 new Vector2(8f, 25f), new Vector2(-8f, -11f), -28f);
 
             GameObject oil = CreateUiObject("OilIcon", root.transform);
-            ConfigureIconRoot(oil.GetComponent<RectTransform>());
+            ConfigureIconRoot(oil.GetComponent<RectTransform>(), compact);
             CreateIconPart("OilDropTop", oil.transform, OilHudColor,
                 new Vector2(18f, 18f), new Vector2(0f, 10f), 45f);
             CreateIconPart("OilDropBody", oil.transform, OilHudColor,
@@ -672,26 +680,27 @@ namespace Presentation
             CreateIconPart("OilPuddle", oil.transform, Color.white,
                 new Vector2(38f, 6f), new Vector2(0f, -18f), 0f);
 
-            TextMeshProUGUI slotLabel = CreateText("WeaponName", root.transform, 16f, EmptyHudColor,
+            TextMeshProUGUI slotLabel = CreateText("WeaponName", root.transform, compact ? 12f : 16f, EmptyHudColor,
                 TextAlignmentOptions.Center, FontStyles.Bold);
             slotLabel.textWrappingMode = TextWrappingModes.NoWrap;
             RectTransform labelRect = slotLabel.rectTransform;
             labelRect.anchorMin = new Vector2(0f, 0f);
             labelRect.anchorMax = new Vector2(1f, 0f);
             labelRect.pivot = new Vector2(.5f, 0f);
-            labelRect.anchoredPosition = new Vector2(0f, 4f);
-            labelRect.sizeDelta = new Vector2(-4f, 20f);
+            labelRect.anchoredPosition = new Vector2(0f, compact ? 2f : 4f);
+            labelRect.sizeDelta = new Vector2(-4f, compact ? 16f : 20f);
 
             return new WeaponHudIdentity { BoltIcon = bolt, OilIcon = oil, Label = slotLabel };
         }
 
-        private static void ConfigureIconRoot(RectTransform rect)
+        private static void ConfigureIconRoot(RectTransform rect, bool compact)
         {
             rect.anchorMin = new Vector2(.5f, 1f);
             rect.anchorMax = new Vector2(.5f, 1f);
             rect.pivot = new Vector2(.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -4f);
+            rect.anchoredPosition = new Vector2(0f, compact ? -1f : -4f);
             rect.sizeDelta = new Vector2(56f, 58f);
+            rect.localScale = compact ? Vector3.one * .72f : Vector3.one;
         }
 
         private static void CreateIconPart(string name, Transform parent, Color color,

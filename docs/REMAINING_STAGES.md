@@ -4,7 +4,7 @@ Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
 non-capture PlayMode gate. Stage 9B corrections are independently verified and
 the consolidated suite passes 85/85; screenshot, profiling, listening, and
 player-build evidence remain before Stage 9C. The first screenshot audit is a
-conditional pass with two remaining P2 gates documented in
+conditional pass with one remaining P2 gate documented in
 `docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`.
 
 ## How much remains
@@ -85,9 +85,13 @@ conditional pass with two remaining P2 gates documented in
    - The first seven-state screenshot audit found no P1s. A verified setup
      capture exposed clipped AI/style/control information; the bounded correction
      now passes its focused capture 1/1 and an independent visual audit closes the
-     Setup P2 at 3840×2160. Four-player HUD/identity readability and near-camera
-     combat/pickup obstruction remain the two P2 gates. Resolve and independently
-     re-audit them before accepting the visual freeze.
+     Setup P2 at 3840×2160. The four-player HUD/identity P2 is also closed with
+     compact quadrant badges, persistent P-number text, and collider-disabled
+     geometric roof digits; focused execution passed 17/17 and fresh Clean 3D,
+     Ink Lite, and Full Ink captures are healthy. Investigation proved the prior
+     Ink Lite clipping was stale Editor screenshot readback rather than a runtime
+     HUD defect. Near-camera combat/pickup obstruction is the sole remaining P2.
+     Resolve it before the consolidated Stage 9 visual freeze audit.
    - This becomes a local baseline gate before track/online work; final
      integrated acceptance occurs after Stage 10.
 

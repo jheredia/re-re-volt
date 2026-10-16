@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Core;
 using UnityEngine;
 
 namespace Vehicle
@@ -212,6 +213,59 @@ namespace Vehicle
             GameObject pivot = new GameObject("PresentationVisualPivot");
             pivot.transform.SetParent(vehicleRoot, false);
             return pivot.transform;
+        }
+
+        /// <summary>
+        /// Adds a presentation-only, high-contrast roof digit for a stable local-player slot.
+        /// It deliberately sits outside <see cref="VehicleFamilyVisual.SourceRenderers"/>, so changing family
+        /// replaces only the silhouette while the player's non-color identity remains attached to the visual pivot.
+        /// </summary>
+        public static Transform CreatePlayerIdentityMarker(GameObject vehicle, int playerIndex)
+        {
+            if (vehicle == null) throw new ArgumentNullException(nameof(vehicle));
+            if (playerIndex < 0 || playerIndex >= LocalPlayerRules.MaximumPlayers)
+                throw new ArgumentOutOfRangeException(nameof(playerIndex));
+
+            VehicleFamilyVisual family = vehicle.GetComponent<VehicleFamilyVisual>();
+            Transform parent = family != null && family.PresentationPivot != null
+                ? family.PresentationPivot
+                : vehicle.transform.Find("PresentationVisualPivot") ?? vehicle.transform;
+            string markerName = $"PlayerIdentityMarker_P{playerIndex + 1}";
+            Transform existing = parent.Find(markerName);
+            if (existing != null) return existing;
+
+            GameObject marker = new GameObject(markerName);
+            marker.transform.SetParent(parent, false);
+            marker.transform.localPosition = new Vector3(0f, .66f, -.04f);
+
+            CreatePart(marker.transform, "IdentityPlate", PrimitiveType.Cube, Vector3.zero,
+                new Vector3(.58f, .025f, .72f), Vector3.zero, new Color(.018f, .022f, .025f));
+
+            // Seven-segment digits remain recognizable in grayscale and do not rely on player paint colors.
+            bool[] segments = playerIndex switch
+            {
+                0 => new[] { false, true, true, false, false, false, false },
+                1 => new[] { true, true, false, true, true, false, true },
+                2 => new[] { true, true, true, true, false, false, true },
+                _ => new[] { false, true, true, false, false, true, true }
+            };
+            Color markColor = new Color(.98f, .96f, .82f);
+            if (segments[0]) CreateIdentitySegment(marker.transform, "DigitTop", true, 0f, .24f, markColor);
+            if (segments[1]) CreateIdentitySegment(marker.transform, "DigitUpperRight", false, .18f, .12f, markColor);
+            if (segments[2]) CreateIdentitySegment(marker.transform, "DigitLowerRight", false, .18f, -.12f, markColor);
+            if (segments[3]) CreateIdentitySegment(marker.transform, "DigitBottom", true, 0f, -.24f, markColor);
+            if (segments[4]) CreateIdentitySegment(marker.transform, "DigitLowerLeft", false, -.18f, -.12f, markColor);
+            if (segments[5]) CreateIdentitySegment(marker.transform, "DigitUpperLeft", false, -.18f, .12f, markColor);
+            if (segments[6]) CreateIdentitySegment(marker.transform, "DigitMiddle", true, 0f, 0f, markColor);
+            return marker.transform;
+        }
+
+        private static void CreateIdentitySegment(Transform parent, string name, bool horizontal,
+            float x, float z, Color color)
+        {
+            CreatePart(parent, name, PrimitiveType.Cube, new Vector3(x, .03f, z),
+                horizontal ? new Vector3(.28f, .02f, .065f) : new Vector3(.065f, .02f, .25f),
+                Vector3.zero, color);
         }
 
         private static void CreateSilhouette(Transform parent, VehicleFamilyId familyId,
