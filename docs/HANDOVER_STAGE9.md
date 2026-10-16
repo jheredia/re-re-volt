@@ -742,3 +742,36 @@ bootstrap composition/idempotence check passes 1/1. Evidence is preserved at
 `/private/tmp/stage9c-track-bootstrap-playmode.xml`. Broad tests, the full
 four-track matrix, screenshots, profiling/listening, and player builds remain
 deferred to the consolidated Stage 9 boundary audit.
+
+## Accepted checkpoint — Stage 9C four-track content roster
+
+The production catalog now contains four genuine fixed circuits. The accepted
+workshop remains unchanged. Three explicit-data layouts share only repetitive
+road, checkpoint, renderer-registration, and disposal mechanics:
+
+- `sunset-patio-sweep`: a wide, fast 11-checkpoint patio loop with long arcs;
+- `market-aisle-dash`: a technical 11-checkpoint switchback/storage circuit;
+- `club-bridge-exhibition`: a flowing 12-checkpoint S-bend circuit with a
+  gentle elevated display bridge and no self-crossing.
+
+Each new runtime supplies a four-place grid, ordered checkpoints with recovery
+anchors, a marked drivable surface, exactly four supported pickup positions,
+non-colliding toy-scale dressing, visual-style registration, and owned cleanup.
+The self-owning new runtimes clear their root during disposal; the bootstrap
+retains its fallback destruction path for the legacy workshop runtime without
+double-destroying either ownership model.
+
+Focused Unity 6000.6.0f1 evidence is green: compilation passes;
+`TrackSelectionContractTests` pass 6/6; and the all-track roster/rebind smoke
+passes 1/1. The smoke builds and switches all four tracks, accepts zero through
+three selected bots on each, creates and releases a three-bot roster without
+local slots, devices, cameras, or HUDs, and advances one authoritative ordered
+lap per track. Evidence is under `/private/tmp/stage9c-authored-tracks/`; the
+lifecycle compile log is
+`/private/tmp/stage9c-authored-tracks-lifecycle-compile.log`.
+
+Stage 9 implementation is now complete. The consolidated stage-end audit must
+still prove autonomous AI completion on the three new layouts, real recovery and
+combat placement, bridge/corner drivability, one-to-four-player and all-style
+readability, performance/audio behavior, full test health, and macOS/Web player
+build evidence before Stage 9 closes.

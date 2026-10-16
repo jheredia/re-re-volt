@@ -54,6 +54,9 @@ namespace Presentation
     public static class TrackCatalog
     {
         public const string WorkshopCircuitId = "rc-club-workshop";
+        public const string PatioSweepId = "sunset-patio-sweep";
+        public const string MarketAislesId = "market-aisle-dash";
+        public const string BridgeExhibitionId = "club-bridge-exhibition";
 
         private static readonly TrackDefinition[] entries =
         {
@@ -61,7 +64,19 @@ namespace Presentation
                 "BALANCED FOUR-CORNER CLUB CIRCUIT",
                 "CUTTING-MAT ROAD / WORKSHOP SCALE / 8 CHECKPOINTS",
                 3, PrototypeCircuitBuilder.OrderedCheckpointCount,
-                (race, parent, visualStyle) => PrototypeCircuitBuilder.Build(race, parent, visualStyle))
+                (race, parent, visualStyle) => PrototypeCircuitBuilder.Build(race, parent, visualStyle)),
+            new(PatioSweepId, "SUNSET PATIO SWEEP",
+                "FAST, WIDE SWEEPS AROUND A CLUB PATIO",
+                "TERRACOTTA PATIO / LONG ARCS / 11 CHECKPOINTS",
+                3, 11, Stage9CAuthoredTrackBuilder.BuildPatioSweep),
+            new(MarketAislesId, "MARKET AISLE DASH",
+                "TECHNICAL STOP-AND-TURN STORAGE AISLES",
+                "CARDBOARD LANES / SWITCHBACKS / 11 CHECKPOINTS",
+                3, 11, Stage9CAuthoredTrackBuilder.BuildMarketAisles),
+            new(BridgeExhibitionId, "CLUB BRIDGE EXHIBITION",
+                "FLOWING S-BENDS WITH A LOW SHOW BRIDGE",
+                "METAL DECK / GENTLE ELEVATION / 12 CHECKPOINTS",
+                3, 12, Stage9CAuthoredTrackBuilder.BuildBridgeExhibition)
         };
 
         public static IReadOnlyList<TrackDefinition> Entries => entries;

@@ -3,9 +3,10 @@
 Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
 non-capture PlayMode gate. Stage 9B corrections are reconciled and the
 consolidated suite passes 85/85. Setup, four-player HUD/non-color identity, and
-near-camera obstruction implementation findings are closed. Under the current
-implementation-first cadence, Stage 9C track work proceeds before one
-consolidated Stage 9 screenshot, profile/listening, test, and player-build audit.
+near-camera obstruction implementation findings are closed. The Stage 9C
+selection contract and four-track content roster are implemented. One
+consolidated Stage 9 test, all-track AI/recovery/combat, screenshot,
+profile/listening, and player-build audit is now the remaining Stage 9 gate.
 
 ## How much remains
 
@@ -99,9 +100,8 @@ consolidated Stage 9 screenshot, profile/listening, test, and player-build audit
      acceptance occurs after Stage 10.
 
 5. **Stage 9C — Four-track roster and selection menu**
-   - The stable selection/session/runtime contract is accepted. Production
-     currently exposes only the genuine `rc-club-workshop` track; no placeholder
-     duplicates were added.
+   - The stable selection/session/runtime contract and all four genuine fixed
+     tracks are implemented; no placeholder duplicates were added.
    - Keep the existing circuit as Track 1 and author three distinct original,
      fixed, learnable tracks.
    - Add a controller/keyboard pre-race selector with preview, lap count, saved
@@ -150,11 +150,10 @@ consolidated Stage 9 screenshot, profile/listening, test, and player-build audit
 
 ## Current implementation boundary
 
-The Stage 9C selection/session contract is accepted with one genuine production
-entry and focused Unity evidence green. The immediate implementation boundary is
-three distinct authored fixed-track builders plus catalog registration and
-all-track AI/recovery/combat support. After that content is complete, one
-consolidated Stage 9 audit covers compilation, full tests, the style/split-screen
-capture matrix, profiling/listening, and macOS/Web build evidence. Stage 10
-online architecture and implementation begin only after that gate. The deferred
-P3 runtime and performance risks remain recorded in `docs/HANDOVER_STAGE9.md`.
+Stage 9 implementation is complete: the selection/runtime contract and four
+genuine fixed tracks are present with focused contract/rebind/roster smoke
+evidence green. The immediate boundary is one consolidated Stage 9 audit covering
+compilation, full tests, autonomous AI and recovery/combat across every track,
+the style/split-screen capture matrix, profiling/listening, and macOS/Web build
+evidence. Stage 10 online architecture begins only after that gate. Deferred P3
+runtime and performance risks remain recorded in `docs/HANDOVER_STAGE9.md`.

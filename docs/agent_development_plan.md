@@ -448,10 +448,12 @@ The selection/runtime contract is now accepted. `TrackSession` owns the stable
 selected ID, `Stage3Bootstrap` owns construction and transactional rebinding via
 `ITrackRuntime`, preferences persist only available catalog IDs, and paired
 roster-owned Setup commands cannot start unavailable content. Production still
-contains only the genuine workshop circuit. The next bounded content deliverable
-must add three distinct authored builders and their catalog definitions without
-redesigning this authority seam; broad audit and validation remain deferred until
-all Stage 9C implementation is complete.
+contains the accepted workshop plus three distinct authored circuits: a wide
+patio sweep, technical market aisles, and a gentle elevated bridge exhibition.
+Focused contracts and an all-track roster/rebind smoke are green. Stage 9
+implementation is complete; one consolidated audit now owns full test, autonomous
+AI/recovery/combat, visual/readability, performance/audio, and macOS/Web build
+acceptance before online architecture begins.
 
 ### Stage 10 — Online multiplayer
 

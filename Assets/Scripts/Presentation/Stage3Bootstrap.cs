@@ -198,7 +198,9 @@ namespace Presentation
             GameObject root = runtime.Root;
             if (root != null) root.SetActive(false);
             runtime.Dispose();
-            if (root == null) return;
+            // New track runtimes may own and clear their root during Dispose. The accepted workshop runtime
+            // leaves root destruction to this composition boundary, so preserve that fallback without double-destroying.
+            if (runtime.Root == null || root == null) return;
             if (Application.isPlaying) Destroy(root);
             else DestroyImmediate(root);
         }
