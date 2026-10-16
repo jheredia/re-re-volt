@@ -71,6 +71,28 @@ namespace Tests.EditMode
             Assert.That(reader.RecoveryMessage, Is.Empty);
         }
 
+        [Test]
+        public void AvailableTrackIdentityRoundTripsAndUnknownIdentityFallsBackSafely()
+        {
+            MemoryStore store = new();
+            DemoFlowPreferences writer = new(store);
+            Assert.That(writer.SetVisualStyle(VisualStyleMode.InkLite), Is.True);
+            Assert.That(store.ReadRaw(), Does.Contain($"\"trackId\":\"{TrackCatalog.WorkshopCircuitId}\""));
+
+            DemoFlowPreferences reader = new(store);
+            reader.Load();
+            Assert.That(reader.TrackId, Is.EqualTo(TrackCatalog.WorkshopCircuitId));
+
+            store.Seed("{\"version\":4,\"visualStyle\":0,\"handlingModels\":[0,0,0,0]," +
+                       "\"vehicleFamilies\":[0,0,0,0],\"cameraMotion\":2,\"vehicleMotion\":2," +
+                       "\"hasPresentationResponseSettings\":true,\"vfxDensity\":2," +
+                       "\"hasVfxDensitySetting\":true,\"trackId\":\"removed-track\"}");
+            DemoFlowPreferences repaired = new(store);
+            repaired.Load();
+            Assert.That(repaired.TrackId, Is.EqualTo(TrackCatalog.WorkshopCircuitId));
+            Assert.That(repaired.RecoveryMessage, Does.Contain("SAFE DEFAULTS"));
+        }
+
         [TestCase("{ definitely-not-json")]
         [TestCase("{\"version\":99,\"visualStyle\":2}")]
         public void CorruptOrUnknownPayloadKeepsRawDataAndFallsBackSafely(string raw)
@@ -249,6 +271,7 @@ namespace Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetPresentationResponseLevels(
                 (PresentationResponseLevel)99, PresentationResponseLevel.Full));
             Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetVfxDensity((VfxDensityLevel)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => preferences.SetTrackId("not-in-catalog"));
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Core;
 using UnityEngine;
 
@@ -39,8 +40,15 @@ namespace Presentation
             new(new Vector3(8f, .2f, -15f), Quaternion.Euler(0f, 270f, 0f)),
             new(new Vector3(-8f, .2f, -15f), Quaternion.Euler(0f, 270f, 0f))
         };
+        private static readonly Vector3[] PickupPositions =
+        {
+            new(-13.3f, .95f, 3f),
+            new(0f, .95f, 16.7f),
+            new(13.3f, .95f, 0f),
+            new(0f, .95f, -13.3f)
+        };
 
-        public sealed class Result : IDisposable
+        public sealed class Result : ITrackRuntime
         {
             private readonly VisualStyleController visualStyle;
             private readonly Renderer[] renderers;
@@ -72,6 +80,7 @@ namespace Presentation
             public Transform[] Grid { get; }
             public RaceCheckpoint[] Checkpoints { get; }
             public LayerMask DrivableMask => 1 << DrivableLayer;
+            public IReadOnlyList<Vector3> PickupPositions => PrototypeCircuitBuilder.PickupPositions;
             public GameObject VenueRoot { get; }
             public int VenueRendererCount { get; }
             public int VenueOutlineEligibleRendererCount { get; }
@@ -183,6 +192,12 @@ namespace Presentation
         {
             if (index < 0 || index >= CheckpointPoses.Length) throw new ArgumentOutOfRangeException(nameof(index));
             return CheckpointPoses[index];
+        }
+
+        public static Vector3 GetPickupPosition(int index)
+        {
+            if (index < 0 || index >= PickupPositions.Length) throw new ArgumentOutOfRangeException(nameof(index));
+            return PickupPositions[index];
         }
 
         private static void CreateRoad(Transform parent, Material road)

@@ -103,14 +103,20 @@ namespace Weapons
         private Material darkOilMaterial;
 
         // Runtime triggers only, between checkpoints and clear of their recovery search lanes.
-        public static Vector3 GetPickupPosition(int index) => index switch
+        public static Vector3 GetPickupPosition(int index) => PrototypeCircuitBuilder.GetPickupPosition(index);
+
+        /// <summary>Moves combat pickups and surface probes to the selected idle-session track.</summary>
+        public bool TryReconfigureTrack(LayerMask groundMask, IReadOnlyList<Vector3> pickupPositions)
         {
-            0 => new Vector3(-13.3f, .95f, 3f),
-            1 => new Vector3(0f, .95f, 16.7f),
-            2 => new Vector3(13.3f, .95f, 0f),
-            3 => new Vector3(0f, .95f, -13.3f),
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
+            if (!configured || race == null || race.CurrentState != RaceManager.RaceState.Idle ||
+                pickupPositions == null || pickupPositions.Count != spawners.Count)
+                return false;
+            ClearAllWeapons();
+            drivableMask = groundMask;
+            for (int i = 0; i < spawners.Count; i++)
+                if (spawners[i] != null) spawners[i].transform.position = pickupPositions[i];
+            return true;
+        }
 
         public void Configure(RaceManager raceManager, VehicleManager roster,
             Stage3RacePresentation hud, LayerMask groundMask, VisualStyleController visualStyleController = null)

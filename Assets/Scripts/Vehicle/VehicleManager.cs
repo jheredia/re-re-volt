@@ -74,6 +74,20 @@ namespace Vehicle
             return true;
         }
 
+        /// <summary>Moves the existing local roster onto a newly selected idle-session track.</summary>
+        public bool TryReconfigureTrack(Transform[] grid, LayerMask groundMask)
+        {
+            if (raceManager == null || raceManager.CurrentState != RaceManager.RaceState.Idle ||
+                grid == null || grid.Length < LocalPlayerRules.MaximumPlayers)
+                return false;
+            for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
+                if (grid[i] == null) return false;
+            spawnPoints = (Transform[])grid.Clone();
+            for (int i = 0; i < players.Count; i++) players[i].Recovery.ConfigureGroundMask(groundMask);
+            ResetPlayersToGrid();
+            return true;
+        }
+
         private void Subscribe()
         {
             if (raceManager == null || subscribed) return;

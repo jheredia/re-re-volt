@@ -705,3 +705,40 @@ smallest audio slice and were not added without an accepted event requirement.
 - `docs/REMAINING_STAGES.md`
 - `docs/agent_development_plan.md`
 - `docs/HANDOVER_STAGE9.md`
+
+## Accepted checkpoint — Stage 9C track-selection contract
+
+The first Stage 9C slice establishes explicit track identity without pretending
+that unfinished content exists. `TrackDefinition` carries a stable ID, menu
+metadata, lap/checkpoint contract, availability, and a builder. `TrackSession`
+owns the selected ID and start eligibility, while `Stage3Bootstrap` remains the
+only runtime composition authority through `ITrackRuntime`. The production
+catalog still contains exactly one available entry, `rc-club-workshop`, backed
+by the unchanged accepted workshop circuit. The next content slice will add
+three genuinely distinct builders rather than aliases of that circuit.
+
+Setup selection is restricted to paired roster-owned keyboard/controller
+devices and does not modify the protected `InputHandler`. Unavailable catalog
+entries can be previewed but cannot start a race or become the persisted choice.
+Preferences are versioned to v4, accept only available catalog IDs, and fall
+back to the first available track for missing, removed, unavailable, or corrupt
+IDs. Rematch retains the active track; returning to Setup permits another
+selection.
+
+Changing an available track while idle builds and validates a candidate runtime
+before rebinding race rules, the local roster and recovery masks, AI guidance,
+combat pickup positions, and audio surface probing. Failure restores the prior
+runtime bindings. The old runtime is released only after the complete handoff,
+including visual-style unregistration and owned material/root cleanup. Race,
+input, vehicle, combat, checkpoint, and recovery authority remain with their
+existing owners.
+
+Focused Unity evidence is green: compilation has no C# errors; the track and
+preference EditMode selection passes 19/19; paired-device menu, unavailable
+start-lock, rematch, and lobby-return behavior pass 2/2; and the existing
+bootstrap composition/idempotence check passes 1/1. Evidence is preserved at
+`/private/tmp/stage9c-track-editmode.xml`,
+`/private/tmp/stage9c-track-playmode.xml`, and
+`/private/tmp/stage9c-track-bootstrap-playmode.xml`. Broad tests, the full
+four-track matrix, screenshots, profiling/listening, and player builds remain
+deferred to the consolidated Stage 9 boundary audit.

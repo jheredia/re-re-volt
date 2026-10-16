@@ -99,6 +99,9 @@ consolidated Stage 9 screenshot, profile/listening, test, and player-build audit
      acceptance occurs after Stage 10.
 
 5. **Stage 9C — Four-track roster and selection menu**
+   - The stable selection/session/runtime contract is accepted. Production
+     currently exposes only the genuine `rc-club-workshop` track; no placeholder
+     duplicates were added.
    - Keep the existing circuit as Track 1 and author three distinct original,
      fixed, learnable tracks.
    - Add a controller/keyboard pre-race selector with preview, lap count, saved
@@ -147,20 +150,11 @@ consolidated Stage 9 screenshot, profile/listening, test, and player-build audit
 
 ## Current implementation boundary
 
-The bounded Stage 9B audio slice is accepted at `b1eadd2` with no remaining P1/P2
-findings. The independent accessibility/performance static audit's two P2s are
-corrected: all visual-child displacement respects Vehicle Motion, and the manual
-pause modal uses existing Confirm to cycle the selected saved Off/Reduced/Full
-setting and advance to the next row in one press. Fire stays suppressed during
-pause. Back shares Escape with Pause on keyboard, so it retains
-its existing behavior. Independent static re-verification found no remaining P1/P2.
-The intended order is Stage 9B audit → consolidated local baseline → Stage 9C
-tracks → Stage 10 online → final integrated acceptance. Broad Unity tests,
-builds, profiling, and screenshot matrices remain deferred to the local baseline.
-The exact deferred P3 runtime matrix and unmeasured performance risks are retained
-in `docs/HANDOVER_STAGE9.md`: camera lifecycle/routing/bounds, VFX real-event
-pool/cleanup/reference checks, four-recipient audio/probes/readability, the
-style/view/level matrix, and CPU/GPU/GC/material/source/listener counts with
-unchanged mechanics when feedback is Off. Grayscale/player-family identity is
-possible P3 only.
-Pause-footer fit at supported resolutions is also a deferred P3 screenshot check.
+The Stage 9C selection/session contract is accepted with one genuine production
+entry and focused Unity evidence green. The immediate implementation boundary is
+three distinct authored fixed-track builders plus catalog registration and
+all-track AI/recovery/combat support. After that content is complete, one
+consolidated Stage 9 audit covers compilation, full tests, the style/split-screen
+capture matrix, profiling/listening, and macOS/Web build evidence. Stage 10
+online architecture and implementation begin only after that gate. The deferred
+P3 runtime and performance risks remain recorded in `docs/HANDOVER_STAGE9.md`.

@@ -73,6 +73,9 @@ namespace Presentation
         private DriverPortraitAtlas portraitAtlas;
         private DemoFlowPreferences preferences;
         private Stage9BVfxPresentation vfxPresentation;
+        private TrackSession tracks;
+        private Func<int, bool> trackSelectionCommand;
+        private string trackSelectionMessage;
         private bool applyingPreferences;
 
         public int HudCount => hudLabels.Count;
@@ -95,6 +98,8 @@ namespace Presentation
         public PresentationResponseLevel CameraMotionSetting => preferences?.CameraMotion ?? PresentationResponseLevel.Full;
         public PresentationResponseLevel VehicleMotionSetting => preferences?.VehicleMotion ?? PresentationResponseLevel.Full;
         public VfxDensityLevel VfxDensitySetting => preferences?.VfxDensity ?? VfxDensityLevel.Full;
+        public string SelectedTrackId => tracks?.SelectedTrackId ?? string.Empty;
+        public bool SelectedTrackAvailable => tracks == null || tracks.CanStart;
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -107,7 +112,8 @@ namespace Presentation
 
         public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
             VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null,
-            DemoFlowPreferences preferenceSource = null, AIManager aiManager = null)
+            DemoFlowPreferences preferenceSource = null, AIManager aiManager = null,
+            TrackSession trackSession = null, Func<int, bool> selectTrackCommand = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -119,6 +125,8 @@ namespace Presentation
             ai = aiManager;
             portraitAtlas = portraitAtlasSource;
             preferences = preferenceSource;
+            tracks = trackSession;
+            trackSelectionCommand = selectTrackCommand;
             ApplySavedVisualStyle();
             ApplyPresentationResponseSettings();
             BuildInterface();
@@ -229,6 +237,7 @@ namespace Presentation
             if (!configured) return;
 
             ReadPausedSettingsInput();
+            ReadTrackSelectionInput();
 
             if (countdownHideAt > 0f && Time.unscaledTime >= countdownHideAt)
             {
@@ -242,6 +251,28 @@ namespace Presentation
                 RefreshHudText();
             }
 
+        }
+
+        private void ReadTrackSelectionInput()
+        {
+            if (race.CurrentState != RaceManager.RaceState.Idle || tracks == null ||
+                trackSelectionCommand == null || vehicles.Players.Count == 0 || AnyPlayerDisconnected())
+                return;
+            for (int i = 0; i < vehicles.Players.Count; i++)
+            {
+                LocalPlayer player = vehicles.Players[i];
+                if (player == null || !player.IsConnected || player.Input == null) continue;
+                InputDevice device = player.Input.PairedDevice;
+                bool pressed = device is Keyboard keyboard && keyboard.spaceKey.wasPressedThisFrame ||
+                               device is Gamepad pad && pad.buttonWest.wasPressedThisFrame;
+                if (!pressed) continue;
+                trackSelectionMessage = trackSelectionCommand(1)
+                    ? string.Empty
+                    : "TRACK CHANGE COULD NOT BE APPLIED — CURRENT TRACK IS ACTIVE";
+                if (tracks.CanStart && preferences != null) preferences.SetTrackId(tracks.SelectedTrackId);
+                RefreshLobbyText();
+                return;
+            }
         }
 
         private void OnConfirmRequested(LocalPlayer player)
@@ -343,6 +374,12 @@ namespace Presentation
         private void StartRaceFromLobby()
         {
             if (vehicles.Players.Count == 0 || AnyPlayerDisconnected()) return;
+            if (tracks != null && !tracks.CanStart)
+            {
+                trackSelectionMessage = "SELECTED TRACK IS NOT AVAILABLE — CHOOSE AN AVAILABLE TRACK";
+                RefreshLobbyText();
+                return;
+            }
             if (ai != null && !ai.PrepareRaceRoster())
             {
                 RefreshLobbyText();
@@ -734,8 +771,8 @@ namespace Presentation
                 CurrentPage = titlePage ? DemoFlowPage.Title : DemoFlowPage.Setup;
             lobbyTitle.text = titlePage ? "AFTER-HOURS RC CLUB" : "SET UP YOUR TEST RUN";
             lobbySubtitle.text = titlePage
-                ? "WORKBENCH CIRCUIT  /  1–4 LOCAL DRIVERS"
-                : "CHOOSE EACH DRIVER'S CAR AND HANDLING  /  3 LAPS";
+                ? $"{(tracks?.SelectedTrack.DisplayName ?? "WORKBENCH CIRCUIT")}  /  1–4 LOCAL DRIVERS"
+                : $"CHOOSE CAR, HANDLING, AND TRACK  /  {(tracks?.SelectedTrack.LapCount ?? race.TotalLaps)} LAPS";
             StringBuilder builder = new StringBuilder(240);
             if (!string.IsNullOrEmpty(PreferenceRecoveryMessage))
                 builder.Append("NOTICE: ").AppendLine(PreferenceRecoveryMessage).AppendLine();
@@ -762,9 +799,22 @@ namespace Presentation
                         .Append(GetVehicleFamilyLabel(player)).Append("   ")
                         .Append(persona.Callsign).AppendLine();
                 }
-                builder.AppendLine();
+                if (tracks != null)
+                {
+                    TrackDefinition selected = tracks.SelectedTrack;
+                    builder.Append("TRACK  ").Append(selected.DisplayName).Append("  [")
+                        .Append(selected.IsAvailable ? "AVAILABLE" : "UNAVAILABLE").Append("]  ")
+                        .Append(selected.LapCount).Append(" LAPS  /  ").Append(selected.FlowDescription)
+                        .AppendLine("  [SPACE / X-SQUARE]");
+                    if (!string.IsNullOrEmpty(trackSelectionMessage))
+                        builder.Append("NOTICE: ").AppendLine(trackSelectionMessage);
+                }
+                else builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
-                else builder.Append("ENTER / A / CROSS   START 3-LAP RACE");
+                else if (tracks == null || tracks.CanStart)
+                    builder.Append("ENTER / A / CROSS   START ")
+                        .Append(tracks?.SelectedTrack.LapCount ?? race.TotalLaps).Append("-LAP RACE");
+                else builder.Append("START LOCKED — TRACK UNAVAILABLE");
                 if (ai != null)
                 {
                     builder.AppendLine().Append("AI TEST CARS  ").Append(ai.SelectedBotCount)

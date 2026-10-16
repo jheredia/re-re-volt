@@ -118,6 +118,11 @@ namespace AudioPresentation
             }
         }
 
+        public void SetTrackSurfaceMask(LayerMask drivableMask)
+        {
+            surfaceMask = drivableMask;
+        }
+
         private void BuildSources()
         {
             audioRoot = new GameObject("Stage8_RuntimeAudio");

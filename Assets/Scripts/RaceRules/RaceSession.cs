@@ -97,8 +97,8 @@ namespace Core
             standingsView = standings.AsReadOnly();
         }
 
-        public int TotalLaps { get; }
-        public int CheckpointCount { get; }
+        public int TotalLaps { get; private set; }
+        public int CheckpointCount { get; private set; }
         public int RacerCount => registrationOrder.Count;
         public float ElapsedTime { get; private set; }
         public RacePhase Phase { get; private set; } = RacePhase.Idle;
@@ -136,6 +136,16 @@ namespace Core
             racersById.Add(racerId, racer);
             standings.Add(racer);
             UpdateStandings();
+            return true;
+        }
+
+        /// <summary>Changes idle track rules without replacing registered racer identities.</summary>
+        public bool TryReconfigure(int totalLaps, int checkpointCount)
+        {
+            if (Phase != RacePhase.Idle || totalLaps < 1 || checkpointCount < 1) return false;
+            TotalLaps = totalLaps;
+            CheckpointCount = checkpointCount;
+            Reset();
             return true;
         }
 

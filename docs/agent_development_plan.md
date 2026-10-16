@@ -444,6 +444,15 @@ can synchronize the same choice online. Use separate bounded agents for the
 selection/runtime contract, authored track content, and an independent race,
 AI, recovery, readability, and performance audit.
 
+The selection/runtime contract is now accepted. `TrackSession` owns the stable
+selected ID, `Stage3Bootstrap` owns construction and transactional rebinding via
+`ITrackRuntime`, preferences persist only available catalog IDs, and paired
+roster-owned Setup commands cannot start unavailable content. Production still
+contains only the genuine workshop circuit. The next bounded content deliverable
+must add three distinct authored builders and their catalog definitions without
+redesigning this authority seam; broad audit and validation remain deferred until
+all Stage 9C implementation is complete.
+
 ### Stage 10 — Online multiplayer
 
 Online multiplayer is now a prototype acceptance requirement so the build can

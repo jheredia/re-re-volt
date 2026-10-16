@@ -21,7 +21,8 @@ namespace Presentation
             new(.3f, .86f, .4f)
         };
 
-        private PrototypeCircuitBuilder.Result circuit;
+        private ITrackRuntime circuit;
+        private string activeTrackId;
         private bool initialized;
 
         public RaceManager RaceManager { get; private set; }
@@ -34,6 +35,7 @@ namespace Presentation
         public Stage9BVfxPresentation VfxPresentation { get; private set; }
         public VisualStyleController VisualStyle { get; private set; }
         public DemoFlowPreferences DemoPreferences { get; private set; }
+        public TrackSession TrackSession { get; private set; }
         public GameObject CircuitRoot => circuit?.Root;
         public Transform[] Grid => circuit?.Grid;
         public RaceCheckpoint[] Checkpoints => circuit?.Checkpoints;
@@ -70,13 +72,19 @@ namespace Presentation
             if (VehicleManager == null) VehicleManager = CreateChild<VehicleManager>("VehicleManager");
             Camera lobbyCamera = PrepareLobbyCamera();
 
-            if (!RaceManager.ConfigureRace(3, PrototypeCircuitBuilder.OrderedCheckpointCount))
+            DemoPreferences = new DemoFlowPreferences(new PlayerPrefsLocalPreferenceStore());
+            DemoPreferences.Load();
+            TrackSession = new TrackSession(TrackCatalog.Entries, DemoPreferences.TrackId);
+            TrackDefinition selectedTrack = TrackSession.SelectedTrack;
+
+            if (!RaceManager.ConfigureRace(selectedTrack.LapCount, selectedTrack.OrderedCheckpointCount))
             {
                 Debug.LogError("[Stage3] RaceManager must be idle and empty before the circuit is composed.", this);
                 return false;
             }
 
-            circuit = PrototypeCircuitBuilder.Build(RaceManager, transform, VisualStyle);
+            circuit = TrackSession.BuildSelected(RaceManager, transform, VisualStyle);
+            activeTrackId = selectedTrack.Id;
             if (!VehicleManager.Configure(RaceManager, circuit.Grid, null, lobbyCamera, VisualStyle))
             {
                 Debug.LogError("[Stage3] VehicleManager could not accept the generated four-place grid.", this);
@@ -85,8 +93,6 @@ namespace Presentation
 
             VehicleManager.PlayerJoined += ConfigureJoinedPlayer;
             VehicleManager.VehicleFamilyChanged += ApplyPlayerColor;
-            DemoPreferences = new DemoFlowPreferences(new PlayerPrefsLocalPreferenceStore());
-            DemoPreferences.Load();
             AIManager = FindAnyObjectByType<AIManager>();
             if (AIManager == null) AIManager = CreateChild<AIManager>("AIManager");
             if (!AIManager.Configure(RaceManager, VehicleManager, circuit.Grid, circuit.Checkpoints,
@@ -97,10 +103,11 @@ namespace Presentation
             }
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
             Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime,
-                DemoPreferences, AIManager);
+                DemoPreferences, AIManager, TrackSession, TryCycleTrack);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
+            WeaponManager.TryReconfigureTrack(circuit.DrivableMask, circuit.PickupPositions);
             VfxPresentation = gameObject.AddComponent<Stage9BVfxPresentation>();
             VfxPresentation.Configure(RaceManager, VehicleManager, AIManager, WeaponManager, VisualStyle,
                 DemoPreferences.VfxDensity);
@@ -114,6 +121,86 @@ namespace Presentation
             initialized = true;
             Debug.Log("[Stage3] Craft-room circuit and controller-first race presentation are ready.", this);
             return true;
+        }
+
+        /// <summary>Roster-owned setup command; unavailable previews remain selected but can never start.</summary>
+        public bool TryCycleTrack(int direction)
+        {
+            if (!initialized || RaceManager.CurrentState != RaceManager.RaceState.Idle || direction == 0) return false;
+            string previousSelection = TrackSession.SelectedTrackId;
+            if (!TrackSession.TryCycle(direction)) return false;
+            if (!TrackSession.CanStart) return true;
+            if (string.Equals(activeTrackId, TrackSession.SelectedTrackId, System.StringComparison.Ordinal))
+            {
+                DemoPreferences.SetTrackId(TrackSession.SelectedTrackId);
+                return true;
+            }
+            if (TryActivateSelectedTrack()) return true;
+            TrackSession.TrySelect(previousSelection);
+            return false;
+        }
+
+        private bool TryActivateSelectedTrack()
+        {
+            TrackDefinition selected = TrackSession.SelectedTrack;
+            ITrackRuntime candidate = null;
+            try
+            {
+                candidate = TrackSession.BuildSelected(RaceManager, transform, VisualStyle);
+                if (!IsValidRuntime(candidate, selected)) throw new System.InvalidOperationException("Track runtime contract is incomplete.");
+                TrackDefinition previous = TrackCatalog.TryGet(activeTrackId, out TrackDefinition known)
+                    ? known
+                    : TrackCatalog.Default;
+                if (!RaceManager.TryReconfigureIdleRace(selected.LapCount, selected.OrderedCheckpointCount) ||
+                    !VehicleManager.TryReconfigureTrack(candidate.Grid, candidate.DrivableMask) ||
+                    !AIManager.TryReconfigureTrack(candidate.Grid, candidate.Checkpoints, candidate.DrivableMask) ||
+                    !WeaponManager.TryReconfigureTrack(candidate.DrivableMask, candidate.PickupPositions))
+                {
+                    RaceManager.TryReconfigureIdleRace(previous.LapCount, previous.OrderedCheckpointCount);
+                    VehicleManager.TryReconfigureTrack(circuit.Grid, circuit.DrivableMask);
+                    AIManager.TryReconfigureTrack(circuit.Grid, circuit.Checkpoints, circuit.DrivableMask);
+                    WeaponManager.TryReconfigureTrack(circuit.DrivableMask, circuit.PickupPositions);
+                    throw new System.InvalidOperationException("Runtime owners rejected the selected track.");
+                }
+                AudioPresentation.SetTrackSurfaceMask(candidate.DrivableMask);
+                ReleaseTrackRuntime(circuit);
+                circuit = candidate;
+                candidate = null;
+                activeTrackId = selected.Id;
+                DemoPreferences.SetTrackId(selected.Id);
+                return true;
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogError($"[Stage9C] Track '{selected.Id}' could not be activated: {exception.Message}", this);
+                return false;
+            }
+            finally
+            {
+                if (candidate != null) ReleaseTrackRuntime(candidate);
+            }
+        }
+
+        private static bool IsValidRuntime(ITrackRuntime runtime, TrackDefinition definition)
+        {
+            if (runtime?.Root == null || runtime.Grid == null || runtime.Grid.Length < 4 ||
+                runtime.Checkpoints == null || runtime.Checkpoints.Length != definition.OrderedCheckpointCount ||
+                runtime.PickupPositions == null || runtime.PickupPositions.Count != 4)
+                return false;
+            for (int i = 0; i < 4; i++) if (runtime.Grid[i] == null) return false;
+            for (int i = 0; i < runtime.Checkpoints.Length; i++) if (runtime.Checkpoints[i] == null) return false;
+            return true;
+        }
+
+        private static void ReleaseTrackRuntime(ITrackRuntime runtime)
+        {
+            if (runtime == null) return;
+            GameObject root = runtime.Root;
+            if (root != null) root.SetActive(false);
+            runtime.Dispose();
+            if (root == null) return;
+            if (Application.isPlaying) Destroy(root);
+            else DestroyImmediate(root);
         }
 
         private T CreateChild<T>(string objectName) where T : Component
@@ -230,7 +317,7 @@ namespace Presentation
                 VehicleManager.PlayerJoined -= ConfigureJoinedPlayer;
                 VehicleManager.VehicleFamilyChanged -= ApplyPlayerColor;
             }
-            circuit?.Dispose();
+            ReleaseTrackRuntime(circuit);
         }
     }
 }

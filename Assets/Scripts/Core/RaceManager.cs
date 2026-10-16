@@ -91,6 +91,18 @@ namespace Core
             return true;
         }
 
+        /// <summary>Applies a lobby track change while retaining joined racer identities and device ownership.</summary>
+        public bool TryReconfigureIdleRace(int laps, int orderedCheckpointCount)
+        {
+            EnsureSession();
+            if (CurrentState != RaceState.Idle || laps < 1 || orderedCheckpointCount < 1 ||
+                !session.TryReconfigure(laps, orderedCheckpointCount))
+                return false;
+            totalLaps = laps;
+            checkpointCount = orderedCheckpointCount;
+            return true;
+        }
+
         public RacerState RegisterRacer(
             string racerId,
             GameObject vehicleObject,

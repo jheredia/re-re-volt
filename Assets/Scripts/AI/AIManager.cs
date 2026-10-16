@@ -102,6 +102,24 @@ namespace AI
             return true;
         }
 
+        /// <summary>Rebinds retained AI setup state to a newly selected idle-session track.</summary>
+        public bool TryReconfigureTrack(Transform[] gridPoints, RaceCheckpoint[] orderedCheckpoints,
+            LayerMask roadMask)
+        {
+            if (!configured || race.CurrentState != RaceManager.RaceState.Idle || bots.Count != 0 ||
+                gridPoints == null || gridPoints.Length < LocalPlayerRules.MaximumPlayers ||
+                orderedCheckpoints == null || orderedCheckpoints.Length != race.CheckpointCount)
+                return false;
+            for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++) if (gridPoints[i] == null) return false;
+            for (int i = 0; i < orderedCheckpoints.Length; i++) if (orderedCheckpoints[i] == null) return false;
+            grid = (Transform[])gridPoints.Clone();
+            checkpoints = new Transform[orderedCheckpoints.Length];
+            for (int i = 0; i < orderedCheckpoints.Length; i++) checkpoints[i] = orderedCheckpoints[i].transform;
+            drivableMask = roadMask;
+            LastRosterError = null;
+            return true;
+        }
+
         private void OnEnable()
         {
             if (configured) Subscribe();

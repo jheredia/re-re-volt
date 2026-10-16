@@ -52,9 +52,10 @@ namespace Presentation
             public bool hasPresentationResponseSettings;
             public int vfxDensity;
             public bool hasVfxDensitySetting;
+            public string trackId;
         }
 
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
         public const string StorageKey = "re-re-volt.demo-flow.preferences";
 
         private readonly ILocalPreferenceStore store;
@@ -72,6 +73,7 @@ namespace Presentation
         public PresentationResponseLevel CameraMotion { get; private set; }
         public PresentationResponseLevel VehicleMotion { get; private set; }
         public VfxDensityLevel VfxDensity { get; private set; }
+        public string TrackId { get; private set; }
         public string RecoveryMessage { get; private set; } = string.Empty;
 
         public void Load()
@@ -103,7 +105,7 @@ namespace Presentation
                 return;
             }
 
-            if (payload == null || (payload.version != 1 && payload.version != 2 && payload.version != CurrentVersion))
+            if (payload == null || payload.version < 1 || payload.version > CurrentVersion)
             {
                 ReportRecovery("LOCAL SETTINGS VERSION WAS NOT RECOGNIZED — SAFE DEFAULTS ARE ACTIVE");
                 return;
@@ -140,13 +142,19 @@ namespace Presentation
             else if (payload.version >= 2)
                 repaired = true;
 
-            if (payload.version == CurrentVersion && payload.hasVfxDensitySetting)
+            if (payload.version >= 3 && payload.hasVfxDensitySetting)
             {
                 if (IsVfxDensity(payload.vfxDensity)) VfxDensity = (VfxDensityLevel)payload.vfxDensity;
                 else repaired = true;
             }
-            else if (payload.version == CurrentVersion)
+            else if (payload.version >= 3)
                 repaired = true;
+
+            if (payload.version >= 4)
+            {
+                if (TrackCatalog.IsAvailable(payload.trackId)) TrackId = payload.trackId;
+                else repaired = true;
+            }
 
             if (repaired)
                 ReportRecovery("SOME LOCAL SETTINGS WERE INVALID — SAFE DEFAULTS FILLED THE GAPS");
@@ -211,6 +219,15 @@ namespace Presentation
             return Save();
         }
 
+        public bool SetTrackId(string trackId)
+        {
+            if (!TrackCatalog.IsAvailable(trackId)) throw new ArgumentOutOfRangeException(nameof(trackId));
+            if (string.Equals(TrackId, trackId, StringComparison.Ordinal)) return !dirty || Save();
+            TrackId = trackId;
+            dirty = true;
+            return Save();
+        }
+
         internal void ReportRecovery(string message)
         {
             RecoveryMessage = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
@@ -228,7 +245,8 @@ namespace Presentation
                 vehicleMotion = (int)VehicleMotion,
                 hasPresentationResponseSettings = true,
                 vfxDensity = (int)VfxDensity,
-                hasVfxDensitySetting = true
+                hasVfxDensitySetting = true,
+                trackId = TrackId
             };
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
@@ -257,6 +275,7 @@ namespace Presentation
             CameraMotion = PresentationResponseLevel.Full;
             VehicleMotion = PresentationResponseLevel.Full;
             VfxDensity = VfxDensityLevel.Full;
+            TrackId = TrackCatalog.Default.Id;
             for (int i = 0; i < LocalPlayerRules.MaximumPlayers; i++)
             {
                 handlingModels[i] = HandlingModelId.A;
