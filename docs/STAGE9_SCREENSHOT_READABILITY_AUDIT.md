@@ -2,10 +2,10 @@
 
 ## Status
 
-Conditional pass. The authored capture tests pass and produced the original
-seven valid 3840×2160 images plus verified setup and four-player style captures,
-but the visual freeze is not yet accepted. There are no P1 findings. One visible
-P2 issue remains: near-camera combat/pickup obstruction.
+Implementation reconciliation complete; consolidated Stage 9 visual acceptance
+is deferred to the stage-end audit. The authored capture tests pass and produced
+the original seven valid 3840×2160 images plus verified setup, four-player style,
+and corrected Bolt/Oil captures. There are no open P1/P2 implementation findings.
 
 Evidence is under
 `/private/tmp/stage9-screenshot-capture-20261015T115047d/`:
@@ -68,10 +68,17 @@ remain P3 polish, not an acceptance blocker.
    earlier Ink Lite clipping was stale Editor screenshot readback, not runtime
    layout or style authority; the test capture now primes the split-camera buffer
    and saves the following synchronized frame.
-2. Bound, fade, or hide near-camera presentation/decoration so the owning car and
-   forward road corridor remain readable.
-3. Re-capture the remaining affected states during the consolidated Stage 9
-   audit before accepting the screenshot gate.
+2. Near-camera obstruction is implemented. Explicit pickup, combat, pooled VFX,
+   and colliderless venue presentation now use per-chase-camera URP render-time
+   suppression only when close, substantial in the normalized road corridor, and
+   centered no farther forward than the owning car. Renderer state restores after
+   each camera and lifecycle exit; gameplay colliders and authority are untouched.
+   Affected combat/style tests pass 2/2, pooled lifecycle tests pass 2/2, and the
+   focused capture passes 1/1. Fresh 3840×2160 Bolt and Oil evidence under
+   `/private/tmp/stage9-near-camera-occlusion-capture/` keeps the forward road
+   corridor readable while preserving forward cues.
+3. Re-capture representative affected states during the consolidated Stage 9
+   audit after Stage 9C track implementation before accepting the screenshot gate.
 
 ## Evidence limits
 

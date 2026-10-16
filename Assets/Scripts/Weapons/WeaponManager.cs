@@ -248,6 +248,9 @@ namespace Weapons
                 kind == WeaponKind.Bolt ? projectileLifetime : oilLifetime, oilRadius, oilArmingDelay, oilShooterGrace);
             liveWeapons.Add(weapon);
             BuildLiveWeaponVisual(weapon, kind);
+            weaponObject.AddComponent<NearCameraPresentationOccludable>()
+                .Configure(NearCameraOcclusionKind.CombatOrPickup,
+                    kind == WeaponKind.Bolt ? player.Vehicle.transform : null);
             PublishSlot(state);
             PublishWeaponSpawned(new WeaponSpawnedPresentationPayload(weapon, player, kind, position, forward));
             WeaponFired?.Invoke(player, kind);

@@ -153,6 +153,9 @@ namespace Presentation
                 for (int i = 0; i < venue.Renderers.Length; i++)
                     visualStyle.RegisterRenderer(venue.Renderers[i], venue.IsOutlineEligible(venue.Renderers[i]));
             }
+            for (int i = 0; i < venue.Renderers.Length; i++)
+                venue.Renderers[i].gameObject.AddComponent<NearCameraPresentationOccludable>()
+                    .Configure(NearCameraOcclusionKind.Decoration);
             return new Result(root, grid, checkpoints,
                 new[] { road, floor, barrier, stripe, red, blue, cardboard, metal, graphite, surfaceArt.DecalMaterial },
                 visualStyle, renderers, venue, surfaceArt);

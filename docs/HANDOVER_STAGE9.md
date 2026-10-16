@@ -228,11 +228,10 @@ shows only the title page, four-player HUDs consume excessive quadrant space and
 similar gray vehicles lack strong non-color identity, and near-camera combat or
 pickup presentation visibly obstructs the road in the Bolt/Oil states. The
 evidence-tied audit and limits are recorded in
-`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. The Setup and four-player
-HUD/identity P2s are now accepted. Near-camera combat/pickup obstruction is the
-only remaining visual P2; resolve it before the consolidated Stage 9 audit and
-re-capture only affected states before
-profiling/listening/build acceptance advances.
+`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`. Setup, four-player HUD/identity,
+and near-camera obstruction implementation findings are now reconciled. Under
+the implementation-first cadence, proceed to Stage 9C and defer the independent
+visual/profile/listening/build audit until the Stage 9 boundary.
 
 A verified test-only capture extension first closed the setup evidence gap. Its
 3840×2160 Setup image is under
@@ -288,9 +287,34 @@ assertions remained valid; `VisualStyleController` never mutates UI. The Unity
 Editor's synchronous four-camera readback alternated stale/current overlay
 buffers. The test-only capture path now primes and discards one split-camera
 readback, rebuilds canvases, and saves the following end-of-frame texture. No
-runtime presentation authority changed. Near-camera obstruction is the next
-implementation slice; defer broad suites and independent audit until the Stage 9
-boundary.
+runtime presentation authority changed. Broad suites and independent audit stay
+deferred until the Stage 9 boundary.
+
+## Accepted checkpoint — near-camera presentation occlusion
+
+The final Stage 9B visual implementation P2 was perspective enlargement of
+persistent pickup/combat and venue presentation rendered by every split camera,
+not physical camera penetration. Each chase camera now owns a
+`NearCameraPresentationOcclusion` observer. Explicitly marked pickup, live
+weapon, pooled VFX, and colliderless venue renderers are temporarily suppressed
+for that camera only when they are close, occupy a substantial normalized road
+corridor, and are centered no farther forward than the owning car. Forward Bolt
+information remains visible, other viewports are unaffected, and renderer state
+is restored after every camera render and on disable/destruction.
+
+Gameplay colliders, pickup spawns, inventory, cooldowns, durations, projectile
+and hazard physics, race rules, camera masks, and viewport ownership are
+unchanged. Pooled candidates register/unregister through lifecycle. Focused
+combat/style checks pass 2/2, pooled VFX lifecycle/cleanup passes 2/2, and the
+affected capture passes 1/1. Fresh 3840×2160 Bolt and Oil images plus XML/logs
+are under `/private/tmp/stage9-near-camera-occlusion-capture/`,
+`/private/tmp/stage9-near-camera-occlusion-test/`, and
+`/private/tmp/stage9-near-camera-vfx-cleanup/`. Binary threshold popping remains
+a P3 motion risk for the consolidated Stage 9 audit.
+
+Stage 9B visual implementation is now complete. Continue with Stage 9C four-track
+runtime/content work, then run one consolidated Stage 9 audit rather than
+re-auditing this slice independently.
 
 ## Stage 9B independent accessibility/performance static audit — corrections
 

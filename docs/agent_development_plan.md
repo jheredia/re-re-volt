@@ -275,8 +275,11 @@ with no P1/P2. The four-player HUD/identity correction is now accepted: compact
 badges preserve one-to-three-player layouts, persistent P-number text and
 collider-disabled roof digits provide non-color identity, focused execution
 passed 17/17, and fresh Clean 3D, Ink Lite, and Full Ink captures are healthy.
-The remaining visual P2 is protecting the forward road corridor from near-camera
-combat/pickup occlusion.
+The forward-road P2 is now implemented with per-owning-camera suppression for
+explicit near pickup/combat/VFX and colliderless venue presentation, exact
+renderer restoration, unchanged gameplay geometry, and green focused checks.
+No Stage 9 visual implementation P2 remains. The implementation-first cadence
+continues through Stage 9C before one consolidated Stage 9 audit and build gate.
 `docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md` owns the evidence and exact
 reconciliation contract.
 

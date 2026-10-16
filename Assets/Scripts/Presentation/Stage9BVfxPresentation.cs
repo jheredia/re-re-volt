@@ -717,6 +717,8 @@ namespace Presentation
                 renderers[i] = renderer;
             }
             LayoutElements(family, elements);
+            root.AddComponent<NearCameraPresentationOccludable>()
+                .Configure(NearCameraOcclusionKind.CombatOrPickup);
             root.SetActive(false);
             return new PooledEntry { Root = root, Elements = elements, Renderers = renderers };
         }

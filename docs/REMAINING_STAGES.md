@@ -1,11 +1,11 @@
 # Pinned Remaining Roadmap
 
 Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
-non-capture PlayMode gate. Stage 9B corrections are independently verified and
-the consolidated suite passes 85/85; screenshot, profiling, listening, and
-player-build evidence remain before Stage 9C. The first screenshot audit is a
-conditional pass with one remaining P2 gate documented in
-`docs/STAGE9_SCREENSHOT_READABILITY_AUDIT.md`.
+non-capture PlayMode gate. Stage 9B corrections are reconciled and the
+consolidated suite passes 85/85. Setup, four-player HUD/non-color identity, and
+near-camera obstruction implementation findings are closed. Under the current
+implementation-first cadence, Stage 9C track work proceeds before one
+consolidated Stage 9 screenshot, profile/listening, test, and player-build audit.
 
 ## How much remains
 
@@ -90,10 +90,13 @@ conditional pass with one remaining P2 gate documented in
      geometric roof digits; focused execution passed 17/17 and fresh Clean 3D,
      Ink Lite, and Full Ink captures are healthy. Investigation proved the prior
      Ink Lite clipping was stale Editor screenshot readback rather than a runtime
-     HUD defect. Near-camera combat/pickup obstruction is the sole remaining P2.
-     Resolve it before the consolidated Stage 9 visual freeze audit.
-   - This becomes a local baseline gate before track/online work; final
-     integrated acceptance occurs after Stage 10.
+     HUD defect. Near-camera obstruction is also implemented through bounded
+     per-camera render suppression with renderer restoration and unchanged
+     gameplay colliders/authority. Focused combat/style, pooled lifecycle, and
+     affected capture checks are green. No visual implementation P2 remains;
+     final acceptance waits for the consolidated Stage 9 audit after Stage 9C.
+   - This becomes the local baseline gate before online work; final integrated
+     acceptance occurs after Stage 10.
 
 5. **Stage 9C — Four-track roster and selection menu**
    - Keep the existing circuit as Track 1 and author three distinct original,

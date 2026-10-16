@@ -147,6 +147,13 @@ namespace Tests.PlayMode
                 LiveCombatWeapon bolt = FindWeapon(WeaponKind.Bolt);
                 Assert.That(bolt, Is.Not.Null);
                 Assert.That(Time.timeScale, Is.Zero);
+                NearCameraPresentationOccludable boltCandidate =
+                    bolt.GetComponent<NearCameraPresentationOccludable>();
+                Assert.That(boltCandidate, Is.Not.Null);
+                Assert.That(boltCandidate.VisibilityOwner, Is.SameAs(players[0].Vehicle.transform));
+                Assert.That(players[0].ChaseCamera.GetComponent<NearCameraPresentationOcclusion>()
+                    .WouldOcclude(boltCandidate), Is.False,
+                    "The firing camera must retain its own forward Bolt presentation.");
                 Assert.That(SourceRendererCount(bolt.transform), Is.EqualTo(WeaponManager.BoltLiveRendererBudget));
                 Assert.That(SourceRendererCount(oil.transform), Is.EqualTo(WeaponManager.OilLiveRendererBudget));
                 AssertNoEnabledPresentationColliders(bolt.transform);
@@ -169,6 +176,55 @@ namespace Tests.PlayMode
                 roster.FireRequested -= freezeBolt;
                 Time.timeScale = 1f;
             }
+        }
+
+        [Test]
+        public void NearCameraOcclusionIsPerOwningCameraAndPreservesGameplayGeometry()
+        {
+            Place(players[0], new Vector3(-15f, .8f, 6f), 0f);
+            Place(players[1], new Vector3(15f, .8f, -3f), 180f);
+
+            PickupSpawner pickup = combat.Pickups[0];
+            NearCameraPresentationOccludable candidate =
+                pickup.GetComponent<NearCameraPresentationOccludable>();
+            NearCameraPresentationOcclusion ownerOcclusion =
+                players[0].ChaseCamera.GetComponent<NearCameraPresentationOcclusion>();
+            NearCameraPresentationOcclusion otherOcclusion =
+                players[1].ChaseCamera.GetComponent<NearCameraPresentationOcclusion>();
+            Assert.That(candidate, Is.Not.Null);
+            Assert.That(candidate.Kind, Is.EqualTo(NearCameraOcclusionKind.CombatOrPickup));
+            Assert.That(ownerOcclusion, Is.Not.Null);
+            Assert.That(otherOcclusion, Is.Not.Null);
+
+            int ownerMask = players[0].Camera.cullingMask;
+            int otherMask = players[1].Camera.cullingMask;
+            Rect fourPlayerViewport = players[0].Camera.rect;
+            Assert.That(fourPlayerViewport.width, Is.EqualTo(.5f));
+            Assert.That(fourPlayerViewport.height, Is.EqualTo(.5f));
+            Collider pickupTrigger = pickup.GetComponent<Collider>();
+            Assert.That(pickupTrigger, Is.Not.Null);
+            Assert.That(pickupTrigger.enabled, Is.True);
+            foreach (VisualStyleMode mode in StyleModes)
+            {
+                style.SetMode(mode);
+                Assert.That(ownerOcclusion.WouldOcclude(candidate), Is.True,
+                    $"The captured near-camera pickup must yield the P1 road corridor in {mode}.");
+                Assert.That(otherOcclusion.WouldOcclude(candidate), Is.False,
+                    $"P1's local correction must not suppress a distant candidate for P2 in {mode}.");
+                Assert.That(players[0].Camera.cullingMask, Is.EqualTo(ownerMask));
+                Assert.That(players[1].Camera.cullingMask, Is.EqualTo(otherMask));
+                Assert.That(pickupTrigger.enabled, Is.True, "Presentation culling cannot change pickup authority.");
+            }
+            players[0].Camera.rect = new Rect(0f, 0f, 1f, 1f);
+            Assert.That(ownerOcclusion.WouldOcclude(candidate), Is.True,
+                "The same normalized road-corridor rule must hold for one-player framing.");
+            players[0].Camera.rect = fourPlayerViewport;
+
+            NearCameraPresentationOccludable venueCandidate =
+                circuit.VenueRoot.GetComponentInChildren<NearCameraPresentationOccludable>(true);
+            Assert.That(venueCandidate, Is.Not.Null);
+            Assert.That(venueCandidate.Kind, Is.EqualTo(NearCameraOcclusionKind.Decoration));
+            Assert.That(venueCandidate.RendererCount, Is.GreaterThan(0));
         }
 
         [UnityTest]

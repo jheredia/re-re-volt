@@ -1,4 +1,5 @@
 using UnityEngine;
+using Presentation;
 using Weapons;
 
 namespace Core
@@ -42,6 +43,8 @@ namespace Core
             owner.CreateVisual(transform, "Pickup base", PrimitiveType.Cylinder,
                 Vector3.down * .72f, new Vector3(1.7f, .045f, 1.7f), owner.FeedbackMaterial);
             Refresh();
+            gameObject.AddComponent<NearCameraPresentationOccludable>()
+                .Configure(NearCameraOcclusionKind.CombatOrPickup);
         }
 
         private void BuildIdentityIcons()

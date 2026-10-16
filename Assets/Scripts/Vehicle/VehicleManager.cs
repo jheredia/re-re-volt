@@ -195,6 +195,9 @@ namespace Vehicle
             listener.enabled = false;
             ChaseCamera chase = cameraObject.AddComponent<ChaseCamera>();
             chase.Initialize(car.transform);
+            NearCameraPresentationOcclusion nearCameraOcclusion =
+                cameraObject.AddComponent<NearCameraPresentationOcclusion>();
+            nearCameraOcclusion.Initialize(car.transform);
             VehiclePresentationResponseOwner response = cameraObject.AddComponent<VehiclePresentationResponseOwner>();
             response.Initialize(index, chase, vehicle, recovery, raceManager, impactEmitter);
             response.SetLevels(cameraMotionLevel, vehicleMotionLevel);
