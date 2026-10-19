@@ -770,8 +770,25 @@ lap per track. Evidence is under `/private/tmp/stage9c-authored-tracks/`; the
 lifecycle compile log is
 `/private/tmp/stage9c-authored-tracks-lifecycle-compile.log`.
 
-Stage 9 implementation is now complete. The consolidated stage-end audit must
-still prove autonomous AI completion on the three new layouts, real recovery and
-combat placement, bridge/corner drivability, one-to-four-player and all-style
-readability, performance/audio behavior, full test health, and macOS/Web player
-build evidence before Stage 9 closes.
+The consolidated audit's compile, EditMode 119/119, and non-capture PlayMode
+89/89 gates passed. Its retained boundary fixture then exposed real authored
+track defects rather than global AI or race-rule failures: primitive corner-pad
+colliders obstructed recovery lanes, the Market route was not reliably
+reachable, and the descending Bridge slab met the elevated span as a vertical
+wall before checkpoint 4. The reconciled content keeps checkpoint triggers,
+recovery, AI policy, combat, and the unchanged 90-second completion contract
+authoritative. Overlapping road slabs now provide collision beneath
+non-colliding corner-pad visuals; Market and Bridge route data and supported
+pickup positions are corrected; the Bridge transition is level across the
+incoming deck.
+
+The retained `Stage9CStageBoundaryValidationTests` now pass 3/3 in 234.84
+seconds. Each new track proves supported authored pickups, paired human combat,
+deterministic off-track recovery, and one autonomous bot completing all three
+laps through ordered authoritative checkpoints within 90 seconds. Evidence is
+under `/private/tmp/stage9c-all-tracks-final.LokU4W/`; Bridge-only root-cause
+evidence is under `/private/tmp/stage9c-bridge-fix-verify.58dd59/`. No compiler
+errors, assertion exceptions, JobTempAlloc diagnostics, or duplicate-listener
+warnings were observed. Stage 9 still requires its deferred visual/readability,
+performance/listening, macOS build/launch, and WebGL build/feasibility gates
+before it closes.

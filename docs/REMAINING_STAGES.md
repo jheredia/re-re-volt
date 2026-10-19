@@ -4,9 +4,11 @@ Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
 non-capture PlayMode gate. Stage 9B corrections are reconciled and the
 consolidated suite passes 85/85. Setup, four-player HUD/non-color identity, and
 near-camera obstruction implementation findings are closed. The Stage 9C
-selection contract and four-track content roster are implemented. One
-consolidated Stage 9 test, all-track AI/recovery/combat, screenshot,
-profile/listening, and player-build audit is now the remaining Stage 9 gate.
+selection contract and four-track content roster are implemented. The
+consolidated compile, EditMode 119/119, non-capture PlayMode 89/89, and retained
+all-track AI/recovery/combat 3/3 gates are green. Screenshot/readability,
+profile/listening, and player-build evidence now form the remaining Stage 9
+gate.
 
 ## How much remains
 
@@ -110,6 +112,12 @@ profile/listening, and player-build audit is now the remaining Stage 9 gate.
      checkpoints, recovery, split-screen, visual modes, and performance before
      networking consumes the contract. AI competition is a prototype gate, not
      optional test tooling.
+   - The retained boundary fixture now passes 3/3: Patio in 72.90 seconds,
+     Bridge in 77.64 seconds, and Market in 84.23 seconds. Each proves authored
+     pickup support and collection, paired human fire, deterministic recovery,
+     and a bot completing three authoritative ordered laps within the unchanged
+     90-second contract. Visual/style, performance/audio, and player-build
+     evidence remain part of the Stage 9 boundary gate.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
    - Start with a separate architecture decision; do not silently select a
@@ -151,9 +159,9 @@ profile/listening, and player-build audit is now the remaining Stage 9 gate.
 ## Current implementation boundary
 
 Stage 9 implementation is complete: the selection/runtime contract and four
-genuine fixed tracks are present with focused contract/rebind/roster smoke
-evidence green. The immediate boundary is one consolidated Stage 9 audit covering
-compilation, full tests, autonomous AI and recovery/combat across every track,
-the style/split-screen capture matrix, profiling/listening, and macOS/Web build
-evidence. Stage 10 online architecture begins only after that gate. Deferred P3
-runtime and performance risks remain recorded in `docs/HANDOVER_STAGE9.md`.
+genuine fixed tracks are present, compile/EditMode/non-capture PlayMode are
+green, and the retained new-track AI/recovery/combat fixture passes 3/3. The
+immediate boundary is the deferred style/split-screen capture matrix,
+profiling/listening, and macOS/Web build evidence. Stage 10 online architecture
+begins only after that gate. Deferred P3 runtime and performance risks remain
+recorded in `docs/HANDOVER_STAGE9.md`.

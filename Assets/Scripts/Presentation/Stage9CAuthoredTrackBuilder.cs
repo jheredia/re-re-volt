@@ -27,6 +27,7 @@ namespace Presentation
             internal Color BarrierColor;
             internal Color AccentColor;
             internal Color SecondaryColor;
+            internal bool OpenRecoveryLanes;
             internal Action<BuildContext> Decorate;
         }
 
@@ -161,8 +162,11 @@ namespace Presentation
             for (int i = 0; i < layout.Route.Length; i++)
             {
                 Vector3 point = layout.Route[i];
+                // The overlapping road slabs own collision at every route node. A primitive cylinder collider
+                // adds a vertical rim there, which catches this small chassis one car-length before the checkpoint.
                 CreatePrimitive(context, PrimitiveType.Cylinder, $"CornerPad_{i:00}", point,
-                    Quaternion.identity, new Vector3(layout.RoadWidth, .11f, layout.RoadWidth), road, true,
+                    Quaternion.identity, new Vector3(layout.RoadWidth, .11f, layout.RoadWidth), road,
+                    !layout.OpenRecoveryLanes,
                     DrivableLayer, layout.RoadSurface, false);
             }
         }
@@ -232,6 +236,7 @@ namespace Presentation
             BarrierColor = new Color(.94f, .66f, .16f),
             AccentColor = new Color(.94f, .24f, .14f),
             SecondaryColor = new Color(.14f, .55f, .72f),
+            OpenRecoveryLanes = true,
             Route = new[]
             {
                 P(-21f, -5f), P(-20f, 9f), P(-13f, 18f), P(2f, 21f), P(17f, 17f),
@@ -259,12 +264,13 @@ namespace Presentation
             BarrierColor = new Color(.19f, .53f, .67f),
             AccentColor = new Color(.92f, .27f, .18f),
             SecondaryColor = new Color(.95f, .74f, .12f),
+            OpenRecoveryLanes = true,
             Route = new[]
             {
-                P(-22f, -14f), P(-22f, 12f), P(-13f, 18f), P(2f, 18f), P(2f, 8f),
-                P(15f, 8f), P(21f, 1f), P(15f, -7f), P(2f, -7f), P(2f, -17f), P(-22f, -22f)
+                P(-20f, -12f), P(-20f, 12f), P(-12f, 12f), P(2f, 12f), P(2f, 6f),
+                P(15f, 6f), P(15f, 0f), P(15f, -6f), P(2f, -6f), P(2f, -14f), P(-20f, -20f)
             },
-            Pickups = new[] { P(-22f, 3f, .95f), P(-6f, 18f, .95f), P(18f, 2f, .95f), P(-5f, -18f, .95f) },
+            Pickups = new[] { P(-20f, 2f, .95f), P(-5f, 12f, .95f), P(15f, 2f, .95f), P(-5f, -16f, .95f) },
             Decorate = context =>
             {
                 for (int i = 0; i < 3; i++)
@@ -285,13 +291,14 @@ namespace Presentation
             BarrierColor = new Color(.73f, .14f, .22f),
             AccentColor = new Color(.14f, .67f, .79f),
             SecondaryColor = new Color(.93f, .76f, .18f),
+            OpenRecoveryLanes = true,
             Route = new[]
             {
-                P(-21f, -8f), P(-20f, 9f), P(-11f, 18f), P(3f, 16f, 1.4f),
-                P(16f, 20f, 2.2f), P(23f, 9f, 1.1f), P(17f, 0f), P(23f, -10f),
-                P(14f, -20f), P(0f, -16f), P(-11f, -20f), P(-21f, -17f)
+                P(-20f, -8f), P(-20f, 9f), P(-11f, 18f), P(3f, 18f, 1f),
+                P(16f, 18f, 1f), P(16f, 7f, .8f), P(16f, 0f), P(22f, -10f),
+                P(14f, -18f), P(0f, -18f), P(-11f, -18f), P(-20f, -15f)
             },
-            Pickups = new[] { P(-20f, 4f, .95f), P(8f, 17.5f, 2.6f), P(20f, -5f, .95f), P(1f, -16f, .95f) },
+            Pickups = new[] { P(-20f, 4f, .95f), P(8f, 18f, 1.95f), P(19f, -5f, .95f), P(1f, -18f, .95f) },
             Decorate = context =>
             {
                 CreateDecor(context, "ExhibitionPodium", new Vector3(-1f, 1.2f, 2f),

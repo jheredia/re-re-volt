@@ -450,10 +450,15 @@ selected ID, `Stage3Bootstrap` owns construction and transactional rebinding via
 roster-owned Setup commands cannot start unavailable content. Production still
 contains the accepted workshop plus three distinct authored circuits: a wide
 patio sweep, technical market aisles, and a gentle elevated bridge exhibition.
-Focused contracts and an all-track roster/rebind smoke are green. Stage 9
-implementation is complete; one consolidated audit now owns full test, autonomous
-AI/recovery/combat, visual/readability, performance/audio, and macOS/Web build
-acceptance before online architecture begins.
+Focused contracts and an all-track roster/rebind smoke are green. The
+consolidated compile gate, EditMode 119/119, and non-capture PlayMode 89/89 are
+also green. The retained stage-boundary fixture passes 3/3 after correcting
+authored corner support, Market reachability, and a Bridge deck transition; it
+proves pickup/combat placement, deterministic recovery, and autonomous ordered
+three-lap completion on every new circuit within the unchanged 90-second
+contract. Stage 9 implementation is complete; visual/readability,
+performance/listening, and macOS/Web build acceptance remain before online
+architecture begins.
 
 ### Stage 10 — Online multiplayer
 
