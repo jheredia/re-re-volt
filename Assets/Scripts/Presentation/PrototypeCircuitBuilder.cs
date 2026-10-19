@@ -19,6 +19,7 @@ namespace Presentation
         public const string RoadTextureResource = Stage8SurfaceArtBuilder.RoadTextureResource;
         public const string WorkbenchTextureResource = Stage8SurfaceArtBuilder.WorkbenchTextureResource;
         public const string SurfaceDecalTextureResource = Stage8SurfaceArtBuilder.DecalTextureResource;
+        public const string SurfaceDecalMaterialResource = Stage8SurfaceArtBuilder.DecalMaterialResource;
 
         private const float RoadHalfExtent = 15f;
         private const float RoadWidth = 7f;

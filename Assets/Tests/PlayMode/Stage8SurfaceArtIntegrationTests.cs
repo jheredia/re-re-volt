@@ -89,6 +89,23 @@ namespace Tests.PlayMode
         }
 
         [Test]
+        public void RetainedDecalTemplateKeepsRuntimeMaterialIndependentOfNameLookup()
+        {
+            Assert.That(Shader.Find("ReReVolt/Intentionally Missing Stage8 Shader"), Is.Null,
+                "The regression must prove an unavailable name lookup before checking the retained path.");
+
+            Material retainedTemplate =
+                Resources.Load<Material>(PrototypeCircuitBuilder.SurfaceDecalMaterialResource);
+            Assert.That(retainedTemplate, Is.Not.Null);
+            Assert.That(retainedTemplate.shader, Is.Not.Null);
+            Assert.That(retainedTemplate.shader.name, Is.EqualTo("Universal Render Pipeline/Unlit"));
+            Assert.That(circuit.SurfaceDecalMaterial, Is.Not.Null);
+            Assert.That(circuit.SurfaceDecalMaterial.shader, Is.SameAs(retainedTemplate.shader));
+            Assert.That(circuit.SurfaceDecalMaterial, Is.Not.SameAs(retainedTemplate),
+                "The retained asset must remain immutable while the circuit owns a disposable runtime clone.");
+        }
+
+        [Test]
         public void SurfaceTexturesAndAllDecalsUseSharedOwnedReferencesWithinExactBudgets()
         {
             Renderer road = FindRenderer("Road_West");

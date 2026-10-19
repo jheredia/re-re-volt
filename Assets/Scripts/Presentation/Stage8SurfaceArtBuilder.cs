@@ -14,6 +14,7 @@ namespace Presentation
         internal const string RoadTextureResource = "Art/Stage8/CuttingMatRoad";
         internal const string WorkbenchTextureResource = "Art/Stage8/WorkbenchSurface";
         internal const string DecalTextureResource = "Art/Stage8/SurfaceDecals";
+        internal const string DecalMaterialResource = "Art/Stage8/SurfaceDecalMaterial";
         internal const string RootName = "Stage8_SurfaceDecals";
         internal const int RendererBudget = 8;
         internal const int MaterialBudget = 1;
@@ -157,9 +158,12 @@ namespace Presentation
 
         private static Material CreateDecalMaterial(Texture2D decalTexture)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ??
-                            Shader.Find("Unlit/Transparent") ?? Shader.Find("Standard");
-            Material material = new(shader)
+            Material retainedTemplate = Resources.Load<Material>(DecalMaterialResource);
+            if (retainedTemplate == null || retainedTemplate.shader == null)
+                throw new InvalidOperationException(
+                    $"Missing player-safe decal material Resources/{DecalMaterialResource}.");
+
+            Material material = new(retainedTemplate)
             {
                 name = "Stage 8 Shared Surface Decals",
                 color = Color.white,
