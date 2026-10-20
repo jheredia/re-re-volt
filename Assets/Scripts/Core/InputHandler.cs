@@ -81,7 +81,7 @@ namespace Core
             {
                 // Reconnected devices may reuse controls with cached values from an old state buffer.
                 // Refresh once on reconnect so a now-neutral trigger cannot retain its former value.
-                if (device != null) device.ApplyParameterChanges();
+                device?.ApplyParameterChanges();
                 lastConnectedDevice = device;
             }
             bool driving = device != null && race != null && race.RaceRunning && !racer.IsFinished &&

@@ -1,6 +1,6 @@
 ﻿<Solution>
   <Project Path="ReReVolt.RaceRules.Tests.csproj" />
-  <Project Path="ReReVolt.LocalPlayers.Tests.csproj" />
   <Project Path="ReReVolt.Runtime.csproj" />
   <Project Path="ReReVolt.RaceRules.csproj" />
+  <Project Path="ReReVolt.LocalPlayers.Tests.csproj" />
 </Solution>
