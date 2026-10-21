@@ -6,7 +6,10 @@ Compilation, EditMode 119/119, non-capture PlayMode 89/89, the retained all-trac
 AI/recovery/combat boundary 3/3, the final 2/2 capture run and ten-state visual
 matrix, and fresh macOS/WebGL build-startup evidence are green. No Stage 9
 blocker remains. Stage 10 private online friend-session architecture is next;
-final integrated prototype acceptance still follows Stage 10.
+final integrated prototype acceptance still follows Stage 10. The separate
+[Stage 10 online architecture decision](STAGE10_ONLINE_ARCHITECTURE_DECISION.md)
+is **Proposed — awaiting user approval**; implementation has not begun and no
+package, transport, service, or authority choice is final.
 
 ## How much remains
 
@@ -142,6 +145,10 @@ final integrated prototype acceptance still follows Stage 10.
      recorded above.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
+   - Architecture proposal:
+     [`STAGE10_ONLINE_ARCHITECTURE_DECISION.md`](STAGE10_ONLINE_ARCHITECTURE_DECISION.md).
+     It awaits explicit user approval before packages, Unity service setup, or
+     implementation.
    - Start with a separate architecture decision; do not silently select a
      transport, package, authority model, relay, or hybrid topology.
    - Implement private host/join, ready and track selection, up-to-four-racer
