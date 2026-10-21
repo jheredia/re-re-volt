@@ -1,20 +1,17 @@
 # Pinned Remaining Roadmap
 
-Status snapshot: `codex/local-multiplayer-prototype` at the accepted Stage 9
-non-capture PlayMode gate. Stage 9B corrections are reconciled and the
-consolidated suite passes 85/85. Setup, four-player HUD/non-color identity, and
-near-camera obstruction implementation findings are closed. The Stage 9C
-selection contract and four-track content roster are implemented. The
-consolidated compile, EditMode 119/119, non-capture PlayMode 89/89, and retained
-all-track AI/recovery/combat 3/3 gates are green. Screenshot/readability,
-profile/listening, and macOS player-build evidence now form the remaining Stage
-9 gate; the fresh WebGL build/startup gate is green.
+Status snapshot: `codex/local-multiplayer-prototype` at `b3c2719`. Stage 9 is
+accepted as **Ready with limitations** for the local playable-prototype baseline.
+Compilation, EditMode 119/119, non-capture PlayMode 89/89, the retained all-track
+AI/recovery/combat boundary 3/3, the final 2/2 capture run and ten-state visual
+matrix, and fresh macOS/WebGL build-startup evidence are green. No Stage 9
+blocker remains. Stage 10 private online friend-session architecture is next;
+final integrated prototype acceptance still follows Stage 10.
 
 ## How much remains
 
-- **Two core numbered stages remain for the expanded playable prototype:**
-  finish Stage 9, including the four-track roster, then complete Stage 10 online
-  friend play.
+- **One core numbered stage remains for the expanded playable prototype:**
+  Stage 10 private online friend play.
 - **Stage 11 remains a post-prototype visual-direction review.**
 - Every bounded implementation, content, architecture, and audit deliverable
   receives a fresh agent/task and overseer reconciliation.
@@ -39,17 +36,18 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
      and sensory settings were displayed without player interaction. Both now
      have focused fixes/test source and passed independent static re-verification.
 
-4. **Stage 9 — Consolidated implementation-freeze acceptance**
+4. **Stage 9 — Consolidated implementation-freeze acceptance — accepted,
+   Ready with limitations**
    - Import and compile in Unity 6000.6.0f1.
    - Run the full EditMode and PlayMode suites, including the bounded AI race.
    - Exercise title/setup, keyboard solo play, 1–4 local players, split-screen,
      vehicles, handling models, combat, pause/recovery, results, and rematch.
-   - Capture the final screenshot/readability matrix and profile representative
-     one- and four-player races.
+   - Capture the final screenshot/readability matrix. Preserve bounded resource
+     and lifecycle evidence without inventing a numerical performance gate.
    - Produce and launch the macOS test build; reassess Web feasibility.
-   - Current evidence: import/compile passes and full EditMode passes 107/107
-     after correcting three stale vehicle-family hierarchy assertions. The VFX
-     PlayMode fixture passes 6/6 after moving native MaterialPropertyBlock creation
+   - Historical validation trail: import/compile passed. Full EditMode passed
+     107/107 after correcting three stale vehicle-family hierarchy assertions.
+     The VFX PlayMode fixture passes 6/6 after moving native MaterialPropertyBlock creation
      into `Configure`. The earlier broad target was cut off before completion by
      an undersized global budget. Subsequent bounded fixtures produced 19 passes
      and 6 failures. The three assertion-only failures are now reconciled:
@@ -83,9 +81,9 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
      consolidated non-capture rerun passes 85/85 in 234.012 seconds; AI remains
      5/5 and completes three laps in 53.354 seconds, with zero listener warnings,
      JobTempAlloc diagnostics, assertion failures, or compiler/runtime errors.
-     Screenshot/readability, profiling/listening, and macOS build evidence remain
-     for the local baseline. The fresh WebGL build/startup gate is green after a
-     narrowly scoped linker descriptor retained the native-created
+     Screenshot/readability, profiling/listening, and macOS build evidence still
+     remained at that checkpoint. The fresh WebGL build/startup gate is green
+     after a narrowly scoped linker descriptor retained the native-created
      `SphereCollider`; focused PlayMode passed 15/15, the player registered the
      type, and one browser startup reached `[Stage3] ... ready` with no missing
      collider, null-reference, or former decal-shader exception.
@@ -100,12 +98,32 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
      HUD defect. Near-camera obstruction is also implemented through bounded
      per-camera render suppression with renderer restoration and unchanged
      gameplay colliders/authority. Focused combat/style, pooled lifecycle, and
-     affected capture checks are green. No visual implementation P2 remains;
-     final acceptance waits for the consolidated Stage 9 audit after Stage 9C.
-   - This becomes the local baseline gate before online work; final integrated
-     acceptance occurs after Stage 10.
+     affected capture checks are green. No visual implementation P2 remained;
+     boundary acceptance then waited for the consolidated Stage 9 audit after
+     Stage 9C.
+   - Final boundary evidence: compilation, EditMode 119/119, non-capture PlayMode
+     89/89, and retained all-track AI/recovery/combat 3/3 are green. The final
+     capture run passes 2/2, produces ten fresh 3840×2160 states, and has no
+     remaining P1/P2 visual finding.
+   - After the initial macOS player exposed only the since-fixed decal shader
+     issue, focused surface-art coverage passes 6/6 and a fresh 81 MB arm64 macOS
+     build succeeds.
+     A 15-second player startup reaches `[Stage3] ... ready` without the former
+     shader exception.
+   - WebGL focused coverage passes 15/15. The fresh 13,118,467-byte build
+     registers `SphereCollider`; one browser startup reaches `[Stage3] ... ready`
+     with zero error-level console entries.
+   - Automated audio listener/voice/routing/drop/duck/cleanup bounds are green;
+     no subjective live listening session was performed. No numerical CPU, GPU,
+     memory, allocation, or frame-time budget and no profiler harness were
+     defined, so this acceptance makes no performance-compliance claim.
+   - The arm64-only macOS artifact, deferred physical multi-controller coverage,
+     and deferred Windows build/runtime coverage are explicit limitations, not
+     Stage 9 blockers.
+   - This is the accepted local baseline before online work. Final integrated
+     acceptance still occurs after Stage 10.
 
-5. **Stage 9C — Four-track roster and selection menu**
+5. **Stage 9C — Four-track roster and selection menu — accepted**
    - The stable selection/session/runtime contract and all four genuine fixed
      tracks are implemented; no placeholder duplicates were added.
    - Keep the existing circuit as Track 1 and author three distinct original,
@@ -113,15 +131,15 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
    - Add a controller/keyboard pre-race selector with preview, lap count, saved
      choice, rematch behavior, and explicit session track identity.
    - Validate every track with selectable 0–3 AI opponents, combat,
-     checkpoints, recovery, split-screen, visual modes, and performance before
-     networking consumes the contract. AI competition is a prototype gate, not
-     optional test tooling.
-   - The retained boundary fixture now passes 3/3: Patio in 72.90 seconds,
+     checkpoints, recovery, split-screen, visual modes, and bounded resource
+     lifecycle checks before networking consumes the contract. AI competition is
+     a prototype gate, not optional test tooling.
+   - The retained boundary fixture passes 3/3: Patio in 72.90 seconds,
      Bridge in 77.64 seconds, and Market in 84.23 seconds. Each proves authored
      pickup support and collection, paired human fire, deterministic recovery,
      and a bot completing three authoritative ordered laps within the unchanged
-     90-second contract. Visual/style, performance/audio, and macOS player-build
-     evidence remain part of the Stage 9 boundary gate; WebGL is green.
+     90-second contract. The Stage 9 boundary is now accepted with the limitations
+     recorded above.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
    - Start with a separate architecture decision; do not silently select a
@@ -137,7 +155,8 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
      integration, covering local and internet friend sessions across all four
      tracks.
    - Physical multi-controller and Windows build/runtime checks remain deferred
-     until explicitly re-enabled, but are required for the final release claim.
+     by user direction. They are not Stage 9 blockers and remain outside current
+     validation coverage; do not imply them in any future release claim.
 
 ## Post-prototype numbered stage
 
@@ -162,11 +181,11 @@ profile/listening, and macOS player-build evidence now form the remaining Stage
 
 ## Current implementation boundary
 
-Stage 9 implementation is complete: the selection/runtime contract and four
-genuine fixed tracks are present, compile/EditMode/non-capture PlayMode are
-green, and the retained new-track AI/recovery/combat fixture passes 3/3. The
-immediate boundary is the deferred style/split-screen capture matrix,
-profiling/listening, and macOS build evidence. The WebGL build/startup gate is
-green. Stage 10 online architecture begins only after the remaining gate.
-Deferred P3 runtime and performance risks remain recorded in
-`docs/HANDOVER_STAGE9.md`.
+Stage 9 is closed as **Ready with limitations** for the local prototype. No
+Stage 9 blocker remains. Its limitations are arm64-only macOS coverage, no
+numerical performance budget or profiler-harness compliance result, no
+subjective live listening session, and deferred physical multi-controller and
+Windows runtime coverage. Stage 10 now begins with a separate architecture
+decision for private online friend sessions. Final integrated prototype
+acceptance remains after Stage 10 and must cover the combined local/online flow;
+the Stage 9 closeout does not pre-accept that work.

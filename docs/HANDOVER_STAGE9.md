@@ -826,3 +826,54 @@ shader exception. The existing root-`DontDestroyOnLoad` warning and unsupported
 URP post-processing shader notices remain non-blocking. Build, test, stripping,
 size, server, and browser evidence is preserved under
 `/private/tmp/stage9-sphere-fix.MQpTol/`.
+
+## Stage 9 boundary closeout — Ready with limitations
+
+Stage 9 is accepted at `b3c2719` as the local playable-prototype baseline. No
+Stage 9 blocker remains. This status is deliberately narrower than final
+integrated prototype acceptance, which still follows Stage 10 private online
+friend-session implementation and its consolidated local/online acceptance run.
+
+The accepted boundary evidence is:
+
+- Unity compilation is green. The complete EditMode suite passes 119/119 and
+  the non-capture PlayMode suite passes 89/89.
+- `Stage9CStageBoundaryValidationTests` pass 3/3. Patio, Bridge, and Market each
+  complete the authoritative three-lap AI/recovery/combat contract inside the
+  unchanged 90-second limit; the accepted workshop remains the fourth track.
+- The final capture run passes 2/2 and produces ten fresh 3840×2160 states under
+  `/private/tmp/stage9-final-validation.3Rv2Va/fresh-captures/`. The consolidated
+  style, split-screen, setup, HUD, results, combat, pickup, and track-view matrix
+  has no remaining P1/P2 visual finding.
+- The first boundary macOS player exposed only the since-fixed decal material's
+  unsupported player shader path. After the focused correction,
+  `Stage8SurfaceArtIntegrationTests` pass 6/6 and a fresh 81 MB macOS build
+  succeeds. Its 15-second player startup reaches `[Stage3] ... ready` with no
+  decal-shader exception. The artifact is Apple Silicon arm64 only.
+- The WebGL preservation correction passes its focused PlayMode coverage 15/15.
+  A fresh 17-file, 13,118,467-byte build registers `SphereCollider`, and the one
+  authorized browser startup reaches `[Stage3] ... ready` with zero error-level
+  console entries. The existing root-`DontDestroyOnLoad` and unsupported URP
+  post-processing notices remain non-blocking warnings.
+- Automated audio coverage for listener/voice bounds, recipient routing,
+  priority drops and steals, ducking, and cleanup is green within the accepted
+  suites. No subjective live listening session was performed.
+
+### Explicit acceptance limitations
+
+- The macOS artifact validates arm64 only; Intel and universal macOS builds were
+  not produced.
+- No numerical CPU, GPU, memory, allocation, or frame-time budget and no
+  representative profiler harness were defined. The bounded implementation and
+  automated lifecycle checks are green, but Stage 9 makes no performance-
+  compliance claim.
+- Procedural audio behavior is covered automatically, but subjective timbre,
+  intelligibility, and mix quality were not accepted through a live listening
+  session.
+- Physical multi-controller validation and Windows build/runtime validation are
+  deferred by user direction. They are outside this Stage 9 local-prototype
+  acceptance and remain unverified.
+
+The next stage is the separate Stage 10 architecture decision for private online
+friend sessions. Transport, package, authority, relay, and topology choices are
+not implied by this closeout.
