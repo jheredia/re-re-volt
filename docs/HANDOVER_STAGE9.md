@@ -789,6 +789,40 @@ laps through ordered authoritative checkpoints within 90 seconds. Evidence is
 under `/private/tmp/stage9c-all-tracks-final.LokU4W/`; Bridge-only root-cause
 evidence is under `/private/tmp/stage9c-bridge-fix-verify.58dd59/`. No compiler
 errors, assertion exceptions, JobTempAlloc diagnostics, or duplicate-listener
-warnings were observed. Stage 9 still requires its deferred visual/readability,
-performance/listening, macOS build/launch, and WebGL build/feasibility gates
-before it closes.
+warnings were observed. At that checkpoint, Stage 9 still required its deferred
+visual/readability, performance/listening, macOS build/launch, and WebGL
+build/feasibility gates before it could close.
+
+## Accepted checkpoint — WebGL native primitive type retention
+
+The first fresh WebGL closeout at `24d9ba8` built successfully but failed during
+startup: native `GameObject.CreatePrimitive(PrimitiveType.Sphere)` attempted to
+add a managed `SphereCollider` that IL2CPP engine-code stripping had omitted.
+The player logged `Can't add component because class 'SphereCollider' doesn't
+exist!`, then a `NullReferenceException`, and never emitted the Stage 3 ready
+checkpoint. Box, capsule, and mesh collider registrations remained present in
+the same stripped output, isolating the missing native-created sphere type.
+
+`Assets/link.xml` now preserves only `UnityEngine.PhysicsModule`'s
+`UnityEngine.SphereCollider` with `preserve="all"`. This keeps global stripping
+and all gameplay, scene, package, build-profile, and project settings unchanged.
+The focused PlayMode regression passed 15/15:
+`Stage8CombatReadabilityIntegrationTests` 9/9 and
+`Stage9BVfxIntegrationTests` 6/6.
+
+A fresh Unity 6000.6.0f1 WebGL build succeeded in 183.871 seconds under
+`/private/tmp/stage9-sphere-fix.MQpTol/WebGL`. The UnityLinker command consumed
+`Assets/link.xml`; generated `UnityClassRegistration.cpp` registers
+`SphereCollider("Physics")`, and the stripped managed assembly plus generated
+IL2CPP methods retain the type. The 17-file artifact totals 13,118,467 bytes,
+16,226 bytes (+0.124%) over the 13,102,241-byte failing baseline.
+
+Exactly one browser startup was run from the fresh artifact. It rendered the
+AFTER-HOURS RC CLUB title/workshop view and logged
+`[Stage3] Craft-room circuit and controller-first race presentation are ready.`
+The captured 59 console entries contain zero error-level messages or exceptions:
+no missing `SphereCollider`, no `NullReferenceException`, and no former decal
+shader exception. The existing root-`DontDestroyOnLoad` warning and unsupported
+URP post-processing shader notices remain non-blocking. Build, test, stripping,
+size, server, and browser evidence is preserved under
+`/private/tmp/stage9-sphere-fix.MQpTol/`.

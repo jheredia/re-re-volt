@@ -1,0 +1,6 @@
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <!-- Native primitive creation is invisible to the managed linker. -->
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+  </assembly>
+</linker>

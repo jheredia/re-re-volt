@@ -7,8 +7,8 @@ near-camera obstruction implementation findings are closed. The Stage 9C
 selection contract and four-track content roster are implemented. The
 consolidated compile, EditMode 119/119, non-capture PlayMode 89/89, and retained
 all-track AI/recovery/combat 3/3 gates are green. Screenshot/readability,
-profile/listening, and player-build evidence now form the remaining Stage 9
-gate.
+profile/listening, and macOS player-build evidence now form the remaining Stage
+9 gate; the fresh WebGL build/startup gate is green.
 
 ## How much remains
 
@@ -83,8 +83,12 @@ gate.
      consolidated non-capture rerun passes 85/85 in 234.012 seconds; AI remains
      5/5 and completes three laps in 53.354 seconds, with zero listener warnings,
      JobTempAlloc diagnostics, assertion failures, or compiler/runtime errors.
-     Screenshot/readability, profiling/listening, and macOS/Web build evidence
-     remain for the local baseline.
+     Screenshot/readability, profiling/listening, and macOS build evidence remain
+     for the local baseline. The fresh WebGL build/startup gate is green after a
+     narrowly scoped linker descriptor retained the native-created
+     `SphereCollider`; focused PlayMode passed 15/15, the player registered the
+     type, and one browser startup reached `[Stage3] ... ready` with no missing
+     collider, null-reference, or former decal-shader exception.
    - The first seven-state screenshot audit found no P1s. A verified setup
      capture exposed clipped AI/style/control information; the bounded correction
      now passes its focused capture 1/1 and an independent visual audit closes the
@@ -116,8 +120,8 @@ gate.
      Bridge in 77.64 seconds, and Market in 84.23 seconds. Each proves authored
      pickup support and collection, paired human fire, deterministic recovery,
      and a bot completing three authoritative ordered laps within the unchanged
-     90-second contract. Visual/style, performance/audio, and player-build
-     evidence remain part of the Stage 9 boundary gate.
+     90-second contract. Visual/style, performance/audio, and macOS player-build
+     evidence remain part of the Stage 9 boundary gate; WebGL is green.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
    - Start with a separate architecture decision; do not silently select a
@@ -162,6 +166,7 @@ Stage 9 implementation is complete: the selection/runtime contract and four
 genuine fixed tracks are present, compile/EditMode/non-capture PlayMode are
 green, and the retained new-track AI/recovery/combat fixture passes 3/3. The
 immediate boundary is the deferred style/split-screen capture matrix,
-profiling/listening, and macOS/Web build evidence. Stage 10 online architecture
-begins only after that gate. Deferred P3 runtime and performance risks remain
-recorded in `docs/HANDOVER_STAGE9.md`.
+profiling/listening, and macOS build evidence. The WebGL build/startup gate is
+green. Stage 10 online architecture begins only after the remaining gate.
+Deferred P3 runtime and performance risks remain recorded in
+`docs/HANDOVER_STAGE9.md`.
