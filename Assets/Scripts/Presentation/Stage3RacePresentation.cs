@@ -781,6 +781,7 @@ namespace Presentation
                 builder.AppendLine("A NEIGHBORHOOD TEST NIGHT IS READY.");
                 builder.AppendLine("ENTER   JOIN WITH KEYBOARD");
                 builder.AppendLine("MENU / START   JOIN WITH A GAMEPAD");
+                builder.AppendLine("F8   ONLINE CONNECTION (KEYBOARD)");
                 builder.AppendLine("ADD UP TO FOUR LOCAL DRIVERS, THEN PICK A CAR AND HANDLING MODEL.");
                 lobbyPlayers.text = builder.ToString();
                 return;

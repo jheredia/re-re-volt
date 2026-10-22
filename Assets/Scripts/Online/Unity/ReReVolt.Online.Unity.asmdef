@@ -1,0 +1,15 @@
+{
+  "name": "ReReVolt.Online.Unity",
+  "references": [
+    "ReReVolt.Runtime",
+    "Unity.InputSystem",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI",
+    "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport",
+    "Unity.Services.Core",
+    "Unity.Services.Authentication",
+    "Unity.Services.Multiplayer"
+  ],
+  "autoReferenced": true
+}
