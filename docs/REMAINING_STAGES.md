@@ -154,6 +154,9 @@ package, transport, service, or authority choice is final.
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
+   - Include host-selected driving-only AI opponents on all four tracks in
+     online races, sharing the four-racer limit with humans; AI weapon use is
+     a later enhancement. Validate mixed human/AI results and rematches.
    - Preserve local split-screen as an independent first-class mode. Public
      matchmaking, accounts, ranked play, and persistent servers are excluded.
 
