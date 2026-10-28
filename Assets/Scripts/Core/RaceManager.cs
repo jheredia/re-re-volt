@@ -42,6 +42,8 @@ namespace Core
         public int TotalLaps => session?.TotalLaps ?? Mathf.Max(1, totalLaps);
         public int CheckpointCount => session?.CheckpointCount ?? Mathf.Max(1, checkpointCount);
         public float ElapsedTime => session?.ElapsedTime ?? 0f;
+        /// <summary>Online composition owns its own session lifecycle; offline defaults remain global.</summary>
+        public bool ControlsGlobalGameState { get; set; } = true;
         public bool RaceRunning => CurrentState == RaceState.Racing;
         public IReadOnlyList<RacerState> Racers => session?.Standings ?? Array.Empty<RacerState>();
 
@@ -190,7 +192,7 @@ namespace Core
             if (session.Phase == RacePhase.Finished)
             {
                 SetState(RaceState.Finished);
-                if (GameManager.Instance != null)
+                if (ControlsGlobalGameState && GameManager.Instance != null)
                 {
                     GameManager.Instance.EndGame();
                 }
@@ -219,7 +221,7 @@ namespace Core
 
             session.Reset();
             SetState(RaceState.Countdown);
-            if (GameManager.Instance != null)
+            if (ControlsGlobalGameState && GameManager.Instance != null)
             {
                 GameManager.Instance.SetState(GameManager.GameState.Loading);
             }
@@ -242,7 +244,7 @@ namespace Core
             SetState(RaceState.Idle);
             CountdownChanged?.Invoke(-1);
 
-            if (GameManager.Instance != null)
+            if (ControlsGlobalGameState && GameManager.Instance != null)
             {
                 GameManager.Instance.ReturnToMainMenu();
             }
@@ -277,7 +279,7 @@ namespace Core
 
             CountdownChanged?.Invoke(0);
             SetState(RaceState.Racing);
-            if (GameManager.Instance != null)
+            if (ControlsGlobalGameState && GameManager.Instance != null)
             {
                 GameManager.Instance.StartGame();
             }

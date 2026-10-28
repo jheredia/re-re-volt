@@ -50,3 +50,16 @@ in both UI and adapter. Bots are selected only, not simulated online yet.
 The architecture proposal file and protected input/feedback files are untouched.
 The owner's unpushed local changes are not part of this checkout. No service,
 terms, or billing setup was performed.
+
+## Host-world source continuation — 2026-10-28
+
+The lobby is published in draft PR #1 (GitHub `1d5d20e`, tree identical to local
+`37312b2`). A separate worktree now contains a host-only world owner using the
+existing race/vehicle/track/recovery/AI systems and a validated driving-snapshot
+contract. See [host-world implementation](STAGE10_HOST_WORLD_IMPLEMENTATION.md).
+Standalone contract/state compilation and tests pass 41/41. Three PlayMode
+fixtures are source-only: Unity is unavailable, so the host module and shared
+RaceManager isolation seam are uncompiled/unrun in Unity. Start remains gated
+because input/snapshot transport, client replicas, pairing/cameras and gameplay
+UI are not integrated. No claim of playable online racing or offline parity is
+made. Owner-local asset changes remain untouched in the original checkout.
