@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Authentication;
@@ -16,14 +17,15 @@ namespace ReReVolt.Online.Unity
     /// </summary>
     public sealed class RelaySessionConnection
     {
-        // SessionJoined describes the service operation, not proof that a peer
-        // has connected or that game-state replication is ready.
+        // SessionJoined includes a connected local NGO transport, but does not prove
+        // peer compatibility, authoritative lobby admission, or playable racing.
         public enum ConnectionState { Idle, Connecting, SessionJoined, Disconnecting }
 
         private ISession session;
         private GameObject networkObject;
 
         public ConnectionState State { get; private set; }
+        public NetworkManager Network => networkObject == null ? null : networkObject.GetComponent<NetworkManager>();
         public string JoinCode => session == null ? null : session.Code;
         public bool IsHost => session != null && session.IsHost;
 
@@ -37,12 +39,12 @@ namespace ReReVolt.Online.Unity
                 var options = new SessionOptions { MaxPlayers = 4, IsPrivate = true }
                     .WithRelayNetwork();
                 session = await MultiplayerService.Instance.CreateSessionAsync(options);
+                await WaitForTransportAsync();
                 State = ConnectionState.SessionJoined;
             }
             catch
             {
-                DestroyNetworkManager();
-                State = ConnectionState.Idle;
+                await CleanupFailedConnectionAsync();
                 throw;
             }
         }
@@ -57,12 +59,12 @@ namespace ReReVolt.Online.Unity
                 await InitializeAsync();
                 CreateNetworkManager();
                 session = await MultiplayerService.Instance.JoinSessionByCodeAsync(joinCode.Trim());
+                await WaitForTransportAsync();
                 State = ConnectionState.SessionJoined;
             }
             catch
             {
-                DestroyNetworkManager();
-                State = ConnectionState.Idle;
+                await CleanupFailedConnectionAsync();
                 throw;
             }
         }
@@ -85,6 +87,30 @@ namespace ReReVolt.Online.Unity
             }
         }
 
+        private async Task WaitForTransportAsync()
+        {
+            var timer = Stopwatch.StartNew();
+            while (Network != null && !Network.IsConnectedClient)
+            {
+                if (timer.Elapsed.TotalSeconds >= 15)
+                    throw new TimeoutException("Relay transport did not connect.");
+                await Task.Delay(50);
+            }
+            if (Network == null) throw new InvalidOperationException("Relay transport was destroyed.");
+        }
+
+        private async Task CleanupFailedConnectionAsync()
+        {
+            try { if (session != null) await session.LeaveAsync(); }
+            catch (Exception) { /* Preserve the connection failure; local shutdown is unconditional. */ }
+            finally
+            {
+                session = null;
+                DestroyNetworkManager();
+                State = ConnectionState.Idle;
+            }
+        }
+
         private void BeginConnection()
         {
             if (State != ConnectionState.Idle)
@@ -94,6 +120,8 @@ namespace ReReVolt.Online.Unity
 
         private static async Task InitializeAsync()
         {
+            if (string.IsNullOrWhiteSpace(Application.cloudProjectId))
+                throw new InvalidOperationException("The owner must link this project to Unity Services first.");
             if (UnityServices.State != ServicesInitializationState.Initialized)
                 await UnityServices.InitializeAsync();
             if (!AuthenticationService.Instance.IsSignedIn)

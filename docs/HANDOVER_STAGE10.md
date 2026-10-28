@@ -31,3 +31,22 @@ Preserve the owner's existing uncommitted architecture-document change and
 protected InputHandler and feedback files. Unity generated a default network
 prefabs asset and solution-file changes during compilation; do not assume
 either is approved for inclusion. The package lock was resolved by Unity.
+
+## Cloud continuation — 2026-10-24
+
+The next authoritative-lobby slice is implemented from pushed baseline
+`3cee4b0`. See [implementation and validation](STAGE10_AUTHORITY_LOBBY_IMPLEMENTATION.md)
+for exact scope, controls, validation, and remaining integration.
+
+The host now assigns transport-derived peer/racer ownership and controls
+ready state, tracks and 0–3 bot slots. Controller lobby navigation and join-code
+entry, cancellation/late cleanup, protocol compatibility and disconnect paths
+are implemented. Pure authority/input/session/roster coverage passes 29/29 in
+standalone Mono/NUnitLite. This cloud environment has no Unity Editor: the new
+Unity adapter/UI has not compiled or run here, and no real peer/Relay connection
+was attempted. Online world simulation is still absent and Start is disabled
+in both UI and adapter. Bots are selected only, not simulated online yet.
+
+The architecture proposal file and protected input/feedback files are untouched.
+The owner's unpushed local changes are not part of this checkout. No service,
+terms, or billing setup was performed.
