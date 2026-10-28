@@ -162,3 +162,16 @@ error text; it does not alter racer ownership or race authority. Static
 whitespace checks pass, but Unity compilation and focused device/lobby tests
 remain pending until the Editor is safely closed. The previous request for
 permission to close PID 2907 has not received an answer; do not bypass it.
+
+## Client visual interpolation source slice — 2026-10-28
+
+Client-only presentation now interpolates visual proxy transforms between
+accepted snapshots over the observed bounded arrival interval (35–120 ms).
+The first state, a recovery revision, or a correction of at least 8 m snaps
+immediately. It never extrapolates beyond the latest host state or writes
+Rigidbody, wheel, race, or input authority. Presentation executes before chase
+cameras in LateUpdate. The focused client presentation fixture now asserts
+ordinary easing and recovery snap behavior. These source changes have not been
+compiled or run because the same validation Editor remains live in Safe Mode;
+include this fixture with the pending HUD/lobby focused checks once that Editor
+is safely closed. Do not infer live-network smoothness from this source change.

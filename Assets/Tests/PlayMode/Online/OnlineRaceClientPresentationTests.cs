@@ -57,6 +57,24 @@ namespace ReReVolt.Tests.Online
             Assert.That(lower.rect, Is.EqualTo(new Rect(0, 0, 1, .5f)));
             Assert.That(presentation.TryGetLocalCamera(roster.Racers[2].Id, out _), Is.False);
 
+            // Ordinary accepted motion eases only the visual proxy; recovery and
+            // large host corrections snap without dragging the chase camera.
+            DrivingWorldSnapshot movement = Snapshot(roster);
+            movement.Sequence = 2;
+            movement.Racers[0].Position = new WorldVector(4, .4f, -1);
+            presentation.ApplyAcceptedSnapshot(movement);
+            Assert.That(first.position.x, Is.EqualTo(2).Within(.01f));
+            yield return new WaitForSecondsRealtime(.16f);
+            yield return null;
+            Assert.That(first.position.x, Is.EqualTo(4).Within(.01f));
+
+            DrivingWorldSnapshot recovery = Snapshot(roster);
+            recovery.Sequence = 3;
+            recovery.Racers[0].Position = new WorldVector(20, .4f, 5);
+            recovery.Racers[0].RecoveryRevision = 1;
+            presentation.ApplyAcceptedSnapshot(recovery);
+            Assert.That(first.position, Is.EqualTo(new Vector3(20, .4f, 5)));
+
             presentation.Shutdown();
             yield return null;
             Assert.That(holder.GetComponentsInChildren<Camera>(true), Is.Empty);

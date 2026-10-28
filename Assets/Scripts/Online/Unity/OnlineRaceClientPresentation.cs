@@ -13,13 +13,24 @@ namespace ReReVolt.Online.Unity
     /// proxy cars, a non-colliding visual course, and peer-local chase cameras;
     /// it never creates vehicle physics, input devices, or a client race simulation.
     /// </summary>
+    [DefaultExecutionOrder(-50)]
     public sealed class OnlineRaceClientPresentation : MonoBehaviour
     {
+        private const float TeleportDistance = 8f;
+        private const float MinimumBlendSeconds = .035f;
+        private const float MaximumBlendSeconds = .12f;
+
         private sealed class Proxy
         {
             public uint RacerId;
             public GameObject Car;
             public Renderer[] Renderers;
+            public Vector3 FromPosition, TargetPosition;
+            public Quaternion FromRotation, TargetRotation;
+            public double ReceivedAt, PreviousReceivedAt;
+            public float BlendSeconds;
+            public uint RecoveryRevision;
+            public bool HasState;
         }
 
         private sealed class LocalView
@@ -114,7 +125,7 @@ namespace ReReVolt.Online.Unity
         }
 
         /// <summary>
-        /// Applies an already-validated snapshot. It only changes proxy transforms and never
+        /// Applies an already-validated snapshot. It only targets proxy transforms and never
         /// writes a Rigidbody, WheelCollider, race manager, or local input state.
         /// </summary>
         public void ApplyAcceptedSnapshot(DrivingWorldSnapshot snapshot)
@@ -123,8 +134,48 @@ namespace ReReVolt.Online.Unity
             foreach (DrivingRacerState state in snapshot.Racers)
             {
                 if (!proxies.TryGetValue(state.RacerId, out Proxy proxy) || proxy.Car == null) continue;
-                proxy.Car.transform.SetPositionAndRotation(Vector(state.Position), Rotation(state.Rotation));
+                Vector3 position = Vector(state.Position);
+                Quaternion rotation = Rotation(state.Rotation);
+                double now = Time.realtimeSinceStartupAsDouble;
+                bool snap = !proxy.HasState || state.RecoveryRevision != proxy.RecoveryRevision ||
+                    Vector3.Distance(proxy.TargetPosition, position) >= TeleportDistance;
+                if (snap)
+                {
+                    proxy.Car.transform.SetPositionAndRotation(position, rotation);
+                    proxy.FromPosition = proxy.TargetPosition = position;
+                    proxy.FromRotation = proxy.TargetRotation = rotation;
+                    proxy.BlendSeconds = 0;
+                }
+                else
+                {
+                    AdvanceProxy(proxy, now);
+                    proxy.FromPosition = proxy.Car.transform.position;
+                    proxy.FromRotation = proxy.Car.transform.rotation;
+                    proxy.TargetPosition = position;
+                    proxy.TargetRotation = rotation;
+                    proxy.BlendSeconds = Mathf.Clamp((float)(now - proxy.PreviousReceivedAt),
+                        MinimumBlendSeconds, MaximumBlendSeconds);
+                }
+                proxy.ReceivedAt = proxy.PreviousReceivedAt = now;
+                proxy.RecoveryRevision = state.RecoveryRevision;
+                proxy.HasState = true;
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (!initialized) return;
+            double now = Time.realtimeSinceStartupAsDouble;
+            foreach (Proxy proxy in proxies.Values) AdvanceProxy(proxy, now);
+        }
+
+        private static void AdvanceProxy(Proxy proxy, double now)
+        {
+            if (!proxy.HasState || proxy.Car == null || proxy.BlendSeconds <= 0) return;
+            float blend = Mathf.Clamp01((float)((now - proxy.ReceivedAt) / proxy.BlendSeconds));
+            proxy.Car.transform.SetPositionAndRotation(
+                Vector3.LerpUnclamped(proxy.FromPosition, proxy.TargetPosition, blend),
+                Quaternion.SlerpUnclamped(proxy.FromRotation, proxy.TargetRotation, blend));
         }
 
         public bool TryGetProxy(uint racerId, out Transform proxy)
