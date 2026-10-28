@@ -1,0 +1,6 @@
+{
+  "name": "ReReVolt.Online.World.Tests",
+  "references": ["ReReVolt.Online.Unity", "ReReVolt.Online.Contracts", "ReReVolt.Runtime", "ReReVolt.RaceRules"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

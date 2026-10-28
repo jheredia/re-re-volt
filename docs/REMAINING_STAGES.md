@@ -1,3 +1,10 @@
+> Host-world update (2026-10-28): lobby published as draft PR #1; host-world
+> source and driving snapshot contracts are added in a separate continuation.
+> See [STAGE10_HOST_WORLD_IMPLEMENTATION.md](STAGE10_HOST_WORLD_IMPLEMENTATION.md).
+> Standalone contract tests pass 41/41; Unity module compilation and new
+> PlayMode/offline parity gates are unrun. Start is still disabled pending wire
+> routing, client replicas, paired input/cameras and presentation integration.
+
 > Stage 10 update (2026-10-24): the owner selected Unity Relay. Initial
 > connection foundations are at `3cee4b0`; the subsequent authoritative lobby
 > and input-validation slice is described in

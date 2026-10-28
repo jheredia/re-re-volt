@@ -189,6 +189,16 @@ namespace ReReVolt.Online.Contracts
             return true;
         }
 
+        /// <summary>Host-runtime abort after composition failure or an interrupted active round.</summary>
+        public bool AbortRound()
+        {
+            if (Phase != OnlinePhase.Countdown && Phase != OnlinePhase.Racing) return false;
+            Phase = OnlinePhase.Lobby;
+            roster.SetLocked(host, false, Epoch, roster.Revision);
+            Changed();
+            return true;
+        }
+
         public bool OwnsHuman(string peer, uint racer) => roster.OwnsHuman(peer, racer);
 
         public LobbySnapshot Snapshot()
