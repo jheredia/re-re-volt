@@ -1,3 +1,11 @@
+> Stage 10 update (2026-10-24): the owner selected Unity Relay. Initial
+> connection foundations are at `3cee4b0`; the subsequent authoritative lobby
+> and input-validation slice is described in
+> [STAGE10_AUTHORITY_LOBBY_IMPLEMENTATION.md](STAGE10_AUTHORITY_LOBBY_IMPLEMENTATION.md).
+> The snapshot below is historical where it says implementation has not begun
+> or approval is pending. Online racing remains incomplete; cloud setup still
+> requires the owner. Standalone 29/29 is not Unity or two-peer acceptance.
+
 # Pinned Remaining Roadmap
 
 Status snapshot: `codex/local-multiplayer-prototype` at `b3c2719`. Stage 9 is
