@@ -29,6 +29,7 @@ namespace ReReVolt.Online.Unity
         private bool enteringCode;
         private bool priorJoining;
         private bool disposed;
+        private bool leaveAfterFailedClientRound;
         private string code = string.Empty;
         private string lastText;
         private string failure;
@@ -101,6 +102,12 @@ namespace ReReVolt.Online.Unity
                     DisposeProtocol();
                     _ = lobby.ConnectionLostAsync();
                 }
+            }
+            if (leaveAfterFailedClientRound)
+            {
+                leaveAfterFailedClientRound = false;
+                Leave(); // A failed client cannot remain a ghost racer in the host's locked round.
+                nextRefresh = 0;
             }
             bool roundInProgress = roundCoordinator != null && roundCoordinator.IsRoundActive &&
                 protocol?.Snapshot?.Phase != OnlinePhase.Results;
@@ -236,11 +243,11 @@ namespace ReReVolt.Online.Unity
                     var racer = FindLocal(snapshot, localSlot);
                     Add("SELECT LOCAL SLOT: " + (localSlot + 1), () => localSlot = (localSlot + 1) % 4);
                     if (racer == null)
-                        Add("ADD HUMAN IN SLOT " + (localSlot + 1), () => Submit(new LobbyCommand { Action = LobbyAction.AddHuman, Slot = (byte)localSlot }));
+                        Add("ADD HUMAN IN SLOT " + (localSlot + 1), () => TryAddLocalHuman(snapshot));
                     else
                     {
                         Add(racer.Ready ? "MARK SELECTED HUMAN NOT READY" : "MARK SELECTED HUMAN READY",
-                            () => Submit(new LobbyCommand { Action = LobbyAction.SetReady, RacerId = racer.Id, Ready = !racer.Ready }));
+                            () => TrySetLocalReady(snapshot, racer));
                         Add("REMOVE SELECTED HUMAN (KEEP AT LEAST ONE)",
                             () => Submit(new LobbyCommand { Action = LobbyAction.RemoveHuman, RacerId = racer.Id }));
                     }
@@ -249,7 +256,7 @@ namespace ReReVolt.Online.Unity
                         Add("NEXT TRACK", CycleTrack);
                         Add("AI OPPONENTS: " + CountBots(snapshot) + " (CYCLE 0–3)",
                             () => Submit(new LobbyCommand { Action = LobbyAction.SetBots, BotCount = (CountBots(snapshot) + 1) % 4 }));
-                        Add("START ONLINE RACE (ALL HUMANS READY)", () => Submit(new LobbyCommand { Action = LobbyAction.Start }));
+                        Add("START ONLINE RACE (ALL HUMANS READY)", () => TryStartOnlineRace(snapshot));
                     }
                 }
                 Add("LEAVE SESSION", Leave);
@@ -260,6 +267,50 @@ namespace ReReVolt.Online.Unity
 
         private void Add(string label, Action action) { labels.Add(label); actions.Add(action); }
         private void Submit(LobbyCommand command) => protocol?.Submit(command);
+        private void TryAddLocalHuman(LobbySnapshot snapshot)
+        {
+            if (CountLocalHumans(snapshot) >= OnlineLocalInputSender.AvailableRacerCapacity())
+            {
+                failure = "Connect another unpaired controller before adding a local racer.";
+                nextRefresh = 0;
+                return;
+            }
+            failure = null;
+            Submit(new LobbyCommand { Action = LobbyAction.AddHuman, Slot = (byte)localSlot });
+        }
+
+        private void TrySetLocalReady(LobbySnapshot snapshot, LobbyRacer racer)
+        {
+            if (!racer.Ready && CountLocalHumans(snapshot) > OnlineLocalInputSender.AvailableRacerCapacity())
+            {
+                failure = "Connect a keyboard or enough unpaired controllers before marking ready.";
+                nextRefresh = 0;
+                return;
+            }
+            failure = null;
+            Submit(new LobbyCommand { Action = LobbyAction.SetReady, RacerId = racer.Id, Ready = !racer.Ready });
+        }
+
+        private void TryStartOnlineRace(LobbySnapshot snapshot)
+        {
+            if (CountLocalHumans(snapshot) > OnlineLocalInputSender.AvailableRacerCapacity())
+            {
+                failure = "Connect enough local controllers before starting the online race.";
+                nextRefresh = 0;
+                return;
+            }
+            failure = null;
+            Submit(new LobbyCommand { Action = LobbyAction.Start });
+        }
+
+        private int CountLocalHumans(LobbySnapshot snapshot)
+        {
+            int count = 0;
+            if (snapshot?.Racers == null || protocol == null) return count;
+            foreach (LobbyRacer racer in snapshot.Racers)
+                if (racer != null && !racer.Bot && racer.Peer == protocol.LocalPeer) count++;
+            return count;
+        }
         private void CycleTrack()
         {
             var entries = TrackCatalog.Entries;
@@ -304,6 +355,8 @@ namespace ReReVolt.Online.Unity
                             content.Append("R").Append(racer.Id).Append(racer.Bot ? "  HOST AI" :
                                 (racer.Peer == protocol.LocalPeer ? "  YOU / SLOT " : "  FRIEND / SLOT ") + (racer.Slot + 1))
                                 .Append(racer.Ready ? "  READY\n" : "  NOT READY\n");
+                        content.Append("LOCAL INPUT DEVICES: ").Append(OnlineLocalInputSender.AvailableRacerCapacity())
+                            .Append(" FOR ").Append(CountLocalHumans(snapshot)).Append(" LOCAL RACER(S)\n");
                         content.Append(OnlineLobbyProtocol.Describe(protocol.LastError)).Append('\n');
                         if (protocol.RequestPending) content.Append("WAITING FOR HOST...\n");
                     }
@@ -376,9 +429,13 @@ namespace ReReVolt.Online.Unity
             if (panel != null) panel.SetActive(false);
         }
 
-        private void OnRoundStopped(string _)
+        private void OnRoundStopped(string reason)
         {
             if (visible && panel != null) panel.SetActive(true);
+            if (!string.IsNullOrEmpty(reason) && reason != "Online round returned to the lobby." &&
+                reason != "Online round ended.") failure = reason;
+            if (reason != null && reason.StartsWith("Online client round could not start:", StringComparison.Ordinal))
+                leaveAfterFailedClientRound = true;
             nextRefresh = 0;
         }
 

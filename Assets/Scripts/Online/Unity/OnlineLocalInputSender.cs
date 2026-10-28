@@ -32,6 +32,25 @@ namespace ReReVolt.Online.Unity
 
         public int LocalRacerCount => bindings.Count;
 
+        /// <summary>
+        /// The maximum number of independent local racers that can be bound now.
+        /// A solo racer can use keyboard or gamepad; each additional racer needs
+        /// another unpaired device. This is advisory until round lock, where
+        /// Initialize performs the same check and owns the actual pairing.
+        /// </summary>
+        public static int AvailableRacerCapacity()
+        {
+            int count = 0;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.added && keyboard.enabled &&
+                !InputUser.FindUserPairedToDevice(keyboard).HasValue)
+                count++;
+            foreach (Gamepad pad in Gamepad.all)
+                if (pad.added && pad.enabled && !InputUser.FindUserPairedToDevice(pad).HasValue)
+                    count++;
+            return Mathf.Min(4, count);
+        }
+
         public void Initialize(LobbySnapshot lockedRoster, string localPeer, OnlineLobbyProtocol lobby,
             OnlineRaceMessageRouting messageRouting)
         {

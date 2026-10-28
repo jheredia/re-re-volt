@@ -72,7 +72,7 @@ namespace ReReVolt.Online.Unity
             catch (Exception exception)
             {
                 Debug.LogException(exception, this);
-                CleanupRound(publishHostAbort: false, "Online host round could not start.");
+                CleanupRound(publishHostAbort: false, "Online host round could not start: " + exception.Message);
                 return false;
             }
         }
@@ -106,7 +106,7 @@ namespace ReReVolt.Online.Unity
             catch (Exception exception)
             {
                 Debug.LogException(exception, this);
-                CleanupRound(publishHostAbort: false, "Online client presentation could not start.");
+                CleanupRound(publishHostAbort: false, "Online client round could not start: " + exception.Message);
             }
         }
 

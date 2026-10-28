@@ -148,3 +148,17 @@ without explicit user approval; a question requesting approval was sent.
 Once the Editor is safely closed, rerun only `OnlineRaceHudTests`, inspect its
 XML/log, reconcile any evidenced failure, then record acceptance in a follow-up
 commit. Do not touch the owner's unrelated uncommitted or generated files.
+
+## Local device preflight source slice — 2026-10-28
+
+While the same Editor remains live in Safe Mode, a separate narrow source
+change makes the online lobby refuse Add Human, Ready, and host Start when the
+local peer lacks enough unpaired keyboard/gamepad devices for its human roster.
+It displays local device capacity and keeps a failed round-composition reason
+visible. A client that cannot compose its locked round leaves the session on
+the following Update, so it cannot remain a ghost racer on the host. This
+changes only `OnlineLocalInputSender`, `OnlineLobbyEntry`, and the coordinator's
+error text; it does not alter racer ownership or race authority. Static
+whitespace checks pass, but Unity compilation and focused device/lobby tests
+remain pending until the Editor is safely closed. The previous request for
+permission to close PID 2907 has not received an answer; do not bypass it.
