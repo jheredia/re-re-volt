@@ -30,6 +30,15 @@ passed 3/3 (`/private/tmp/stage10-ngo-routing/results-final.xml`). It is still
 not evidence of a live Relay connection, a second peer, client vehicle
 presentation, race UI, combat, or a complete online race.
 
+Client snapshot presentation now creates visual-only vehicle proxies and
+peer-local split-screen chase cameras for the authenticated local human racers.
+It never creates a Rigidbody, wheel collider, controller, local input device,
+race manager, or audio listener. Unity 6000.6 ran the focused presentation
+PlayMode coverage 1/1 (`/private/tmp/online-client-presentation-results.xml`).
+This validates presentation ownership in-process only; a real peer connection,
+snapshot interpolation under latency, start composition, and complete game
+flow remain next.
+
 Next: integrate the roster with authenticated transport identities, online
 setup and host authority; add cancellation, disconnect handling, simulation,
 state replication, AI, and results/rematch. Validate with two real peers and

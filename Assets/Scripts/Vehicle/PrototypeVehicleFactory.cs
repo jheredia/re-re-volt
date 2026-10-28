@@ -167,6 +167,30 @@ namespace Vehicle
         }
 
         /// <summary>
+        /// Builds only the generated visual hierarchy used by an online snapshot client.
+        /// It deliberately has no Rigidbody, WheelCollider, VehicleController, or collision
+        /// components: the host is the sole simulation authority for online rounds.
+        /// </summary>
+        public static GameObject CreatePresentationProxy(Pose pose, int identityIndex,
+            VehicleFamilyId familyId = VehicleFamilyId.Touring)
+        {
+            if (identityIndex < 0 || identityIndex >= LocalPlayerRules.MaximumPlayers)
+                throw new ArgumentOutOfRangeException(nameof(identityIndex));
+            if (!VehicleFamilyCatalog.IsDefined(familyId))
+                throw new ArgumentOutOfRangeException(nameof(familyId), familyId, "Unknown vehicle family.");
+
+            GameObject proxy = new GameObject("OnlineVehiclePresentationProxy");
+            proxy.transform.SetPositionAndRotation(pose.position, pose.rotation);
+            List<Renderer> sourceRenderers = new(10);
+            List<Renderer> colorableBodyRenderers = new(8);
+            Transform visualPivot = CreatePresentationPivot(proxy.transform);
+            CreateSilhouette(visualPivot, familyId, sourceRenderers, colorableBodyRenderers, string.Empty, true);
+            proxy.AddComponent<VehicleFamilyVisual>().Initialize(familyId, sourceRenderers, colorableBodyRenderers, visualPivot);
+            CreatePlayerIdentityMarker(proxy, identityIndex);
+            return proxy;
+        }
+
+        /// <summary>
         /// Builds an inactive replacement silhouette while leaving the current visual and all root gameplay state intact.
         /// The caller may register <see cref="VehicleFamilyVisualReplacement.NewSourceRenderers"/> transactionally,
         /// then commit, or dispose to roll back.
