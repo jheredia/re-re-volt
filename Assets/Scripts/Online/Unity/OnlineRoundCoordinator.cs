@@ -20,6 +20,7 @@ namespace ReReVolt.Online.Unity
         private OnlineHostLocalPresentation hostPresentation;
         private OnlineRaceClientPresentation clientPresentation;
         private OnlineLocalInputSender localInput;
+        private OnlineRaceHud raceHud;
         private OnlineRaceMessageRouting routing;
         private bool initialized;
         private bool stopping;
@@ -60,6 +61,9 @@ namespace ReReVolt.Online.Unity
                 hostPresentation.Initialize(lockedRoster, protocol.LocalPeer, hostWorld);
                 localInput = gameObject.AddComponent<OnlineLocalInputSender>();
                 localInput.Initialize(lockedRoster, protocol.LocalPeer, protocol, routing);
+                raceHud = gameObject.AddComponent<OnlineRaceHud>();
+                raceHud.Initialize(lockedRoster, protocol.LocalPeer);
+                raceHud.Bind(routing);
                 SuspendOfflinePresentation();
                 hostWorld.Race.RaceStateChanged += OnHostRaceStateChanged;
                 RoundStarted?.Invoke();
@@ -93,6 +97,9 @@ namespace ReReVolt.Online.Unity
                 clientPresentation.BindAcceptedSnapshots(routing);
                 localInput = gameObject.AddComponent<OnlineLocalInputSender>();
                 localInput.Initialize(snapshot, protocol.LocalPeer, protocol, routing);
+                raceHud = gameObject.AddComponent<OnlineRaceHud>();
+                raceHud.Initialize(snapshot, protocol.LocalPeer);
+                raceHud.Bind(routing);
                 SuspendOfflinePresentation();
                 RoundStarted?.Invoke();
             }
@@ -146,6 +153,12 @@ namespace ReReVolt.Online.Unity
                 localInput.Shutdown();
                 Destroy(localInput);
                 localInput = null;
+            }
+            if (raceHud != null)
+            {
+                raceHud.Shutdown();
+                Destroy(raceHud);
+                raceHud = null;
             }
             routing?.Dispose();
             routing = null;

@@ -125,3 +125,26 @@ authority/presentation, input-device assignment/error guidance in the lobby,
 snapshot interpolation and latency checks, disconnect/rematch flows, and full
 stage-end tests/builds. Keep the protected InputHandler edit and all feedback
 files untouched. Cloud service activation/terms/billing remain with the owner.
+
+## Online HUD source slice — 2026-10-28
+
+The next source slice adds a peer-local countdown/lap/position/time/results
+HUD driven by the existing authoritative host snapshot and client-accepted
+snapshot events. Its owned files are `Assets/Scripts/Online/Unity/OnlineRaceMessageRouting.cs`,
+`OnlineRoundCoordinator.cs`, new `OnlineRaceHud.cs` and `.meta`, and new
+`Assets/Tests/PlayMode/Online/OnlineRaceHudTests.cs` and `.meta`. The first
+focused Unity run found only a test-assembly error (`TMPro` not referenced by
+the PlayMode test assembly); production code compiled. The test was revised to
+use a read-only HUD diagnostic API instead, but that revision has not been
+compiled or run yet. Treat this source slice as unaccepted until focused
+validation succeeds. Its original log is
+`/private/tmp/stage10-online-hud-smoke.log`; no final XML was produced.
+
+The Unity Editor launched by that test is still live in Safe Mode as process
+2907 (confirmed by the live exec session). Normal test-mode exit did not occur.
+An attempt to send SIGTERM was rejected by auto-review because an Editor can
+hold unsaved state. Do not retry termination or work around that rejection
+without explicit user approval; a question requesting approval was sent.
+Once the Editor is safely closed, rerun only `OnlineRaceHudTests`, inspect its
+XML/log, reconcile any evidenced failure, then record acceptance in a follow-up
+commit. Do not touch the owner's unrelated uncommitted or generated files.

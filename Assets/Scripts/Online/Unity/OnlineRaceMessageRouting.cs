@@ -32,6 +32,8 @@ namespace ReReVolt.Online.Unity
 
         /// <summary>Only raised on non-host peers after the contract accepts a host snapshot.</summary>
         public event Action<DrivingWorldSnapshot> SnapshotAccepted;
+        /// <summary>Only raised on the host for the same authoritative snapshot sent to clients.</summary>
+        public event Action<DrivingWorldSnapshot> HostSnapshotPublished;
         public InputError LastInputError { get; private set; }
         public SnapshotError LastSnapshotError { get; private set; }
         public bool IsHost => network.IsHost;
@@ -90,8 +92,10 @@ namespace ReReVolt.Online.Unity
             if (!network.IsHost || hostWorld == null || !hostWorld.IsInitialized) return;
             if (double.IsNaN(hostTime) || double.IsInfinity(hostTime) || hostTime < nextSnapshotAt) return;
             nextSnapshotAt = hostTime + SnapshotInterval;
-            if (!OnlineRaceWireCodec.TryEncodeSnapshot(hostWorld.CaptureSnapshot(), out byte[] bytes))
+            DrivingWorldSnapshot snapshot = hostWorld.CaptureSnapshot();
+            if (!OnlineRaceWireCodec.TryEncodeSnapshot(snapshot, out byte[] bytes))
                 throw new InvalidOperationException("Authoritative driving snapshot exceeded its wire contract.");
+            HostSnapshotPublished?.Invoke(snapshot);
             recipients.Clear();
             foreach (ulong peer in network.ConnectedClientsIds)
                 if (peer != network.LocalClientId) recipients.Add(peer);
@@ -143,6 +147,7 @@ namespace ReReVolt.Online.Unity
             network.CustomMessagingManager?.UnregisterNamedMessageHandler(InputChannel);
             network.CustomMessagingManager?.UnregisterNamedMessageHandler(SnapshotChannel);
             SnapshotAccepted = null;
+            HostSnapshotPublished = null;
         }
     }
 
