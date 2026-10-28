@@ -29,7 +29,7 @@ namespace ReReVolt.Tests.Online
             await lobby.HostAsync();
             Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Joined));
             Assert.That(lobby.JoinCode, Is.EqualTo("ABC123"));
-            Assert.That(lobby.Message, Does.Contain("not implemented"));
+            Assert.That(lobby.Message, Does.Contain("Negotiating"));
             await lobby.LeaveAsync();
             Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
             Assert.That(lobby.JoinCode, Is.Null);
@@ -62,6 +62,76 @@ namespace ReReVolt.Tests.Online
             connection.Pending.SetResult(true);
             await first;
             Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Joined));
+        }
+        [Test]
+        public async Task CancelledConnectionLeavesLateSessionBeforeReturningIdle()
+        {
+            var connection = new FakeConnection { Pending = new TaskCompletionSource<bool>() };
+            var lobby = new OnlineLobbySession(connection);
+            Task operation = lobby.HostAsync();
+            lobby.Cancel();
+            Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Cancelling));
+            await lobby.HostAsync();
+            Assert.That(connection.Calls, Is.EqualTo(1));
+            connection.Pending.SetResult(true);
+            await operation;
+            Assert.That(connection.Calls, Is.EqualTo(2));
+            Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
+            Assert.That(lobby.Error, Is.EqualTo(OnlineConnectionError.Cancelled));
+            Assert.That(lobby.JoinCode, Is.Null);
+        }
+
+        [Test]
+        public async Task CancelThenServiceFailureIsRecoverable()
+        {
+            var connection = new FakeConnection { Pending = new TaskCompletionSource<bool>() };
+            var lobby = new OnlineLobbySession(connection);
+            Task operation = lobby.HostAsync();
+            lobby.Cancel();
+            connection.Pending.SetException(new InvalidOperationException());
+            await operation;
+            Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
+            Assert.That(lobby.Error, Is.EqualTo(OnlineConnectionError.Cancelled));
+            Assert.That(connection.Calls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task CancelCleanupFailureDoesNotClaimCleanCancellation()
+        {
+            var connection = new FakeConnection { Pending = new TaskCompletionSource<bool>() };
+            var lobby = new OnlineLobbySession(connection);
+            Task operation = lobby.HostAsync();
+            lobby.Cancel();
+            connection.Fail = true;
+            connection.Pending.SetResult(true);
+            await operation;
+            Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
+            Assert.That(lobby.Error, Is.EqualTo(OnlineConnectionError.CleanupFailed));
+        }
+
+        [Test]
+        public async Task TransportLossClosesConnectionAndOffersNewSession()
+        {
+            var connection = new FakeConnection();
+            var lobby = new OnlineLobbySession(connection);
+            await lobby.HostAsync();
+            await lobby.ConnectionLostAsync();
+            Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
+            Assert.That(lobby.Error, Is.EqualTo(OnlineConnectionError.ConnectionLost));
+            Assert.That(lobby.Message, Does.Contain("Host or join"));
+            Assert.That(connection.Calls, Is.EqualTo(2));
+        }
+
+        [TestCase("bad code")]
+        [TestCase("éABC")]
+        [TestCase("ABCDEFGHIJKLM")]
+        public async Task InvalidCodesNeverCallService(string code)
+        {
+            var connection = new FakeConnection();
+            var lobby = new OnlineLobbySession(connection);
+            await lobby.JoinAsync(code);
+            Assert.That(connection.Calls, Is.Zero);
+            Assert.That(lobby.Error, Is.EqualTo(OnlineConnectionError.InvalidCode));
         }
     }
 }
