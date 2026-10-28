@@ -88,3 +88,40 @@ RaceManager isolation seam are uncompiled/unrun in Unity. Start remains gated
 because input/snapshot transport, client replicas, pairing/cameras and gameplay
 UI are not integrated. No claim of playable online racing or offline parity is
 made. Owner-local asset changes remain untouched in the original checkout.
+
+## Local branch continuation — 2026-10-28
+
+The Cloud draft-PR work was reconciled onto `codex/local-multiplayer-prototype`.
+The local branch now contains the authoritative lobby, isolated host race world,
+NGO input/snapshot routing, client car proxies/split cameras, and a round
+coordinator. Focused Unity evidence before this continuation: online contract
+EditMode 25/25, lobby EditMode 11/11, host world PlayMode 3/3, routing 3/3,
+client presentation 1/1, and coordinator host-world 4/4. These are local
+in-process checks, not live Relay proof.
+
+The local-input/view slice binds a peer's locked human roster to unpaired
+physical devices for the duration of a round. Keyboard takes the first local
+racer; remaining racers use distinct gamepads. A solo racer may also use the
+first gamepad as a fallback. Device users are released on teardown, and a
+disconnect produces neutral controls rather than reassigning another player's
+controller. The sender emits 30 Hz quantized throttle, steering and brake
+commands plus a one-shot recovery edge. The host input authority still
+validates epoch, round, owner, sequence and rate before physics. Fire and pause
+are not yet wired to online gameplay.
+
+Host-local chase views follow real authoritative cars; clients build the
+selected course only as non-colliding scenery and follow host-accepted proxy
+cars. The offline circuit and HUD are hidden during an online round and
+restored on teardown. Focused Unity 6000.6 PlayMode checks pass client
+presentation 1/1 (`/private/tmp/stage10-online-local-input-smoke.xml`) and
+host-local view 1/1 (`/private/tmp/stage10-host-local-view-smoke-fixed.xml`).
+Compilation completed in those runs. This slice has not been exercised with
+two live peers or Relay; device binding still needs dedicated runtime testing
+for four local slots, disconnect and rematch.
+
+Before calling Stage 10 playable: verify a real two-machine Relay session and
+cross-network joining; add online race HUD/results, online combat and pickup
+authority/presentation, input-device assignment/error guidance in the lobby,
+snapshot interpolation and latency checks, disconnect/rematch flows, and full
+stage-end tests/builds. Keep the protected InputHandler edit and all feedback
+files untouched. Cloud service activation/terms/billing remain with the owner.

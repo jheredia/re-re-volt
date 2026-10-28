@@ -17,10 +17,16 @@ namespace ReReVolt.Online.Unity
         private OnlineLobbyProtocol protocol;
         private Stage3Bootstrap bootstrap;
         private OnlineRaceHostWorld hostWorld;
+        private OnlineHostLocalPresentation hostPresentation;
         private OnlineRaceClientPresentation clientPresentation;
+        private OnlineLocalInputSender localInput;
         private OnlineRaceMessageRouting routing;
         private bool initialized;
         private bool stopping;
+        private GameObject suspendedOfflineCircuit;
+        private bool offlineCircuitWasActive;
+        private Canvas suspendedOfflineCanvas;
+        private bool offlineCanvasWasEnabled;
 
         public bool IsRoundActive => hostWorld != null || clientPresentation != null;
         public bool IsHostRound => hostWorld != null;
@@ -50,6 +56,11 @@ namespace ReReVolt.Online.Unity
                 hostWorld.Aborted += OnHostAborted;
                 hostWorld.Initialize(protocol.HostAuthority, bootstrap.VisualStyle);
                 routing = new OnlineRaceMessageRouting(protocol.Network, lockedRoster, hostWorld);
+                hostPresentation = gameObject.AddComponent<OnlineHostLocalPresentation>();
+                hostPresentation.Initialize(lockedRoster, protocol.LocalPeer, hostWorld);
+                localInput = gameObject.AddComponent<OnlineLocalInputSender>();
+                localInput.Initialize(lockedRoster, protocol.LocalPeer, protocol, routing);
+                SuspendOfflinePresentation();
                 hostWorld.Race.RaceStateChanged += OnHostRaceStateChanged;
                 RoundStarted?.Invoke();
                 return true;
@@ -80,6 +91,9 @@ namespace ReReVolt.Online.Unity
                 clientPresentation = gameObject.AddComponent<OnlineRaceClientPresentation>();
                 clientPresentation.Initialize(snapshot, protocol.LocalPeer, bootstrap.VisualStyle);
                 clientPresentation.BindAcceptedSnapshots(routing);
+                localInput = gameObject.AddComponent<OnlineLocalInputSender>();
+                localInput.Initialize(snapshot, protocol.LocalPeer, protocol, routing);
+                SuspendOfflinePresentation();
                 RoundStarted?.Invoke();
             }
             catch (Exception exception)
@@ -127,8 +141,20 @@ namespace ReReVolt.Online.Unity
                 if (hostWorld.Race != null) hostWorld.Race.RaceStateChanged -= OnHostRaceStateChanged;
                 hostWorld.Aborted -= OnHostAborted;
             }
+            if (localInput != null)
+            {
+                localInput.Shutdown();
+                Destroy(localInput);
+                localInput = null;
+            }
             routing?.Dispose();
             routing = null;
+            if (hostPresentation != null)
+            {
+                hostPresentation.Shutdown();
+                Destroy(hostPresentation);
+                hostPresentation = null;
+            }
             if (clientPresentation != null)
             {
                 clientPresentation.Shutdown();
@@ -141,6 +167,7 @@ namespace ReReVolt.Online.Unity
                 Destroy(hostWorld);
                 hostWorld = null;
             }
+            RestoreOfflinePresentation();
             if (publishHostAbort) protocol?.PublishAuthoritySnapshot();
             stopping = false;
             if (hadRound) RoundStopped?.Invoke(reason);
@@ -148,6 +175,31 @@ namespace ReReVolt.Online.Unity
 
         private void OnDisable() => DisposeCoordinator();
         private void OnDestroy() => DisposeCoordinator();
+
+        private void SuspendOfflinePresentation()
+        {
+            if (bootstrap == null) return;
+            suspendedOfflineCircuit = bootstrap.CircuitRoot;
+            if (suspendedOfflineCircuit != null)
+            {
+                offlineCircuitWasActive = suspendedOfflineCircuit.activeSelf;
+                suspendedOfflineCircuit.SetActive(false);
+            }
+            suspendedOfflineCanvas = bootstrap.Presentation != null ? bootstrap.Presentation.PresentationCanvas : null;
+            if (suspendedOfflineCanvas != null)
+            {
+                offlineCanvasWasEnabled = suspendedOfflineCanvas.enabled;
+                suspendedOfflineCanvas.enabled = false;
+            }
+        }
+
+        private void RestoreOfflinePresentation()
+        {
+            if (suspendedOfflineCircuit != null) suspendedOfflineCircuit.SetActive(offlineCircuitWasActive);
+            if (suspendedOfflineCanvas != null) suspendedOfflineCanvas.enabled = offlineCanvasWasEnabled;
+            suspendedOfflineCircuit = null;
+            suspendedOfflineCanvas = null;
+        }
 
         private void DisposeCoordinator()
         {

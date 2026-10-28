@@ -116,6 +116,32 @@ namespace ReReVolt.Tests.Online
             Assert.That(global.CurrentState, Is.EqualTo(GameManager.GameState.MainMenu));
         }
 
+        [UnityTest] public IEnumerator HostLocalViewsFollowOnlyOwnedAuthoritativeCarsAndReleaseCleanly()
+        {
+            var authority = new OnlineLobbyAuthority("host", 13,
+                new[] { TrackCatalog.Default.Id }, TrackCatalog.Default.Id);
+            Apply(authority, "host", new LobbyCommand { Action = LobbyAction.AddHuman, Slot = 1 });
+            foreach (var racer in authority.Snapshot().Racers)
+                Apply(authority, "host", new LobbyCommand { Action = LobbyAction.SetReady,
+                    RacerId = racer.Id, Ready = true });
+            Apply(authority, "host", new LobbyCommand { Action = LobbyAction.Start });
+            world.Initialize(authority);
+
+            var views = holder.AddComponent<OnlineHostLocalPresentation>();
+            views.Initialize(authority.Snapshot(), "host", world);
+            Assert.That(views.LocalCameraCount, Is.EqualTo(2));
+            Camera[] cameras = views.GetComponentsInChildren<Camera>();
+            Assert.That(cameras.Length, Is.EqualTo(2));
+            Assert.That(cameras[0].rect, Is.EqualTo(new Rect(0, .5f, 1, .5f)));
+            Assert.That(cameras[1].rect, Is.EqualTo(new Rect(0, 0, 1, .5f)));
+            Assert.That(views.GetComponentsInChildren<AudioListener>(), Is.Empty);
+            Assert.That(holder.GetComponentsInChildren<VehicleController>().Length, Is.EqualTo(2),
+                "Host views must not duplicate authoritative vehicles.");
+            views.Shutdown();
+            yield return null;
+            Assert.That(views.GetComponentsInChildren<Camera>(true), Is.Empty);
+        }
+
         [UnityTest] public IEnumerator OrderedHostCheckpointsProduceResultsAndRetainedIdsCanRematch()
         {
             var authority = Lobby(TrackCatalog.Default.Id, 1);

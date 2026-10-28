@@ -10,8 +10,8 @@ namespace ReReVolt.Online.Unity
 {
     /// <summary>
     /// Client-only view of host-accepted driving snapshots. This component owns visual
-    /// proxy cars and peer-local chase cameras; it never creates physics, race rules,
-    /// input devices, or a client simulation world.
+    /// proxy cars, a non-colliding visual course, and peer-local chase cameras;
+    /// it never creates vehicle physics, input devices, or a client race simulation.
     /// </summary>
     public sealed class OnlineRaceClientPresentation : MonoBehaviour
     {
@@ -34,6 +34,7 @@ namespace ReReVolt.Online.Unity
         private readonly List<LobbyRacer> localHumans = new List<LobbyRacer>(4);
         private OnlineRaceMessageRouting routing;
         private VisualStyleController visualStyle;
+        private ITrackRuntime visualTrack;
         private GameObject content;
         private LobbySnapshot roster;
         private bool initialized;
@@ -73,6 +74,20 @@ namespace ReReVolt.Online.Unity
             {
                 content = new GameObject("Online Client Presentation " + roster.Round);
                 content.transform.SetParent(transform, false);
+                // The client needs the selected course to see and navigate, but it
+                // never runs local checkpoint, collision, or race authority.
+                if (!TrackCatalog.TryGet(roster.TrackId, out TrackDefinition definition) || !definition.IsAvailable)
+                    throw new InvalidOperationException("The selected online track is unavailable.");
+                GameObject rulesObject = new GameObject("Visual Track Rules (Inactive)");
+                rulesObject.transform.SetParent(content.transform, false);
+                RaceManager visualRules = rulesObject.AddComponent<RaceManager>();
+                visualRules.ControlsGlobalGameState = false;
+                if (!visualRules.ConfigureRace(definition.LapCount, definition.OrderedCheckpointCount))
+                    throw new InvalidOperationException("The visual track rejected its authored configuration.");
+                visualTrack = new TrackSession(TrackCatalog.Entries, roster.TrackId)
+                    .BuildSelected(visualRules, content.transform, visualStyle);
+                foreach (Collider collider in visualTrack.Root.GetComponentsInChildren<Collider>(true))
+                    collider.enabled = false;
                 for (int i = 0; i < roster.Racers.Length; i++) CreateProxy(roster.Racers[i], i);
                 for (int i = 0; i < localHumans.Count; i++) CreateLocalView(localHumans[i], i);
                 RefreshViewports();
@@ -192,6 +207,8 @@ namespace ReReVolt.Online.Unity
             proxies.Clear();
             localViews.Clear();
             localHumans.Clear();
+            visualTrack?.Dispose();
+            visualTrack = null;
             if (content != null)
             {
                 content.SetActive(false);

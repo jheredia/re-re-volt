@@ -339,7 +339,7 @@ namespace ReReVolt.Online.Unity
             var hint = label.GetComponent<TextMeshProUGUI>();
             hint.fontSize = 22; hint.color = Color.white;
             hint.alignment = TextAlignmentOptions.Center;
-            hint.text = "PRIVATE ONLINE LOBBY (DEVELOPMENT): F8 / PAD SELECT — RACING NOT YET AVAILABLE";
+            hint.text = "PRIVATE ONLINE LOBBY (EXPERIMENTAL): F8 / PAD SELECT";
             hint.raycastTarget = false;
         }
 

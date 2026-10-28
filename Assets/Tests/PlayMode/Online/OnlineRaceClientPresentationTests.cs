@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using Presentation;
 using ReReVolt.Online.Contracts;
 using ReReVolt.Online.Unity;
 using UnityEngine;
@@ -38,7 +39,8 @@ namespace ReReVolt.Tests.Online
             Assert.That(presentation.ProxyCount, Is.EqualTo(3));
             Assert.That(presentation.LocalCameraCount, Is.EqualTo(2));
             Assert.That(holder.GetComponentsInChildren<Rigidbody>(true), Is.Empty);
-            Assert.That(holder.GetComponentsInChildren<Collider>(true), Is.Empty);
+            foreach (Collider collider in holder.GetComponentsInChildren<Collider>(true))
+                Assert.That(collider.enabled, Is.False, "Client track geometry must never run collision authority.");
             Assert.That(holder.GetComponentsInChildren<WheelCollider>(true), Is.Empty);
             Assert.That(holder.GetComponentsInChildren<VehicleController>(true), Is.Empty);
             Assert.That(holder.GetComponentsInChildren<AudioListener>(true), Is.Empty);
@@ -62,7 +64,8 @@ namespace ReReVolt.Tests.Online
 
         private static LobbySnapshot LockedRoster()
         {
-            var authority = new OnlineLobbyAuthority("host", 81, new[] { "track" }, "track");
+            var authority = new OnlineLobbyAuthority("host", 81,
+                new[] { TrackCatalog.Default.Id }, TrackCatalog.Default.Id);
             Apply(authority, "host", new LobbyCommand { Action = LobbyAction.AddHuman, Slot = 1 });
             Apply(authority, "host", new LobbyCommand { Action = LobbyAction.SetBots, BotCount = 1 });
             foreach (LobbyRacer racer in authority.Snapshot().Racers)
