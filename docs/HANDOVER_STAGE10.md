@@ -21,6 +21,15 @@ not yet implemented. Unity compiled and its isolated lobby state tests passed
 screen itself has not been runtime-validated and requires a keyboard; controller
 navigation, cancellation and a genuine connection remain outstanding.
 
+The host-driving transport slice is now also in place: `OnlineRaceMessageRouting`
+uses bounded NGO named messages for validated peer input and host-only snapshots
+at an explicit 20 Hz, post-physics cadence. A client validates and observes
+defensive snapshot copies only; it cannot own the host world or submit a
+snapshot. Unity 6000.6 compiled this slice and the focused PlayMode wire tests
+passed 3/3 (`/private/tmp/stage10-ngo-routing/results-final.xml`). It is still
+not evidence of a live Relay connection, a second peer, client vehicle
+presentation, race UI, combat, or a complete online race.
+
 Next: integrate the roster with authenticated transport identities, online
 setup and host authority; add cancellation, disconnect handling, simulation,
 state replication, AI, and results/rematch. Validate with two real peers and

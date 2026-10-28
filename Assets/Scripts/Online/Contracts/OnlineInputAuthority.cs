@@ -7,6 +7,7 @@ namespace ReReVolt.Online.Contracts
     public enum InputEdges : byte { None = 0, Fire = 1, Recover = 2, Pause = 4 }
     public enum InputError { None, WrongEpoch, WrongRound, IllegalPhase, InvalidFrame, NotOwner, StaleSequence, RateLimited }
 
+    [Serializable]
     public struct RacerInputCommand
     {
         public uint RacerId;
@@ -17,6 +18,7 @@ namespace ReReVolt.Online.Contracts
         public InputEdges Edges;
     }
 
+    [Serializable]
     public sealed class PeerInputFrame
     {
         public ulong Epoch;
