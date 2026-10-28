@@ -149,5 +149,24 @@ namespace ReReVolt.Tests.Online
             Assert.That(snapshot.Racers[0].FinishPosition, Is.Zero);
             Assert.That(snapshot.Racers[0].CompletedLaps, Is.Zero);
         }
+
+        [UnityTest] public IEnumerator ResultsRemainHostAuthoritativeUntilExplicitRematchAfterWorldCleanup()
+        {
+            var authority = Lobby(TrackCatalog.Default.Id, 0);
+            world.Initialize(authority);
+            float deadline = Time.realtimeSinceStartup + 6;
+            while (world.Race.CurrentState == RaceManager.RaceState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
+            uint racer = authority.Snapshot().Racers[0].Id;
+            for (int lap = 0; lap < world.Race.TotalLaps; lap++)
+                for (int checkpoint = 0; checkpoint < world.Race.CheckpointCount; checkpoint++)
+                    Assert.That(world.Race.ReportCheckpoint("online-" + racer, checkpoint), Is.True);
+
+            Assert.That(authority.Phase, Is.EqualTo(OnlinePhase.Results));
+            world.Shutdown();
+            Assert.That(authority.Phase, Is.EqualTo(OnlinePhase.Results),
+                "Round teardown must not silently erase the host's results/rematch state.");
+            Apply(authority, "host", new LobbyCommand { Action = LobbyAction.Rematch });
+            Assert.That(authority.Phase, Is.EqualTo(OnlinePhase.Lobby));
+        }
     }
 }

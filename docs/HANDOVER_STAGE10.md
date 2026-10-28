@@ -39,6 +39,13 @@ This validates presentation ownership in-process only; a real peer connection,
 snapshot interpolation under latency, start composition, and complete game
 flow remain next.
 
+The online round coordinator now owns lobby-to-round composition: validated
+Start builds the host world plus routing, clients build only routing and visual
+presentation, and disconnect/lobby return tears those resources down. Results
+return through the lobby/rematch boundary. Focused Unity PlayMode coverage
+passed 4/4 (`/private/tmp/stage10-round-composition-results-final.xml`). This
+is an in-process lifecycle test, not a real Relay session or two-peer race.
+
 Next: integrate the roster with authenticated transport identities, online
 setup and host authority; add cancellation, disconnect handling, simulation,
 state replication, AI, and results/rematch. Validate with two real peers and

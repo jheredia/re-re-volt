@@ -40,12 +40,17 @@ namespace ReReVolt.Online.Unity
         private double nextHello;
         private double requestStarted;
         private bool disposed;
+        private Func<LobbySnapshot, bool> roundComposition;
         public LobbySnapshot Snapshot { get; private set; }
         public string LocalPeer => Peer(network.LocalClientId);
         public bool IsHost => authority != null;
+        /// <summary>Host-only authority, exposed only for the validated round-composition boundary.</summary>
+        public OnlineLobbyAuthority HostAuthority => authority;
+        public NetworkManager Network => network;
         public OnlineError LastError { get; private set; }
         public string TerminalMessage { get; private set; }
         public bool RequestPending { get; private set; }
+        public event Action<LobbySnapshot> SnapshotChanged;
 
         public OnlineLobbyProtocol(NetworkManager network, double now)
         {
@@ -108,6 +113,16 @@ namespace ReReVolt.Online.Unity
             else { RequestPending = true; requestStarted = Time.realtimeSinceStartupAsDouble; Send(NetworkManager.ServerClientId, new Envelope { Command = command }); }
         }
 
+        /// <summary>
+        /// Installs the host-only owner of a validated countdown. Returning false rolls
+        /// the lobby back to an unlocked state rather than publishing a broken round.
+        /// </summary>
+        public void SetRoundCompositionHandler(Func<LobbySnapshot, bool> handler)
+        {
+            if (!IsHost) throw new InvalidOperationException("Only the NGO host may compose an online round.");
+            roundComposition = handler;
+        }
+
         private void Receive(ulong sender, FastBufferReader reader)
         {
             if (disposed || TerminalMessage != null) return;
@@ -159,23 +174,49 @@ namespace ReReVolt.Online.Unity
             if (!ValidSnapshot(message.Snapshot) || Array.IndexOf(message.Snapshot.Peers, LocalPeer) < 0) return;
             if (Snapshot != null && (message.Snapshot.Epoch != Snapshot.Epoch || message.Snapshot.Revision < Snapshot.Revision)) return;
             Snapshot = message.Snapshot;
+            SnapshotChanged?.Invoke(Snapshot);
         }
 
         private void Apply(ulong sender, LobbyCommand command)
         {
-            // The world adapter is not integrated yet. Keep Start explicitly disabled at this boundary.
-            OnlineError error = authority.Apply(Peer(sender), command, simulationAvailable: false);
+            bool start = command.Action == LobbyAction.Start;
+            OnlineError error = authority.Apply(Peer(sender), command, simulationAvailable: !start || roundComposition != null);
+            if (error == OnlineError.None && start)
+            {
+                Snapshot = authority.Snapshot();
+                bool composed;
+                try { composed = roundComposition != null && roundComposition(Snapshot); }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                    composed = false;
+                }
+                if (!composed)
+                {
+                    authority.AbortRound();
+                    error = OnlineError.SimulationUnavailable;
+                }
+            }
             if (sender == network.LocalClientId) LastError = error;
             if (error == OnlineError.None) Broadcast();
             else if (sender != network.LocalClientId)
                 Send(sender, new Envelope { Error = error, Snapshot = authority.Snapshot() });
+            else if (start)
+                Broadcast();
         }
 
         private void Broadcast()
         {
             Snapshot = authority.Snapshot();
+            SnapshotChanged?.Invoke(Snapshot);
             foreach (ulong peer in admitted)
                 if (peer != network.LocalClientId) Send(peer, new Envelope { Snapshot = Snapshot });
+        }
+
+        /// <summary>Publishes a phase change owned by the composed host race world.</summary>
+        public void PublishAuthoritySnapshot()
+        {
+            if (!disposed && IsHost) Broadcast();
         }
 
         private void Reject(ulong peer, OnlineError error, double now)
@@ -275,6 +316,8 @@ namespace ReReVolt.Online.Unity
             if (network == null) return;
             network.OnClientDisconnectCallback -= OnDisconnected;
             network.CustomMessagingManager?.UnregisterNamedMessageHandler(Channel);
+            SnapshotChanged = null;
+            roundComposition = null;
         }
     }
 }

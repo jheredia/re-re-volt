@@ -20,6 +20,7 @@ namespace ReReVolt.Online.Unity
         private RelayLobbyConnection connection;
         private OnlineLobbySession lobby;
         private OnlineLobbyProtocol protocol;
+        private OnlineRoundCoordinator roundCoordinator;
         private GameObject panel;
         private TextMeshProUGUI text;
         private GameObject titleHint;
@@ -101,6 +102,14 @@ namespace ReReVolt.Online.Unity
                     _ = lobby.ConnectionLostAsync();
                 }
             }
+            bool roundInProgress = roundCoordinator != null && roundCoordinator.IsRoundActive &&
+                protocol?.Snapshot?.Phase != OnlinePhase.Results;
+            if (roundInProgress)
+            {
+                if (panel != null) panel.SetActive(false);
+                return;
+            }
+            if (visible && panel != null && !panel.activeSelf) panel.SetActive(true);
             if (back)
             {
                 if (enteringCode) enteringCode = false;
@@ -176,10 +185,18 @@ namespace ReReVolt.Online.Unity
                 return;
             }
             if (lobby.State != OnlineLobbySession.LobbyState.Joined) return;
-            try { protocol = new OnlineLobbyProtocol(connection.Connection.Network, Time.realtimeSinceStartupAsDouble); }
+            try
+            {
+                protocol = new OnlineLobbyProtocol(connection.Connection.Network, Time.realtimeSinceStartupAsDouble);
+                roundCoordinator = gameObject.AddComponent<OnlineRoundCoordinator>();
+                roundCoordinator.Initialize(protocol, bootstrap);
+                roundCoordinator.RoundStarted += OnRoundStarted;
+                roundCoordinator.RoundStopped += OnRoundStopped;
+            }
             catch (Exception)
             {
                 failure = "Lobby protocol could not start. Retry after using the same build on both peers.";
+                DisposeProtocol();
                 await lobby.LeaveAsync();
             }
         }
@@ -210,6 +227,12 @@ namespace ReReVolt.Online.Unity
                 LobbySnapshot snapshot = protocol?.Snapshot;
                 if (snapshot != null)
                 {
+                    if (snapshot.Phase == OnlinePhase.Results)
+                    {
+                        if (protocol.IsHost) Add("REMATCH", () => Submit(new LobbyCommand { Action = LobbyAction.Rematch }));
+                        Add("LEAVE SESSION", Leave);
+                        return;
+                    }
                     var racer = FindLocal(snapshot, localSlot);
                     Add("SELECT LOCAL SLOT: " + (localSlot + 1), () => localSlot = (localSlot + 1) % 4);
                     if (racer == null)
@@ -226,6 +249,7 @@ namespace ReReVolt.Online.Unity
                         Add("NEXT TRACK", CycleTrack);
                         Add("AI OPPONENTS: " + CountBots(snapshot) + " (CYCLE 0–3)",
                             () => Submit(new LobbyCommand { Action = LobbyAction.SetBots, BotCount = (CountBots(snapshot) + 1) % 4 }));
+                        Add("START ONLINE RACE (ALL HUMANS READY)", () => Submit(new LobbyCommand { Action = LobbyAction.Start }));
                     }
                 }
                 Add("LEAVE SESSION", Leave);
@@ -289,7 +313,8 @@ namespace ReReVolt.Online.Unity
                 for (int i = 0; i < labels.Count; i++) content.Append(i == selection ? "> " : "   ").Append(labels[i]).Append('\n');
                 content.Append("\nUP/DOWN: SELECT   A / ENTER: CONFIRM   B / ESC: BACK");
             }
-            content.Append("\n\nRace start is unavailable: online world simulation is not integrated yet.");
+            if (roundCoordinator != null && roundCoordinator.IsRoundActive && protocol?.Snapshot?.Phase == OnlinePhase.Results)
+                content.Append("\n\nRACE COMPLETE — HOST MAY REMATCH OR EVERYONE MAY LEAVE.");
             string next = content.ToString();
             if (next == lastText) return;
             lastText = next;
@@ -346,7 +371,30 @@ namespace ReReVolt.Online.Unity
             text.textWrappingMode = TextWrappingModes.Normal;
         }
 
-        private void DisposeProtocol() { protocol?.Dispose(); protocol = null; }
+        private void OnRoundStarted()
+        {
+            if (panel != null) panel.SetActive(false);
+        }
+
+        private void OnRoundStopped(string _)
+        {
+            if (visible && panel != null) panel.SetActive(true);
+            nextRefresh = 0;
+        }
+
+        private void DisposeProtocol()
+        {
+            if (roundCoordinator != null)
+            {
+                roundCoordinator.RoundStarted -= OnRoundStarted;
+                roundCoordinator.RoundStopped -= OnRoundStopped;
+                roundCoordinator.AbortRound();
+                Destroy(roundCoordinator);
+                roundCoordinator = null;
+            }
+            protocol?.Dispose();
+            protocol = null;
+        }
         private void OnDisable()
         {
             lobby?.Cancel();
