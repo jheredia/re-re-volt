@@ -30,6 +30,7 @@ namespace ReReVolt.Online.Unity
         private bool priorJoining;
         private bool disposed;
         private bool leaveAfterFailedClientRound;
+        private bool leavePrompt;
         private string code = string.Empty;
         private string lastText;
         private string failure;
@@ -113,8 +114,31 @@ namespace ReReVolt.Online.Unity
                 protocol?.Snapshot?.Phase != OnlinePhase.Results;
             if (roundInProgress)
             {
-                if (panel != null) panel.SetActive(false);
+                if (back)
+                {
+                    leavePrompt = !leavePrompt;
+                    roundCoordinator.SetLocalControlsSuspended(leavePrompt);
+                }
+                else if (leavePrompt && confirm)
+                {
+                    leavePrompt = false;
+                    Leave();
+                    return;
+                }
+                if (panel != null) panel.SetActive(leavePrompt);
+                if (leavePrompt && text != null)
+                    text.text = "PRIVATE ONLINE RACE\n\nLEAVE THIS SESSION?\n\n" +
+                        "A / ENTER: LEAVE SESSION\nB / ESC: RESUME RACE\n\n" +
+                        "Your local cars receive neutral controls while this panel is open. " +
+                        "Other players and the host race continue.";
                 return;
+            }
+            if (leavePrompt)
+            {
+                leavePrompt = false;
+                roundCoordinator?.SetLocalControlsSuspended(false);
+                lastText = null;
+                nextRefresh = 0;
             }
             if (visible && panel != null && !panel.activeSelf) panel.SetActive(true);
             if (back)
@@ -426,11 +450,14 @@ namespace ReReVolt.Online.Unity
 
         private void OnRoundStarted()
         {
+            leavePrompt = false;
             if (panel != null) panel.SetActive(false);
         }
 
         private void OnRoundStopped(string reason)
         {
+            leavePrompt = false;
+            lastText = null;
             if (visible && panel != null) panel.SetActive(true);
             if (!string.IsNullOrEmpty(reason) && reason != "Online round returned to the lobby." &&
                 reason != "Online round ended.") failure = reason;
@@ -441,6 +468,7 @@ namespace ReReVolt.Online.Unity
 
         private void DisposeProtocol()
         {
+            leavePrompt = false;
             if (roundCoordinator != null)
             {
                 roundCoordinator.RoundStarted -= OnRoundStarted;

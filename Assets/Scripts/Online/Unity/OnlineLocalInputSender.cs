@@ -29,8 +29,17 @@ namespace ReReVolt.Online.Unity
         private PeerInputFrame frame;
         private ulong sequence;
         private double nextSendAt;
+        private bool controlsSuspended;
 
         public int LocalRacerCount => bindings.Count;
+
+        /// <summary>Local menus send neutral input without pausing the host or another peer.</summary>
+        public void SetControlsSuspended(bool suspended)
+        {
+            controlsSuspended = suspended;
+            if (suspended)
+                foreach (Binding binding in bindings) binding.PendingEdges = InputEdges.None;
+        }
 
         /// <summary>
         /// The maximum number of independent local racers that can be bound now.
@@ -120,6 +129,7 @@ namespace ReReVolt.Online.Unity
 
             foreach (Binding binding in bindings)
             {
+                if (controlsSuspended) continue;
                 if (binding.Keyboard != null && binding.Keyboard.added && binding.Keyboard.spaceKey.wasPressedThisFrame)
                     binding.PendingEdges |= InputEdges.Fire;
                 if (binding.Keyboard != null && binding.Keyboard.added && binding.Keyboard.rKey.wasPressedThisFrame)
@@ -136,7 +146,8 @@ namespace ReReVolt.Online.Unity
             for (int i = 0; i < bindings.Count; i++)
             {
                 Binding binding = bindings[i];
-                ReadAxes(binding, out float throttle, out float steer, out float brake);
+                float throttle = 0, steer = 0, brake = 0;
+                if (!controlsSuspended) ReadAxes(binding, out throttle, out steer, out brake);
                 frame.Racers[i] = new RacerInputCommand
                 {
                     RacerId = binding.RacerId, Sequence = sequence,
@@ -184,6 +195,7 @@ namespace ReReVolt.Online.Unity
             routing = null;
             sequence = 0;
             nextSendAt = 0;
+            controlsSuspended = false;
         }
 
         private void OnDisable() => Shutdown();

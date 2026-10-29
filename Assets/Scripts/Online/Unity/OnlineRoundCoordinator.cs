@@ -32,6 +32,7 @@ namespace ReReVolt.Online.Unity
 
         public bool IsRoundActive => hostWorld != null || clientPresentation != null;
         public bool IsHostRound => hostWorld != null;
+        public void SetLocalControlsSuspended(bool suspended) => localInput?.SetControlsSuspended(suspended);
         public event Action RoundStarted;
         public event Action<string> RoundStopped;
 

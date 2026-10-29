@@ -305,3 +305,15 @@ state-change handler runs. The adjacent input-device PlayMode smoke compiled
 and passed **1/1** (`/private/tmp/stage10-racing-phase-input-smoke.xml`). That
 fixture does not exercise a live protocol broadcast; a two-peer Relay race
 must prove this transition and the first accepted driving command end-to-end.
+
+## In-race leave confirmation — 2026-10-29
+
+During an active online round, B/Escape now opens a private leave-confirmation
+panel; A/Enter leaves, and B/Escape resumes. While the panel is open, the
+local peer sends neutral controls and clears pending Fire/Recover edges, but
+does not pause the host or other peers. The existing leave path tears down
+the round and transport, so a departed peer cannot keep a ghost local input
+owner. Unity 6000.6 compiled the change and the adjacent input-device fixture
+passed **1/1** (`/private/tmp/stage10-online-leave-input-smoke.xml`). The
+prompt, neutral-frame behavior and peer disconnect have not been exercised in
+a live two-peer session; this is still a required Stage 10 test.
