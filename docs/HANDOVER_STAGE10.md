@@ -107,7 +107,7 @@ disconnect produces neutral controls rather than reassigning another player's
 controller. The sender emits 30 Hz quantized throttle, steering and brake
 commands plus a one-shot recovery edge. The host input authority still
 validates epoch, round, owner, sequence and rate before physics. Fire and pause
-are not yet wired to online gameplay.
+were not yet wired to online gameplay at this checkpoint.
 
 Host-local chase views follow real authoritative cars; clients build the
 selected course only as non-colliding scenery and follow host-accepted proxy
@@ -176,7 +176,13 @@ The three focused fixtures above are green; no full online/offline suite or
 player build was run for these source slices. The next implementation gap is
 host-authoritative online combat and pickups (including inventory, cooldowns,
 projectile/hit effects, and snapshot/event presentation) without changing
-offline combat authority. Fire/pause input and live two-peer Relay validation
-also remain. Unity service activation, terms, and billing still require the
-owner. Keep the protected `InputHandler`, feedback files, unrelated architecture
-draft, generated network-prefabs asset, solution file, and `.DS_Store` untouched.
+offline combat authority. A follow-up source slice now emits the already-
+validated `Fire` input edge from Space or gamepad X/Square; Unity 6000.6
+compiled it and the adjacent device fixture passed 1/1
+(`/private/tmp/stage10-focus-20261029-fire-compile.xml`). This is only intent
+wiring: the host's `ActionRequested` event has no combat subscriber yet, and
+the mapping itself has no dedicated input-injection test. Pause input and live
+two-peer Relay validation also remain. Unity service activation, terms, and
+billing still require the owner. Keep the protected `InputHandler`, feedback
+files, unrelated architecture draft, generated network-prefabs asset, solution
+file, and `.DS_Store` untouched.

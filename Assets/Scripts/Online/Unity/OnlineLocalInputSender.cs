@@ -120,8 +120,12 @@ namespace ReReVolt.Online.Unity
 
             foreach (Binding binding in bindings)
             {
+                if (binding.Keyboard != null && binding.Keyboard.added && binding.Keyboard.spaceKey.wasPressedThisFrame)
+                    binding.PendingEdges |= InputEdges.Fire;
                 if (binding.Keyboard != null && binding.Keyboard.added && binding.Keyboard.rKey.wasPressedThisFrame)
                     binding.PendingEdges |= InputEdges.Recover;
+                if (binding.Gamepad != null && binding.Gamepad.added && binding.Gamepad.buttonWest.wasPressedThisFrame)
+                    binding.PendingEdges |= InputEdges.Fire;
                 if (binding.Gamepad != null && binding.Gamepad.added && binding.Gamepad.buttonNorth.wasPressedThisFrame)
                     binding.PendingEdges |= InputEdges.Recover;
             }
