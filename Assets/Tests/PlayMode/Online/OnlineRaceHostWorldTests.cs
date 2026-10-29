@@ -93,8 +93,14 @@ namespace ReReVolt.Tests.Online
             var authority = Lobby(TrackCatalog.Default.Id, 2, friend: true);
             world.Initialize(authority);
             uint human = authority.Snapshot().Racers[0].Id;
+            int fireRequests = 0;
+            world.ActionRequested += (racerId, edges) =>
+            {
+                if (racerId == human && (edges & InputEdges.Fire) != 0) fireRequests++;
+            };
             var frame = new PeerInputFrame { Epoch = 12, Round = authority.Round, Sequence = 1,
-                Racers = new[] { new RacerInputCommand { RacerId = human, Sequence = 1, Throttle = 1000 } } };
+                Racers = new[] { new RacerInputCommand { RacerId = human, Sequence = 1, Throttle = 1000,
+                    Edges = InputEdges.Fire } } };
             Assert.That(world.SubmitInput("host", frame), Is.EqualTo(InputError.IllegalPhase));
             float deadline = Time.realtimeSinceStartup + 6;
             while (world.Race.CurrentState == RaceManager.RaceState.Countdown && Time.realtimeSinceStartup < deadline) yield return null;
@@ -103,6 +109,9 @@ namespace ReReVolt.Tests.Online
             Assert.That(world.SubmitInput("host", frame), Is.EqualTo(InputError.None));
             yield return new WaitForFixedUpdate(); yield return null;
             Assert.That(world.CaptureSnapshot().Racers[0].AcknowledgedInput, Is.EqualTo(1));
+            Assert.That(fireRequests, Is.EqualTo(1), "An owned Fire edge reaches only host action routing.");
+            yield return new WaitForFixedUpdate();
+            Assert.That(fireRequests, Is.EqualTo(1), "The host must consume a Fire edge once.");
             Assert.That(world.TryGetVehicle(human, out var car), Is.True);
             Assert.That(car.ThrottleInput, Is.EqualTo(1));
             yield return new WaitForSecondsRealtime(.3f);

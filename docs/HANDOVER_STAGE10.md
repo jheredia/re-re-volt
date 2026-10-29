@@ -181,7 +181,10 @@ validated `Fire` input edge from Space or gamepad X/Square; Unity 6000.6
 compiled it and the adjacent device fixture passed 1/1
 (`/private/tmp/stage10-focus-20261029-fire-compile.xml`). This is only intent
 wiring: the host's `ActionRequested` event has no combat subscriber yet, and
-the mapping itself has no dedicated input-injection test. Pause input and live
+the mapping itself has no dedicated input-injection test. A retained host-world
+test now proves an owner-validated `Fire` edge is forwarded exactly once and a
+foreign peer is rejected; the focused host fixture passes **5/5**
+(`/private/tmp/stage10-focus-20261029-host-fire.xml`). Pause input and live
 two-peer Relay validation also remain. Unity service activation, terms, and
 billing still require the owner. Keep the protected `InputHandler`, feedback
 files, unrelated architecture draft, generated network-prefabs asset, solution
