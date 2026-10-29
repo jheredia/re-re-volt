@@ -292,3 +292,16 @@ PlayMode **4/4**, including the full 16-weapon/16-event wire-budget check
 **9/9** (`/private/tmp/stage10-combat-event-host.xml`). No actual Relay peer
 has received this event history yet. Impact audio, stronger VFX, network
 latency, disconnect/rematch and full-stage validation remain open.
+
+## Countdown-to-Racing protocol publication — 2026-10-29
+
+Source review found a functional phase handoff gap: the host world advanced
+its lobby authority to Racing after countdown, but the coordinator only
+broadcast Results. `OnlineLocalInputSender` intentionally sends no controls
+while its protocol snapshot still says Countdown, so the previous path could
+leave all online racers without input. The coordinator now publishes the
+host-owned Racing transition as well as Results, after the world authority's
+state-change handler runs. The adjacent input-device PlayMode smoke compiled
+and passed **1/1** (`/private/tmp/stage10-racing-phase-input-smoke.xml`). That
+fixture does not exercise a live protocol broadcast; a two-peer Relay race
+must prove this transition and the first accepted driving command end-to-end.

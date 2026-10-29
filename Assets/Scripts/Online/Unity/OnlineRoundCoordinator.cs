@@ -133,7 +133,11 @@ namespace ReReVolt.Online.Unity
 
         private void OnHostRaceStateChanged(Core.RaceManager.RaceState state)
         {
-            if (state == Core.RaceManager.RaceState.Finished)
+            // The input sender gates controls on the published lobby phase. The host
+            // world enters Racing after countdown, so that transition must reach all
+            // peers before their first race input can be submitted.
+            if (state == Core.RaceManager.RaceState.Racing ||
+                state == Core.RaceManager.RaceState.Finished)
                 protocol?.PublishAuthoritySnapshot();
         }
 
