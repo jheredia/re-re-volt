@@ -231,3 +231,24 @@ and all-track composition. The changed wire codec passes **3/3** PlayMode
 combat: clients do not yet render pickup sites or availability, Fire does not
 spawn a weapon, and hits, oil, VFX/audio and two-peer Relay behavior remain
 unverified.
+
+## Host-authoritative Bolt and Oil simulation — 2026-10-29
+
+The host now consumes an owner-validated Fire edge only after a legal spawn
+check, then simulates bounded Bolt sweeps or armed Oil hazards against the
+authoritative car colliders. Hit modifiers, recovery grace, finishing and round
+cleanup remain host-owned; driving-only bots can be hit but cannot collect or
+fire. This reuses the existing inventory/cooldown contract without changing
+offline combat. The host has no online weapon presentation yet, and no combat
+state beyond the held slot is replicated to clients. This slice must not be
+described as player-visible online combat.
+
+Unity 6000.6 focused evidence: the full expanded host-world PlayMode fixture
+passes **9/9**, including owner rejection, Bolt hit, Oil hit, and invalid Oil
+spawn (`/private/tmp/stage10-host-combat-complete.xml`). The inventory
+EditMode fixture passes **2/2** (`/private/tmp/stage10-host-combat-contract.xml`).
+No live Relay/two-peer, results/rematch combat, or latency evidence exists.
+
+Next: replicate bounded weapon spawn/motion/expiry, pickup availability, and
+hit events or state without giving clients authority; render per-peer online
+VFX/audio and pickup markers; then verify combat end-to-end over real Relay.

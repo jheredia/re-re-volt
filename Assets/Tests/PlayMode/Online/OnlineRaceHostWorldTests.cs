@@ -157,6 +157,89 @@ namespace ReReVolt.Tests.Online
             Assert.That(global.CurrentState, Is.EqualTo(GameManager.GameState.MainMenu));
         }
 
+        [UnityTest] public IEnumerator OwnedFireConsumesHostInventoryButForeignFireCannot()
+        {
+            var authority = Lobby(TrackCatalog.Default.Id, 0, friend: true);
+            uint human = authority.Snapshot().Racers[0].Id;
+            world.Initialize(authority);
+            float deadline = Time.realtimeSinceStartup + 6;
+            while (world.Race.CurrentState == RaceManager.RaceState.Countdown &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(world.Race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));
+            Assert.That(world.CombatInventory.TryCollect(human, 0, world.Race.ElapsedTime, out var item), Is.True);
+            Assert.That(item, Is.EqualTo(Weapons.WeaponKind.Bolt));
+            var frame = new PeerInputFrame { Epoch = authority.Epoch, Round = authority.Round, Sequence = 1,
+                Racers = new[] { new RacerInputCommand { RacerId = human, Sequence = 1, Edges = InputEdges.Fire } } };
+            Assert.That(world.SubmitInput("friend", frame), Is.EqualTo(InputError.NotOwner));
+            Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.Bolt));
+            Assert.That(world.SubmitInput("host", frame), Is.EqualTo(InputError.None));
+            yield return new WaitForFixedUpdate();
+            Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.None));
+            Assert.That(world.Combat.SimulationTime, Is.GreaterThan(0));
+            Assert.That(world.Combat.TryFire(human), Is.False, "A consumed slot cannot be fired again.");
+            Assert.That(world.CombatInventory.TryCollect(human, 1, world.Race.ElapsedTime, out item), Is.True);
+            Assert.That(item, Is.EqualTo(Weapons.WeaponKind.Oil));
+            yield return new WaitForSeconds(.4f);
+            Assert.That(world.TryGetVehicle(human, out VehicleController car), Is.True);
+            car.Teleport(new Pose(new Vector3(0, 100, 0), Quaternion.identity));
+            Assert.That(world.Combat.TryFire(human), Is.False,
+                "An oil fire request needs a validated drivable drop point.");
+            Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.Oil));
+            world.Shutdown();
+            Assert.That(world.Combat, Is.Null);
+        }
+
+        [UnityTest] public IEnumerator HostBoltHitsAnotherRacerButNeverTheShooter()
+        {
+            var authority = Lobby(TrackCatalog.Default.Id, 0, friend: true);
+            var roster = authority.Snapshot().Racers;
+            uint shooterId = roster[0].Id, targetId = roster[1].Id;
+            world.Initialize(authority);
+            float deadline = Time.realtimeSinceStartup + 6;
+            while (world.Race.CurrentState == RaceManager.RaceState.Countdown &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(world.Race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));
+            Assert.That(world.TryGetVehicle(shooterId, out VehicleController shooter), Is.True);
+            Assert.That(world.TryGetVehicle(targetId, out VehicleController target), Is.True);
+            shooter.Teleport(new Pose(new Vector3(0, 10, 0), Quaternion.identity));
+            target.Teleport(new Pose(new Vector3(0, 10, 3), Quaternion.identity));
+            Physics.SyncTransforms();
+            Assert.That(world.CombatInventory.TryCollect(shooterId, 0, world.Race.ElapsedTime, out _), Is.True);
+            Assert.That(world.Combat.TryFire(shooterId), Is.True);
+            Assert.That(world.Combat.LiveCount, Is.EqualTo(1));
+            deadline = Time.realtimeSinceStartup + 1;
+            while (world.Combat.HitCount == 0 && Time.realtimeSinceStartup < deadline)
+                yield return new WaitForFixedUpdate();
+            Assert.That(world.Combat.HitCount, Is.EqualTo(1), "Only the target accepts the swept Bolt hit.");
+            Assert.That(world.Combat.LiveCount, Is.Zero);
+        }
+
+        [UnityTest] public IEnumerator HostOilArmsOnDrivableRoadAndHitsAnotherRacer()
+        {
+            var authority = Lobby(TrackCatalog.Default.Id, 0, friend: true);
+            var roster = authority.Snapshot().Racers;
+            uint shooterId = roster[0].Id, targetId = roster[1].Id;
+            world.Initialize(authority);
+            float deadline = Time.realtimeSinceStartup + 6;
+            while (world.Race.CurrentState == RaceManager.RaceState.Countdown &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(world.Race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));
+            Assert.That(world.TryGetVehicle(shooterId, out VehicleController shooter), Is.True);
+            Assert.That(world.TryGetVehicle(targetId, out VehicleController target), Is.True);
+            shooter.Teleport(new Pose(new Vector3(-15, .6f, -5), Quaternion.identity));
+            target.Teleport(new Pose(new Vector3(0, 10, 0), Quaternion.identity));
+            Physics.SyncTransforms();
+            Assert.That(world.CombatInventory.TryCollect(shooterId, 1, world.Race.ElapsedTime, out var item), Is.True);
+            Assert.That(item, Is.EqualTo(Weapons.WeaponKind.Oil));
+            Assert.That(world.Combat.TryFire(shooterId), Is.True);
+            target.Teleport(new Pose(new Vector3(-15, .6f, -7.7f), Quaternion.identity));
+            Physics.SyncTransforms();
+            world.Combat.Step(.61f);
+            Assert.That(world.Combat.HitCount, Is.EqualTo(1));
+            Assert.That(world.Combat.LiveCount, Is.Zero);
+            yield return null;
+        }
+
         [UnityTest] public IEnumerator HostLocalViewsFollowOnlyOwnedAuthoritativeCarsAndReleaseCleanly()
         {
             var authority = new OnlineLobbyAuthority("host", 13,

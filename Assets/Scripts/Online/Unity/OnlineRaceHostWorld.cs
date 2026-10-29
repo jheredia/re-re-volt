@@ -40,6 +40,7 @@ namespace ReReVolt.Online.Unity
         private bool initialized;
         public RaceManager Race { get; private set; }
         public OnlineCombatInventoryAuthority CombatInventory { get; private set; }
+        public OnlineHostCombat Combat { get; private set; }
         public bool IsInitialized => initialized;
         public int RacerCount => racers.Count;
         public event Action<uint, InputEdges> ActionRequested;
@@ -72,6 +73,9 @@ namespace ReReVolt.Online.Unity
                 for (int i = 0; i < checkpoints.Length; i++) checkpoints[i] = track.Checkpoints[i].transform;
                 for (int i = 0; i < roster.Racers.Length; i++) CreateRacer(roster.Racers[i], i, checkpoints);
                 CombatInventory = new OnlineCombatInventoryAuthority(authority);
+                Combat = new OnlineHostCombat(CombatInventory, Race, track.DrivableMask);
+                foreach (Racer racer in racers)
+                    Combat.Register(racer.Id, racer.Vehicle, racer.Body, racer.Progress);
                 if (track.PickupPositions == null || track.PickupPositions.Count != pickups.Length)
                     throw new InvalidOperationException("Online tracks require four authored pickup sites.");
                 for (int i = 0; i < pickups.Length; i++)
@@ -84,6 +88,7 @@ namespace ReReVolt.Online.Unity
                 input = new OnlineInputAuthority(authority);
                 Race.RaceStateChanged += OnRaceStateChanged;
                 Race.CountdownChanged += OnCountdownChanged;
+                Race.RacerFinished += OnRacerFinished;
                 initialized = true;
                 if (!Race.StartRace()) throw new InvalidOperationException("Online countdown could not start.");
             }
@@ -104,7 +109,7 @@ namespace ReReVolt.Online.Unity
             racer.Recovery = car.AddComponent<VehicleRecovery>();
             racer.Recovery.Initialize(pose, Race);
             racer.Recovery.ConfigureGroundMask(track.DrivableMask);
-            racer.RecoveryHandler = () => racer.RecoveryRevision++;
+            racer.RecoveryHandler = () => { racer.RecoveryRevision++; Combat?.Recover(racer.Id); };
             racer.Recovery.Recovered += racer.RecoveryHandler;
             racer.Progress = Race.RegisterRacer("online-" + identity.Id, car,
                 identity.Bot ? "AI " + identity.Id : "RACER " + identity.Id, !identity.Bot, identity.Bot ? -1 : gridIndex);
@@ -155,9 +160,11 @@ namespace ReReVolt.Online.Unity
                 racer.Vehicle.BrakeInput = command.Brake / 1000f;
                 racer.Vehicle.SteerInput = command.Steer / 1000f;
                 if ((command.Edges & InputEdges.Recover) != 0) racer.Recovery.TryRecover();
+                if ((command.Edges & InputEdges.Fire) != 0) Combat.TryFire(racer.Id);
                 InputEdges forwarded = command.Edges & (InputEdges.Fire | InputEdges.Pause);
                 if (forwarded != InputEdges.None) ActionRequested?.Invoke(racer.Id, forwarded);
             }
+            if (canDrive) Combat.Step(Time.fixedDeltaTime);
         }
 
         /// <summary>Call after physics at the network snapshot cadence; no send or allocation occurs every physics tick.</summary>
@@ -218,8 +225,18 @@ namespace ReReVolt.Online.Unity
         private void OnRaceStateChanged(RaceManager.RaceState state)
         {
             if (state == RaceManager.RaceState.Racing) authority.BeginRace();
-            else if (state == RaceManager.RaceState.Finished) authority.CompleteRace();
+            else if (state == RaceManager.RaceState.Finished)
+            {
+                Combat?.Clear();
+                CombatInventory?.Clear();
+                authority.CompleteRace();
+            }
             else if (state == RaceManager.RaceState.Idle) authority.AbortRound();
+        }
+        private void OnRacerFinished(RacerState state)
+        {
+            foreach (Racer racer in racers)
+                if (racer.Progress == state) { Combat?.Finish(racer.Id); return; }
         }
         private static WorldVector Vector(Vector3 value) => new WorldVector(value.x, value.y, value.z);
 
@@ -230,6 +247,7 @@ namespace ReReVolt.Online.Unity
             {
                 Race.RaceStateChanged -= OnRaceStateChanged;
                 Race.CountdownChanged -= OnCountdownChanged;
+                Race.RacerFinished -= OnRacerFinished;
                 Race.ResetRace(); // This RaceManager explicitly does not control the offline global state.
             }
             foreach (var racer in racers)
@@ -241,6 +259,8 @@ namespace ReReVolt.Online.Unity
             for (int i = 0; i < pickups.Length; i++) pickups[i] = null;
             CombatInventory?.Clear();
             CombatInventory = null;
+            Combat?.Clear();
+            Combat = null;
             authority?.AbortRound();
             GameObject trackRoot = track?.Root;
             if (trackRoot != null) trackRoot.SetActive(false);

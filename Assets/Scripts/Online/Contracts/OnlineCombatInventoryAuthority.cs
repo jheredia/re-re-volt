@@ -69,6 +69,12 @@ namespace ReReVolt.Online.Contracts
                 humanInventory[racerId].TryFire(hostTime, FireCooldown, out fired);
         }
 
+        /// <summary>A finished human no longer carries a weapon into results.</summary>
+        public void ClearRacer(uint racerId)
+        {
+            if (humanInventory.TryGetValue(racerId, out CombatInventory inventory)) inventory.Reset();
+        }
+
         /// <summary>Discard round-local inventory and pickup state during host teardown.</summary>
         public void Clear()
         {

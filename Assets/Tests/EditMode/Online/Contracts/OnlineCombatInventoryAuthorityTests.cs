@@ -46,6 +46,9 @@ namespace ReReVolt.Tests.Online
             Assert.That(combat.TryCollect(host, 0, 5, out collected), Is.True);
             Assert.That(collected, Is.EqualTo(WeaponKind.Oil),
                 "A consumed pickup alternates its offering on respawn.");
+            combat.ClearRacer(host);
+            Assert.That(combat.HeldWeapon(host), Is.EqualTo(WeaponKind.None),
+                "A finished racer must not carry a slot into results.");
 
             Assert.That(lobby.CompleteRace(), Is.True);
             Assert.That(combat.TryFire(host, 6, out _), Is.False);
