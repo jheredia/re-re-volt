@@ -317,3 +317,15 @@ owner. Unity 6000.6 compiled the change and the adjacent input-device fixture
 passed **1/1** (`/private/tmp/stage10-online-leave-input-smoke.xml`). The
 prompt, neutral-frame behavior and peer disconnect have not been exercised in
 a live two-peer session; this is still a required Stage 10 test.
+
+## Local NGO host loopback evidence — 2026-10-29
+
+A retained Unity PlayMode fixture now starts a real NGO host on local UTP,
+composes the online round through `OnlineRoundCoordinator`, waits for countdown,
+and proves the host protocol publishes Racing. Its paired keyboard sends an
+owned input frame; held throttle reaches the authoritative car, becomes zero
+while local controls are suspended, and resumes afterward. The fixture passed
+**1/1** (`/private/tmp/stage10-loopback-input-neutral.xml`). It does not use
+Unity Relay, create a remote client, prove join-code admission, measure
+latency, or exercise two-machine disconnect/rematch. Those remain required
+before Stage 10 or the integrated prototype can be accepted.
