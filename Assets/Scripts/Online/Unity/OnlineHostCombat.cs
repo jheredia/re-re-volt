@@ -27,6 +27,7 @@ namespace ReReVolt.Online.Unity
 
         private sealed class LiveWeapon
         {
+            internal uint Id;
             internal uint ShooterId;
             internal WeaponKind Kind;
             internal Vector3 Position, Direction;
@@ -40,6 +41,7 @@ namespace ReReVolt.Online.Unity
         private readonly List<LiveWeapon> weapons = new List<LiveWeapon>(MaximumLiveWeapons);
         private readonly Collider[] overlaps = new Collider[32];
         private readonly RaycastHit[] hits = new RaycastHit[32];
+        private uint nextWeaponId;
 
         public double SimulationTime { get; private set; }
         public int LiveCount => weapons.Count;
@@ -80,8 +82,26 @@ namespace ReReVolt.Online.Unity
                 position = ground.point + Vector3.up * .055f;
             }
             if (!inventory.TryFire(shooterId, race.ElapsedTime, out kind)) return false;
-            weapons.Add(new LiveWeapon { ShooterId = shooterId, Kind = kind, Position = position, Direction = forward });
+            weapons.Add(new LiveWeapon { Id = ++nextWeaponId, ShooterId = shooterId, Kind = kind,
+                Position = position, Direction = forward });
             return true;
+        }
+
+        public DrivingWeaponState[] CaptureWeapons()
+        {
+            var result = new DrivingWeaponState[weapons.Count];
+            for (int i = 0; i < weapons.Count; i++)
+            {
+                LiveWeapon weapon = weapons[i];
+                result[i] = new DrivingWeaponState
+                {
+                    Id = weapon.Id, ShooterId = weapon.ShooterId, Kind = weapon.Kind,
+                    Position = new WorldVector(weapon.Position.x, weapon.Position.y, weapon.Position.z),
+                    Direction = new WorldVector(weapon.Direction.x, weapon.Direction.y, weapon.Direction.z),
+                    Age = weapon.Age
+                };
+            }
+            return result;
         }
 
         public void Step(float delta)
@@ -121,6 +141,7 @@ namespace ReReVolt.Online.Unity
             weapons.Clear();
             SimulationTime = 0;
             HitCount = 0;
+            nextWeaponId = 0;
         }
 
         private bool StepWeapon(LiveWeapon weapon, float delta)

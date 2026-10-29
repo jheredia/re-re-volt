@@ -43,6 +43,7 @@ namespace ReReVolt.Online.Unity
         public OnlineHostCombat Combat { get; private set; }
         public bool IsInitialized => initialized;
         public int RacerCount => racers.Count;
+        public IReadOnlyList<Vector3> PickupPositions => track?.PickupPositions;
         public event Action<uint, InputEdges> ActionRequested;
         public event Action<string> Aborted;
 
@@ -189,10 +190,15 @@ namespace ReReVolt.Online.Unity
                     HeldWeapon = CombatInventory.HeldWeapon(racer.Id)
                 };
             }
+            var pickupStates = new DrivingPickupState[pickups.Length];
+            for (int i = 0; i < pickupStates.Length; i++)
+                pickupStates[i] = new DrivingPickupState { Index = i, Offering = CombatInventory.Offering(i),
+                    Available = Race.RaceRunning && CombatInventory.IsPickupAvailable(i, Race.ElapsedTime) };
             return new DrivingWorldSnapshot
             {
                 Epoch = roster.Epoch, Round = roster.Round, Sequence = ++snapshotSequence, Tick = tick,
                 TrackId = roster.TrackId, Elapsed = Race.ElapsedTime, Racers = states,
+                Pickups = pickupStates, Weapons = Combat.CaptureWeapons(),
                 Phase = Race.CurrentState == RaceManager.RaceState.Countdown ? DrivingPhase.Countdown :
                     Race.CurrentState == RaceManager.RaceState.Finished ? DrivingPhase.Results : DrivingPhase.Racing,
                 Countdown = Race.CurrentState == RaceManager.RaceState.Countdown ? countdown : 0

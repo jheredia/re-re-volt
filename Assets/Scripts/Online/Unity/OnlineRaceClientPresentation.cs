@@ -53,6 +53,7 @@ namespace ReReVolt.Online.Unity
         public bool IsInitialized => initialized;
         public int ProxyCount => proxies.Count;
         public int LocalCameraCount => localViews.Count;
+        public IReadOnlyList<Vector3> PickupPositions => visualTrack?.PickupPositions;
 
         /// <summary>
         /// Creates the static client presentation roster. The caller must pass the locked

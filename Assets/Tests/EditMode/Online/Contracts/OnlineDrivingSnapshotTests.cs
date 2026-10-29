@@ -33,7 +33,14 @@ namespace ReReVolt.Tests.Online
                 Racers = new[] {
                     new DrivingRacerState { RacerId = human, PositionInRace = 1, FinishTime = -1, Rotation = new WorldRotation { W = 1 } },
                     new DrivingRacerState { RacerId = bot, PositionInRace = 2, FinishTime = -1, Rotation = new WorldRotation { W = 1 } }
-                }
+                },
+                Pickups = new[] {
+                    new DrivingPickupState { Index = 0, Offering = WeaponKind.Bolt, Available = true },
+                    new DrivingPickupState { Index = 1, Offering = WeaponKind.Oil, Available = true },
+                    new DrivingPickupState { Index = 2, Offering = WeaponKind.Bolt, Available = true },
+                    new DrivingPickupState { Index = 3, Offering = WeaponKind.Oil, Available = true }
+                },
+                Weapons = Array.Empty<DrivingWeaponState>()
             };
         }
         [Test] public void ReorderedDroppedAndDuplicateSnapshotsDoNotRollbackState()
@@ -51,11 +58,15 @@ namespace ReReVolt.Tests.Online
             var candidate = Snapshot();
             Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.None));
             candidate.Racers[0].FinishPosition = 2;
+            candidate.Pickups[0].Available = false;
             candidate.Sequence = 500;
             var copy = receiver.Latest; copy.Racers[0].FinishTime = 99; copy.Sequence = 600;
+            copy.Pickups[1].Available = false;
             Assert.That(receiver.Latest.Sequence, Is.EqualTo(1));
             Assert.That(receiver.Latest.Racers[0].FinishPosition, Is.Zero);
             Assert.That(receiver.Latest.Racers[0].FinishTime, Is.EqualTo(-1));
+            Assert.That(receiver.Latest.Pickups[0].Available, Is.True);
+            Assert.That(receiver.Latest.Pickups[1].Available, Is.True);
         }
         [Test] public void RejectsForeignSessionRoundAndTrack()
         {
@@ -109,7 +120,31 @@ namespace ReReVolt.Tests.Online
             Assert.That(receiver.Latest.Racers[0].HeldWeapon, Is.EqualTo(WeaponKind.Bolt));
             var countdownReceiver = new OnlineDrivingSnapshotReceiver(authority.Snapshot(), 3, 8);
             candidate.Phase = DrivingPhase.Countdown; candidate.Elapsed = 0; candidate.Countdown = 3;
+            for (int i = 0; i < candidate.Pickups.Length; i++) candidate.Pickups[i].Available = false;
             Assert.That(countdownReceiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
+        }
+        [Test] public void BoundedCombatRepairStateRejectsForgedWeaponsAndPickups()
+        {
+            var candidate = Snapshot();
+            candidate.Weapons = new[] { new DrivingWeaponState { Id = 1, ShooterId = human,
+                Kind = WeaponKind.Bolt, Position = new WorldVector(1, 2, 3),
+                Direction = new WorldVector(0, 0, 1), Age = .1f } };
+            Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.None));
+            candidate.Weapons[0].Age = 50;
+            Assert.That(receiver.Latest.Weapons[0].Age, Is.EqualTo(.1f));
+            var latest = receiver.Latest; latest.Pickups[0].Available = false;
+            Assert.That(receiver.Latest.Pickups[0].Available, Is.True);
+
+            var next = Snapshot(2); next.Weapons = (DrivingWeaponState[])candidate.Weapons.Clone();
+            next.Weapons[0].ShooterId = bot;
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
+            next.Weapons[0].ShooterId = human; next.Weapons[0].Age = .1f;
+            next.Weapons[0].Direction.Z = 2;
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
+            next = Snapshot(2); next.Pickups[2].Index = 1;
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
+            next = Snapshot(2); next.Pickups[0].Offering = WeaponKind.None;
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
         }
         [Test] public void AcceptsMissedCheckpointUpdatesAndRecoveryCorrectionsWithoutReversingProgress()
         {
@@ -130,6 +165,7 @@ namespace ReReVolt.Tests.Online
         [Test] public void ResultsRequireACompleteConsistentFinishOrder()
         {
             var candidate = Snapshot(); candidate.Phase = DrivingPhase.Results;
+            for (int i = 0; i < candidate.Pickups.Length; i++) candidate.Pickups[i].Available = false;
             Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
             for (int i = 0; i < candidate.Racers.Length; i++)
             {
@@ -144,6 +180,7 @@ namespace ReReVolt.Tests.Online
         {
             var candidate = Snapshot(); candidate.Phase = DrivingPhase.Countdown; candidate.Countdown = 3;
             candidate.Elapsed = 0;
+            for (int i = 0; i < candidate.Pickups.Length; i++) candidate.Pickups[i].Available = false;
             Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.None));
             Assert.That(receiver.Accept(Snapshot(2)), Is.EqualTo(SnapshotError.None));
             candidate.Sequence = 3; candidate.Tick = 3; candidate.Elapsed = 10;

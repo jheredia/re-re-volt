@@ -154,7 +154,7 @@ namespace ReReVolt.Online.Unity
     /// <summary>Small bounded codec isolated from NGO callbacks for focused validation.</summary>
     public static class OnlineRaceWireCodec
     {
-        private const int Version = 2;
+        private const int Version = 3;
         private const int MaximumInputBytes = 2048;
         private const int MaximumSnapshotBytes = 8192;
 

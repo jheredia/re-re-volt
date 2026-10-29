@@ -44,7 +44,17 @@ namespace ReReVolt.Tests.Online
                         Rotation = new WorldRotation { W = 1 }, CompletedLaps = 0, NextCheckpoint = 0, PositionInRace = 1,
                         FinishPosition = 0, FinishTime = -1, AcknowledgedInput = 2, RecoveryRevision = 0
                     }
-                }
+                },
+                Pickups = new[]
+                {
+                    new DrivingPickupState { Index = 0, Offering = Weapons.WeaponKind.Bolt, Available = true },
+                    new DrivingPickupState { Index = 1, Offering = Weapons.WeaponKind.Oil, Available = true },
+                    new DrivingPickupState { Index = 2, Offering = Weapons.WeaponKind.Bolt, Available = true },
+                    new DrivingPickupState { Index = 3, Offering = Weapons.WeaponKind.Oil, Available = true }
+                },
+                Weapons = new[] { new DrivingWeaponState { Id = 1, ShooterId = lobby.Racers[0].Id,
+                    Kind = Weapons.WeaponKind.Bolt, Position = new WorldVector(1, 2, 3),
+                    Direction = new WorldVector(0, 0, 1), Age = .1f } }
             };
 
             Assert.That(OnlineRaceWireCodec.TryEncodeSnapshot(source, out var bytes), Is.True);
@@ -53,6 +63,7 @@ namespace ReReVolt.Tests.Online
             var receiver = new OnlineDrivingSnapshotReceiver(lobby, 3, 8);
             Assert.That(receiver.Accept(decoded), Is.EqualTo(SnapshotError.None));
             Assert.That(receiver.Latest.Racers[0].Position.X, Is.EqualTo(1));
+            Assert.That(receiver.Latest.Weapons[0].Id, Is.EqualTo(1));
         }
 
         [Test]

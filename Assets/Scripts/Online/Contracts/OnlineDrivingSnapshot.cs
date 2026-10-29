@@ -44,7 +44,24 @@ namespace ReReVolt.Online.Contracts
         public WeaponKind HeldWeapon;
     }
 
-    /// <summary>Driving and held-item repair state. Live weapons and discrete effects are added separately.</summary>
+    [Serializable]
+    public struct DrivingPickupState
+    {
+        public int Index;
+        public WeaponKind Offering;
+        public bool Available;
+    }
+
+    [Serializable]
+    public struct DrivingWeaponState
+    {
+        public uint Id, ShooterId;
+        public WeaponKind Kind;
+        public WorldVector Position, Direction;
+        public float Age;
+    }
+
+    /// <summary>Host repair state for racers, pickups and the bounded live-weapon set.</summary>
     [Serializable]
     public sealed class DrivingWorldSnapshot
     {
@@ -55,6 +72,8 @@ namespace ReReVolt.Online.Contracts
         public int Countdown;
         public float Elapsed;
         public DrivingRacerState[] Racers;
+        public DrivingPickupState[] Pickups;
+        public DrivingWeaponState[] Weapons;
     }
 
     /// <summary>Client-side, package-free snapshot validation. No vehicle or race authority is granted.</summary>
@@ -65,6 +84,7 @@ namespace ReReVolt.Online.Contracts
         private readonly string track;
         private readonly int laps, checkpoints;
         private readonly HashSet<uint> racers = new HashSet<uint>();
+        private readonly HashSet<uint> humans = new HashSet<uint>();
         private DrivingWorldSnapshot latest;
 
         public OnlineDrivingSnapshotReceiver(LobbySnapshot lobby, int totalLaps, int checkpointCount)
@@ -73,7 +93,10 @@ namespace ReReVolt.Online.Contracts
                 lobby.Phase == OnlinePhase.Lobby || lobby.Racers == null || lobby.Racers.Length < 1 || lobby.Racers.Length > 4 || totalLaps < 1 || checkpointCount < 1)
                 throw new ArgumentException("A locked race roster and valid track rules are required.");
             foreach (var racer in lobby.Racers)
+            {
                 if (racer == null || racer.Id == 0 || !racers.Add(racer.Id)) throw new ArgumentException("Invalid racer roster.");
+                if (!racer.Bot) humans.Add(racer.Id);
+            }
             epoch = lobby.Epoch; round = lobby.Round; track = lobby.TrackId;
             laps = totalLaps; checkpoints = checkpointCount;
         }
@@ -94,6 +117,27 @@ namespace ReReVolt.Online.Contracts
                 (latest != null && (candidate.Elapsed < latest.Elapsed || (int)candidate.Phase < (int)latest.Phase)))
                 return SnapshotError.InvalidState;
             if (candidate.Racers == null || candidate.Racers.Length != racers.Count) return SnapshotError.InvalidRoster;
+            if (candidate.Pickups == null || candidate.Pickups.Length != OnlineCombatInventoryAuthority.PickupCount ||
+                candidate.Weapons == null || candidate.Weapons.Length > 16) return SnapshotError.InvalidState;
+            for (int i = 0; i < candidate.Pickups.Length; i++)
+            {
+                DrivingPickupState pickup = candidate.Pickups[i];
+                if (pickup.Index != i || (pickup.Offering != WeaponKind.Bolt && pickup.Offering != WeaponKind.Oil) ||
+                    (candidate.Phase != DrivingPhase.Racing && pickup.Available)) return SnapshotError.InvalidState;
+            }
+            var weaponIds = new HashSet<uint>();
+            foreach (DrivingWeaponState weapon in candidate.Weapons)
+            {
+                if (candidate.Phase != DrivingPhase.Racing || weapon.Id == 0 || !weaponIds.Add(weapon.Id) ||
+                    !humans.Contains(weapon.ShooterId) ||
+                    (weapon.Kind != WeaponKind.Bolt && weapon.Kind != WeaponKind.Oil) ||
+                    !weapon.Position.IsFinite || !weapon.Direction.IsFinite || !WorldVector.Finite(weapon.Age) ||
+                    weapon.Age < 0 || weapon.Age >= (weapon.Kind == WeaponKind.Bolt ? 3f : 9f))
+                    return SnapshotError.InvalidState;
+                double directionLength = (double)weapon.Direction.X * weapon.Direction.X +
+                    (double)weapon.Direction.Y * weapon.Direction.Y + (double)weapon.Direction.Z * weapon.Direction.Z;
+                if (Math.Abs(directionLength - 1) > .03) return SnapshotError.InvalidState;
+            }
             var seen = new HashSet<uint>();
             var positions = new HashSet<int>();
             var finishes = new HashSet<int>();
@@ -136,7 +180,8 @@ namespace ReReVolt.Online.Contracts
         {
             Epoch = value.Epoch, Sequence = value.Sequence, Tick = value.Tick, Round = value.Round,
             TrackId = value.TrackId, Phase = value.Phase, Countdown = value.Countdown, Elapsed = value.Elapsed,
-            Racers = (DrivingRacerState[])value.Racers.Clone()
+            Racers = (DrivingRacerState[])value.Racers.Clone(),
+            Pickups = (DrivingPickupState[])value.Pickups.Clone(), Weapons = (DrivingWeaponState[])value.Weapons.Clone()
         };
     }
 }

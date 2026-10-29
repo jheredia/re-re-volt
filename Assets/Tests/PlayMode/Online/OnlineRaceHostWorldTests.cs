@@ -112,6 +112,7 @@ namespace ReReVolt.Tests.Online
             Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.Bolt));
             Assert.That(world.CombatInventory.IsPickupAvailable(0, world.Race.ElapsedTime), Is.False);
             Assert.That(world.CaptureSnapshot().Racers[0].HeldWeapon, Is.EqualTo(Weapons.WeaponKind.Bolt));
+            Assert.That(world.CaptureSnapshot().Pickups[0].Available, Is.False);
 
             vehicle.Teleport(new Pose(PrototypeCircuitBuilder.GetPickupPosition(1), Quaternion.identity));
             yield return new WaitForFixedUpdate();
@@ -207,6 +208,7 @@ namespace ReReVolt.Tests.Online
             Assert.That(world.CombatInventory.TryCollect(shooterId, 0, world.Race.ElapsedTime, out _), Is.True);
             Assert.That(world.Combat.TryFire(shooterId), Is.True);
             Assert.That(world.Combat.LiveCount, Is.EqualTo(1));
+            Assert.That(world.CaptureSnapshot().Weapons[0].Kind, Is.EqualTo(Weapons.WeaponKind.Bolt));
             deadline = Time.realtimeSinceStartup + 1;
             while (world.Combat.HitCount == 0 && Time.realtimeSinceStartup < deadline)
                 yield return new WaitForFixedUpdate();

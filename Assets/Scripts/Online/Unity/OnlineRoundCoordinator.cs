@@ -21,6 +21,7 @@ namespace ReReVolt.Online.Unity
         private OnlineRaceClientPresentation clientPresentation;
         private OnlineLocalInputSender localInput;
         private OnlineRaceHud raceHud;
+        private OnlineCombatPresentation combatPresentation;
         private OnlineRaceMessageRouting routing;
         private bool initialized;
         private bool stopping;
@@ -64,6 +65,9 @@ namespace ReReVolt.Online.Unity
                 raceHud = gameObject.AddComponent<OnlineRaceHud>();
                 raceHud.Initialize(lockedRoster, protocol.LocalPeer);
                 raceHud.Bind(routing);
+                combatPresentation = gameObject.AddComponent<OnlineCombatPresentation>();
+                combatPresentation.Initialize(hostWorld.PickupPositions, true, bootstrap.VisualStyle);
+                combatPresentation.Bind(routing);
                 SuspendOfflinePresentation();
                 hostWorld.Race.RaceStateChanged += OnHostRaceStateChanged;
                 RoundStarted?.Invoke();
@@ -100,6 +104,9 @@ namespace ReReVolt.Online.Unity
                 raceHud = gameObject.AddComponent<OnlineRaceHud>();
                 raceHud.Initialize(snapshot, protocol.LocalPeer);
                 raceHud.Bind(routing);
+                combatPresentation = gameObject.AddComponent<OnlineCombatPresentation>();
+                combatPresentation.Initialize(clientPresentation.PickupPositions, false, bootstrap.VisualStyle);
+                combatPresentation.Bind(routing);
                 SuspendOfflinePresentation();
                 RoundStarted?.Invoke();
             }
@@ -159,6 +166,12 @@ namespace ReReVolt.Online.Unity
                 raceHud.Shutdown();
                 Destroy(raceHud);
                 raceHud = null;
+            }
+            if (combatPresentation != null)
+            {
+                combatPresentation.Shutdown();
+                Destroy(combatPresentation);
+                combatPresentation = null;
             }
             routing?.Dispose();
             routing = null;

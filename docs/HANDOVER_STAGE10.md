@@ -252,3 +252,25 @@ No live Relay/two-peer, results/rematch combat, or latency evidence exists.
 Next: replicate bounded weapon spawn/motion/expiry, pickup availability, and
 hit events or state without giving clients authority; render per-peer online
 VFX/audio and pickup markers; then verify combat end-to-end over real Relay.
+
+## Snapshot combat repair and peer-local visuals — 2026-10-29
+
+The 20 Hz host snapshot now carries four indexed pickup offerings/availability
+states and at most 16 live Bolt/Oil states (stable round-local IDs, shooter,
+position, direction and age). The receiving contract rejects invalid counts,
+foreign/bot shooters, nonfinite values, invalid phases and malformed directions,
+and copies the arrays defensively. A snapshot-only presentation owner paints
+client pickup markers and interpolated weapon shapes; the host uses the same
+weapon view, while retaining its existing physical pickup markers. All new
+visual colliders are disabled and destroyed. Wire version 3 and lobby
+compatibility fingerprint 3 prevent older peers silently reading this schema.
+
+Unity 6000.6 focused results: snapshot EditMode **14/14**
+(`/private/tmp/stage10-combat-snapshot-editmode.xml`), client presentation
+PlayMode **2/2** (`/private/tmp/stage10-combat-client-presentation.xml`),
+wire codec PlayMode **3/3** (`/private/tmp/stage10-combat-wire.xml`), and
+host-world PlayMode **9/9** (`/private/tmp/stage10-combat-repair-host.xml`).
+This remains in-process evidence. Effects have no replicated hit/impact event,
+online audio or polished VFX; the rough weapon shapes and pickup readability
+still need visual review across split-screen/style modes. The protocol change
+has not been tested over live Relay or latency, and Stage 10 is not accepted.

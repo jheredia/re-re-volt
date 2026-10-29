@@ -6,6 +6,7 @@ using ReReVolt.Online.Unity;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Vehicle;
+using Weapons;
 
 namespace ReReVolt.Tests.Online
 {
@@ -80,6 +81,35 @@ namespace ReReVolt.Tests.Online
             Assert.That(holder.GetComponentsInChildren<Camera>(true), Is.Empty);
         }
 
+        [UnityTest]
+        public IEnumerator AcceptedCombatRepairStateCreatesOnlyColliderlessClientVisuals()
+        {
+            LobbySnapshot roster = LockedRoster();
+            presentation.Initialize(roster, "host");
+            var combat = holder.AddComponent<OnlineCombatPresentation>();
+            combat.Initialize(presentation.PickupPositions, false);
+            DrivingWorldSnapshot snapshot = Snapshot(roster);
+            snapshot.Phase = DrivingPhase.Racing;
+            snapshot.Countdown = 0;
+            snapshot.Pickups[0].Available = true;
+            snapshot.Weapons = new[] { new DrivingWeaponState { Id = 1, ShooterId = roster.Racers[0].Id,
+                Kind = WeaponKind.Bolt, Position = new WorldVector(-15, 1, 2),
+                Direction = new WorldVector(0, 0, 1), Age = .1f } };
+            combat.ApplySnapshot(snapshot);
+            Assert.That(combat.VisiblePickupCount, Is.EqualTo(1));
+            Assert.That(combat.LiveWeaponViewCount, Is.EqualTo(1));
+            yield return null;
+            Assert.That(holder.GetComponentsInChildren<Rigidbody>(true), Is.Empty);
+            foreach (Collider collider in holder.GetComponentsInChildren<Collider>(true))
+                Assert.That(collider.enabled, Is.False);
+            snapshot.Pickups[0].Available = false;
+            snapshot.Weapons = System.Array.Empty<DrivingWeaponState>();
+            combat.ApplySnapshot(snapshot);
+            Assert.That(combat.VisiblePickupCount, Is.Zero);
+            Assert.That(combat.LiveWeaponViewCount, Is.Zero);
+            combat.Shutdown();
+        }
+
         private static LobbySnapshot LockedRoster()
         {
             var authority = new OnlineLobbyAuthority("host", 81,
@@ -111,7 +141,12 @@ namespace ReReVolt.Tests.Online
                     State(roster.Racers[0].Id, new WorldVector(2, .4f, -1)),
                     State(roster.Racers[1].Id, new WorldVector(5, .4f, -2)),
                     State(roster.Racers[2].Id, new WorldVector(-4, .5f, 3))
-                }
+                },
+                Pickups = new[] { new DrivingPickupState { Index = 0, Offering = WeaponKind.Bolt },
+                    new DrivingPickupState { Index = 1, Offering = WeaponKind.Oil },
+                    new DrivingPickupState { Index = 2, Offering = WeaponKind.Bolt },
+                    new DrivingPickupState { Index = 3, Offering = WeaponKind.Oil } },
+                Weapons = System.Array.Empty<DrivingWeaponState>()
             };
         }
 
