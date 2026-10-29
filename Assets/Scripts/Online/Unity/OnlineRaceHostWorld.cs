@@ -29,6 +29,7 @@ namespace ReReVolt.Online.Unity
             public Action RecoveryHandler;
         }
         private readonly List<Racer> racers = new List<Racer>(4);
+        private readonly OnlineHostPickup[] pickups = new OnlineHostPickup[OnlineCombatInventoryAuthority.PickupCount];
         private OnlineLobbyAuthority authority;
         private OnlineInputAuthority input;
         private LobbySnapshot roster;
@@ -71,6 +72,15 @@ namespace ReReVolt.Online.Unity
                 for (int i = 0; i < checkpoints.Length; i++) checkpoints[i] = track.Checkpoints[i].transform;
                 for (int i = 0; i < roster.Racers.Length; i++) CreateRacer(roster.Racers[i], i, checkpoints);
                 CombatInventory = new OnlineCombatInventoryAuthority(authority);
+                if (track.PickupPositions == null || track.PickupPositions.Count != pickups.Length)
+                    throw new InvalidOperationException("Online tracks require four authored pickup sites.");
+                for (int i = 0; i < pickups.Length; i++)
+                {
+                    GameObject site = new GameObject("Online pickup " + (i + 1));
+                    site.transform.SetParent(content.transform, false);
+                    pickups[i] = site.AddComponent<OnlineHostPickup>();
+                    pickups[i].Initialize(this, i, track.PickupPositions[i], style);
+                }
                 input = new OnlineInputAuthority(authority);
                 Race.RaceStateChanged += OnRaceStateChanged;
                 Race.CountdownChanged += OnCountdownChanged;
@@ -124,6 +134,10 @@ namespace ReReVolt.Online.Unity
             }
             tick++;
             bool canDrive = Race.RaceRunning && Time.timeScale > 0;
+            for (int i = 0; i < pickups.Length; i++)
+                if (pickups[i] != null)
+                    pickups[i].Refresh(canDrive && CombatInventory.IsPickupAvailable(i, Race.ElapsedTime),
+                        CombatInventory.Offering(i));
             foreach (var racer in racers)
             {
                 if (racer.Bot != null)
@@ -164,7 +178,8 @@ namespace ReReVolt.Online.Unity
                     CompletedLaps = racer.Progress.CompletedLaps, NextCheckpoint = racer.Progress.NextCheckpointIndex,
                     PositionInRace = racer.Progress.CurrentPosition, FinishPosition = racer.Progress.FinishPosition,
                     FinishTime = racer.Progress.FinishTime, AcknowledgedInput = racer.AcknowledgedInput,
-                    RecoveryRevision = racer.RecoveryRevision
+                    RecoveryRevision = racer.RecoveryRevision,
+                    HeldWeapon = CombatInventory.HeldWeapon(racer.Id)
                 };
             }
             return new DrivingWorldSnapshot
@@ -182,6 +197,21 @@ namespace ReReVolt.Online.Unity
             foreach (var racer in racers) if (racer.Id == racerId) { vehicle = racer.Vehicle; return true; }
             vehicle = null;
             return false;
+        }
+
+        internal void TryCollectPickup(int pickupIndex, Collider collider)
+        {
+            if (!initialized || !Race.RaceRunning || Time.timeScale <= 0 || collider == null ||
+                pickupIndex < 0 || pickupIndex >= pickups.Length) return;
+            Rigidbody body = collider.attachedRigidbody;
+            if (body == null) return;
+            foreach (Racer racer in racers)
+            {
+                if (racer.Body != body || racer.Progress.IsFinished) continue;
+                if (CombatInventory.TryCollect(racer.Id, pickupIndex, Race.ElapsedTime, out _))
+                    pickups[pickupIndex].Refresh(false, CombatInventory.Offering(pickupIndex));
+                return;
+            }
         }
 
         private void OnCountdownChanged(int value) => countdown = Mathf.Clamp(value, 0, 3);
@@ -208,6 +238,7 @@ namespace ReReVolt.Online.Unity
                 if (racer.Vehicle != null) racer.Vehicle.SetInputEnabled(false);
             }
             racers.Clear();
+            for (int i = 0; i < pickups.Length; i++) pickups[i] = null;
             CombatInventory?.Clear();
             CombatInventory = null;
             authority?.AbortRound();

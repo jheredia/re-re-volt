@@ -5,6 +5,7 @@ using ReReVolt.Online.Contracts;
 using ReReVolt.Online.Unity;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Weapons;
 
 namespace ReReVolt.Tests.Online
 {
@@ -44,11 +45,13 @@ namespace ReReVolt.Tests.Online
                 racing.Elapsed = 63.4f;
                 racing.Racers[0].CompletedLaps = 1;
                 racing.Racers[0].PositionInRace = 2;
+                racing.Racers[0].HeldWeapon = WeaponKind.Bolt;
                 hud.ApplySnapshot(racing);
                 Assert.That(hud.TryGetLocalStatus(11, out first), Is.True);
                 Assert.That(first, Does.Contain("LAP 2/" + TrackCatalog.Default.LapCount));
                 Assert.That(first, Does.Contain("POS 2/3"));
                 Assert.That(first, Does.Contain("01:03.4"));
+                Assert.That(first, Does.Contain("BOLT"));
                 Assert.That(hud.TryGetLocalStatus(12, out second), Is.True);
                 Assert.That(second, Does.Contain("P2"));
 

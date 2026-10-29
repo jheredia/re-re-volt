@@ -1,6 +1,7 @@
 using System;
 using NUnit.Framework;
 using ReReVolt.Online.Contracts;
+using Weapons;
 
 namespace ReReVolt.Tests.Online
 {
@@ -98,6 +99,17 @@ namespace ReReVolt.Tests.Online
             Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
             candidate = Snapshot(); candidate.Racers[0].CompletedLaps = 3;
             Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
+            candidate = Snapshot(); candidate.Racers[0].HeldWeapon = (WeaponKind)99;
+            Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
+        }
+        [Test] public void AcceptsHostHeldWeaponButNotInventoryDuringCountdown()
+        {
+            var candidate = Snapshot(); candidate.Racers[0].HeldWeapon = WeaponKind.Bolt;
+            Assert.That(receiver.Accept(candidate), Is.EqualTo(SnapshotError.None));
+            Assert.That(receiver.Latest.Racers[0].HeldWeapon, Is.EqualTo(WeaponKind.Bolt));
+            var countdownReceiver = new OnlineDrivingSnapshotReceiver(authority.Snapshot(), 3, 8);
+            candidate.Phase = DrivingPhase.Countdown; candidate.Elapsed = 0; candidate.Countdown = 3;
+            Assert.That(countdownReceiver.Accept(candidate), Is.EqualTo(SnapshotError.InvalidState));
         }
         [Test] public void AcceptsMissedCheckpointUpdatesAndRecoveryCorrectionsWithoutReversingProgress()
         {

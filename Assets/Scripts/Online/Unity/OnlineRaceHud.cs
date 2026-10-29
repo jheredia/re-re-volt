@@ -7,6 +7,7 @@ using ReReVolt.Online.Contracts;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Weapons;
 
 namespace ReReVolt.Online.Unity
 {
@@ -171,8 +172,10 @@ namespace ReReVolt.Online.Unity
                 return player + "   FINISHED #" + state.FinishPosition +
                     "\n" + TimeLabel(state.FinishTime) + "  •  LOBBY REMATCH";
             int lap = Mathf.Clamp(state.CompletedLaps + 1, 1, totalLaps);
+            string item = state.HeldWeapon == WeaponKind.None ? "NO ITEM" :
+                state.HeldWeapon == WeaponKind.Bolt ? "BOLT" : "OIL";
             return player + "   LAP " + lap + "/" + totalLaps + "   POS " + state.PositionInRace + "/" + totalRacers +
-                "\n" + TimeLabel(snapshot.Elapsed) + "  •  RC CLUB";
+                "\n" + TimeLabel(snapshot.Elapsed) + "  •  " + item;
         }
 
         private static string TimeLabel(float seconds)

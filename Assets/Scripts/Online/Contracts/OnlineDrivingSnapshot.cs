@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Weapons;
 
 namespace ReReVolt.Online.Contracts
 {
@@ -40,9 +41,10 @@ namespace ReReVolt.Online.Contracts
         public float FinishTime;
         public ulong AcknowledgedInput;
         public uint RecoveryRevision;
+        public WeaponKind HeldWeapon;
     }
 
-    /// <summary>Driving-only repair state. Combat and discrete presentation events are added separately.</summary>
+    /// <summary>Driving and held-item repair state. Live weapons and discrete effects are added separately.</summary>
     [Serializable]
     public sealed class DrivingWorldSnapshot
     {
@@ -99,6 +101,7 @@ namespace ReReVolt.Online.Contracts
             {
                 if (!racers.Contains(racer.RacerId) || !seen.Add(racer.RacerId)) return SnapshotError.InvalidRoster;
                 if (!racer.Position.IsFinite || !racer.Velocity.IsFinite || !racer.AngularVelocity.IsFinite || !racer.Rotation.IsValid ||
+                    (racer.HeldWeapon != WeaponKind.None && racer.HeldWeapon != WeaponKind.Bolt && racer.HeldWeapon != WeaponKind.Oil) ||
                     racer.CompletedLaps < 0 || racer.CompletedLaps > laps || racer.NextCheckpoint < 0 || racer.NextCheckpoint >= checkpoints ||
                     racer.PositionInRace < 1 || racer.PositionInRace > racers.Count || !positions.Add(racer.PositionInRace) ||
                     racer.FinishPosition < 0 || racer.FinishPosition > racers.Count || !WorldVector.Finite(racer.FinishTime))
@@ -111,7 +114,8 @@ namespace ReReVolt.Online.Contracts
                 else if (racer.CompletedLaps >= laps || racer.FinishTime != -1 || candidate.Phase == DrivingPhase.Results)
                     return SnapshotError.InvalidState;
                 if (candidate.Phase == DrivingPhase.Countdown &&
-                    (racer.CompletedLaps != 0 || racer.NextCheckpoint != 0 || racer.FinishPosition != 0)) return SnapshotError.InvalidState;
+                    (racer.CompletedLaps != 0 || racer.NextCheckpoint != 0 || racer.FinishPosition != 0 ||
+                     racer.HeldWeapon != WeaponKind.None)) return SnapshotError.InvalidState;
                 if (latest != null)
                     foreach (var previous in latest.Racers)
                     {

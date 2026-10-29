@@ -209,3 +209,25 @@ online combat. Physical pickup triggers, host projectile/oil simulation and
 hits, snapshot/event replication, client VFX/HUD, and live Relay validation are
 still required. Do not consume the held slot on Fire until the host has
 validated a legal weapon spawn and live-weapon capacity.
+
+## Host pickup collection and held-item display — 2026-10-29
+
+The host now builds exactly four trigger-only pickup sites from each selected
+track's authored positions. Only a real host racer collider during Racing can
+collect, through the one-slot authority above. A full slot leaves the other
+pickup available. The host markers have collider-disabled Bolt/Oil shapes,
+register with the active visual style, and release with the round. The host's
+20 Hz driving snapshot now includes each human's held item, validates the enum
+and countdown state on clients, and paints it only in that peer's local HUD.
+The race wire version and lobby compatibility fingerprint were bumped so older
+clients cannot silently accept the changed snapshot schema.
+
+Focused Unity 6000.6 results: authoritative snapshot EditMode **13/13**
+(`/private/tmp/stage10-pickup-snapshot-editmode.xml`), online HUD PlayMode **1/1**
+(`/private/tmp/stage10-pickup-hud-playmode.xml`), and host-world PlayMode **6/6**
+(`/private/tmp/stage10-host-pickup-suite.xml`), including physical collection
+and all-track composition. The changed wire codec passes **3/3** PlayMode
+(`/private/tmp/stage10-pickup-wire-playmode.xml`). This is not complete online
+combat: clients do not yet render pickup sites or availability, Fire does not
+spawn a weapon, and hits, oil, VFX/audio and two-peer Relay behavior remain
+unverified.

@@ -72,6 +72,7 @@ namespace ReReVolt.Tests.Online
                 world.Initialize(authority);
                 Assert.That(world.RacerCount, Is.EqualTo(4));
                 Assert.That(world.CombatInventory, Is.Not.Null);
+                Assert.That(holder.GetComponentsInChildren<OnlineHostPickup>().Length, Is.EqualTo(4));
                 Assert.That(world.CombatInventory.TryCollect(authority.Snapshot().Racers[0].Id,
                     0, 0, out _), Is.False, "The host cannot grant a pickup during countdown.");
                 Assert.That(world.Race.ControlsGlobalGameState, Is.False);
@@ -90,6 +91,33 @@ namespace ReReVolt.Tests.Online
                 Assert.That(global.CurrentState, Is.EqualTo(GameManager.GameState.MainMenu));
                 yield return null; // Deferred object/material cleanup before building the next track.
             }
+        }
+
+        [UnityTest] public IEnumerator AuthoredHostPickupTriggerGrantsOnlyOneHeldWeaponDuringRacing()
+        {
+            var authority = Lobby(TrackCatalog.Default.Id, 0);
+            uint human = authority.Snapshot().Racers[0].Id;
+            world.Initialize(authority);
+            float deadline = Time.realtimeSinceStartup + 6;
+            while (world.Race.CurrentState == RaceManager.RaceState.Countdown &&
+                   Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(world.Race.CurrentState, Is.EqualTo(RaceManager.RaceState.Racing));
+            yield return new WaitForFixedUpdate(); // Enable racing-only pickup triggers.
+            Assert.That(world.TryGetVehicle(human, out VehicleController vehicle), Is.True);
+
+            vehicle.Teleport(new Pose(PrototypeCircuitBuilder.GetPickupPosition(0), Quaternion.identity));
+            deadline = Time.realtimeSinceStartup + 2;
+            while (world.CombatInventory.HeldWeapon(human) == Weapons.WeaponKind.None &&
+                   Time.realtimeSinceStartup < deadline) yield return new WaitForFixedUpdate();
+            Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.Bolt));
+            Assert.That(world.CombatInventory.IsPickupAvailable(0, world.Race.ElapsedTime), Is.False);
+            Assert.That(world.CaptureSnapshot().Racers[0].HeldWeapon, Is.EqualTo(Weapons.WeaponKind.Bolt));
+
+            vehicle.Teleport(new Pose(PrototypeCircuitBuilder.GetPickupPosition(1), Quaternion.identity));
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+            Assert.That(world.CombatInventory.HeldWeapon(human), Is.EqualTo(Weapons.WeaponKind.Bolt));
+            Assert.That(world.CombatInventory.IsPickupAvailable(1, world.Race.ElapsedTime), Is.True);
         }
 
         [UnityTest] public IEnumerator InputsAreHostOwnedAndPeerLossAbortsWithoutChangingOfflineState()
