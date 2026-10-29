@@ -189,3 +189,23 @@ two-peer Relay validation also remain. Unity service activation, terms, and
 billing still require the owner. Keep the protected `InputHandler`, feedback
 files, unrelated architecture draft, generated network-prefabs asset, solution
 file, and `.DS_Store` untouched.
+
+## Host combat-inventory contract — 2026-10-29
+
+`OnlineCombatInventoryAuthority` now binds one round's stable human racer IDs
+to the existing `CombatInventory` and four `PickupCycle` rules. It admits no
+pickup or fire before Racing or after Results/abort, excludes driving-only bots,
+retains the one-slot inventory and 0.35-second fire cooldown, and rotates a
+consumed pickup only after a successful collection. The host world creates it
+after the locked roster is composed and clears it on teardown. Unity 6000.6
+EditMode passes the focused authority fixture **2/2**
+(`/private/tmp/stage10-combat-inventory-editmode-final.xml`); PlayMode host-world
+composition passes **5/5** across the four fixed tracks
+(`/private/tmp/stage10-combat-inventory-host.xml`). A batch EditMode invocation
+exited before producing XML and is not counted as a test pass.
+
+This is an engine-independent rule/lifecycle foundation, not player-visible
+online combat. Physical pickup triggers, host projectile/oil simulation and
+hits, snapshot/event replication, client VFX/HUD, and live Relay validation are
+still required. Do not consume the held slot on Fire until the host has
+validated a legal weapon spawn and live-weapon capacity.

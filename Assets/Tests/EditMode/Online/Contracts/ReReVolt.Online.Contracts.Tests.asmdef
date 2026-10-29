@@ -1,6 +1,6 @@
 {
   "name": "ReReVolt.Online.Contracts.Tests",
-  "references": ["ReReVolt.Online.Contracts"],
+  "references": ["ReReVolt.Online.Contracts", "ReReVolt.RaceRules"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

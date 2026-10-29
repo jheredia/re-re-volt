@@ -38,6 +38,7 @@ namespace ReReVolt.Online.Unity
         private int countdown = 3;
         private bool initialized;
         public RaceManager Race { get; private set; }
+        public OnlineCombatInventoryAuthority CombatInventory { get; private set; }
         public bool IsInitialized => initialized;
         public int RacerCount => racers.Count;
         public event Action<uint, InputEdges> ActionRequested;
@@ -69,6 +70,7 @@ namespace ReReVolt.Online.Unity
                 var checkpoints = new Transform[track.Checkpoints.Length];
                 for (int i = 0; i < checkpoints.Length; i++) checkpoints[i] = track.Checkpoints[i].transform;
                 for (int i = 0; i < roster.Racers.Length; i++) CreateRacer(roster.Racers[i], i, checkpoints);
+                CombatInventory = new OnlineCombatInventoryAuthority(authority);
                 input = new OnlineInputAuthority(authority);
                 Race.RaceStateChanged += OnRaceStateChanged;
                 Race.CountdownChanged += OnCountdownChanged;
@@ -206,6 +208,8 @@ namespace ReReVolt.Online.Unity
                 if (racer.Vehicle != null) racer.Vehicle.SetInputEnabled(false);
             }
             racers.Clear();
+            CombatInventory?.Clear();
+            CombatInventory = null;
             authority?.AbortRound();
             GameObject trackRoot = track?.Root;
             if (trackRoot != null) trackRoot.SetActive(false);

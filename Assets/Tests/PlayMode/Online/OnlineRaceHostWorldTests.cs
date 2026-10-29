@@ -71,6 +71,9 @@ namespace ReReVolt.Tests.Online
                 var authority = Lobby(definition.Id, 3);
                 world.Initialize(authority);
                 Assert.That(world.RacerCount, Is.EqualTo(4));
+                Assert.That(world.CombatInventory, Is.Not.Null);
+                Assert.That(world.CombatInventory.TryCollect(authority.Snapshot().Racers[0].Id,
+                    0, 0, out _), Is.False, "The host cannot grant a pickup during countdown.");
                 Assert.That(world.Race.ControlsGlobalGameState, Is.False);
                 Assert.That(global.RaceManager, Is.SameAs(offline));
                 Assert.That(global.CurrentState, Is.EqualTo(GameManager.GameState.MainMenu));
@@ -82,6 +85,7 @@ namespace ReReVolt.Tests.Online
                 Assert.That(receiver.Accept(snapshot), Is.EqualTo(SnapshotError.None));
                 Assert.That(snapshot.Phase, Is.EqualTo(DrivingPhase.Countdown));
                 world.Shutdown();
+                Assert.That(world.CombatInventory, Is.Null);
                 Assert.That(authority.Phase, Is.EqualTo(OnlinePhase.Lobby));
                 Assert.That(global.CurrentState, Is.EqualTo(GameManager.GameState.MainMenu));
                 yield return null; // Deferred object/material cleanup before building the next track.
