@@ -160,12 +160,13 @@ package, transport, service, or authority choice is final.
      recorded above.
 
 6. **Stage 10 — Online multiplayer — now required for prototype acceptance**
-   - Architecture proposal:
-     [`STAGE10_ONLINE_ARCHITECTURE_DECISION.md`](STAGE10_ONLINE_ARCHITECTURE_DECISION.md).
-     It awaits explicit user approval before packages, Unity service setup, or
-     implementation.
-   - Start with a separate architecture decision; do not silently select a
-     transport, package, authority model, relay, or hybrid topology.
+   - The owner selected Unity Relay private sessions with a player-hosted,
+     authoritative race. The implementation is in progress; see the
+     [Stage 10 handover](HANDOVER_STAGE10.md). The separate architecture draft
+     remains owner-edited and must not be overwritten.
+   - Local NGO host loopback now verifies countdown-to-Racing publication,
+     owned driving input, and neutral input while the leave menu is open.
+     This is not a two-peer Relay test or final online acceptance.
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
@@ -174,6 +175,11 @@ package, transport, service, or authority choice is final.
      a later enhancement. Validate mixed human/AI results and rematches.
    - Preserve local split-screen as an independent first-class mode. Public
      matchmaking, accounts, ranked play, and persistent servers are excluded.
+   - Before acceptance, prove host and remote client over Relay (join code,
+     race/combat, 0–3 host AI across four tracks, results/rematch, disconnect
+     and recovery), then complete the stage-end visual/audio/performance and
+     platform build gates. Keep Windows and physical-controller runtime checks
+     deferred as directed by the owner.
 
 7. **Final integrated prototype acceptance**
    - Run the consolidated test/build/profile/screenshot matrix after online
