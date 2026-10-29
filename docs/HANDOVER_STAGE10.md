@@ -132,36 +132,30 @@ The next source slice adds a peer-local countdown/lap/position/time/results
 HUD driven by the existing authoritative host snapshot and client-accepted
 snapshot events. Its owned files are `Assets/Scripts/Online/Unity/OnlineRaceMessageRouting.cs`,
 `OnlineRoundCoordinator.cs`, new `OnlineRaceHud.cs` and `.meta`, and new
-`Assets/Tests/PlayMode/Online/OnlineRaceHudTests.cs` and `.meta`. The first
-focused Unity run found only a test-assembly error (`TMPro` not referenced by
-the PlayMode test assembly); production code compiled. The test was revised to
-use a read-only HUD diagnostic API instead, but that revision has not been
-compiled or run yet. Treat this source slice as unaccepted until focused
-validation succeeds. Its original log is
-`/private/tmp/stage10-online-hud-smoke.log`; no final XML was produced.
-
-The Unity Editor launched by that test is still live in Safe Mode as process
-2907 (confirmed by the live exec session). Normal test-mode exit did not occur.
-An attempt to send SIGTERM was rejected by auto-review because an Editor can
-hold unsaved state. Do not retry termination or work around that rejection
-without explicit user approval; a question requesting approval was sent.
-Once the Editor is safely closed, rerun only `OnlineRaceHudTests`, inspect its
-XML/log, reconcile any evidenced failure, then record acceptance in a follow-up
-commit. Do not touch the owner's unrelated uncommitted or generated files.
+`Assets/Tests/PlayMode/Online/OnlineRaceHudTests.cs` and `.meta`. The initial
+test-assembly-only `TMPro` reference failure was removed by exercising the
+read-only HUD diagnostic API. On 2026-10-29, Unity 6000.6 compiled and the
+focused `OnlineRaceHudTests` PlayMode fixture passed **1/1** at
+`/private/tmp/stage10-focus-20261029-hud.xml`. The former Safe Mode Editor
+process 2907 had exited before this run; no Editor was force-quit. This is
+in-process HUD ownership/formatting/cleanup evidence, not live Relay evidence.
 
 ## Local device preflight source slice — 2026-10-28
 
-While the same Editor remains live in Safe Mode, a separate narrow source
-change makes the online lobby refuse Add Human, Ready, and host Start when the
-local peer lacks enough unpaired keyboard/gamepad devices for its human roster.
+A narrow source change makes the online lobby refuse Add Human, Ready, and
+host Start when the local peer lacks enough unpaired keyboard/gamepad devices
+for its human roster.
 It displays local device capacity and keeps a failed round-composition reason
 visible. A client that cannot compose its locked round leaves the session on
 the following Update, so it cannot remain a ghost racer on the host. This
 changes only `OnlineLocalInputSender`, `OnlineLobbyEntry`, and the coordinator's
-error text; it does not alter racer ownership or race authority. Static
-whitespace checks pass, but Unity compilation and focused device/lobby tests
-remain pending until the Editor is safely closed. The previous request for
-permission to close PID 2907 has not received an answer; do not bypass it.
+error text; it does not alter racer ownership or race authority. Unity 6000.6
+compiled these sources. A new isolated Input System PlayMode test proves
+unpaired/enabled device counting, paired-device exclusion, and the four-racer
+cap (**1/1**, `/private/tmp/stage10-focus-20261029-input-retry.xml`). The
+online test assembly now references the Input System and its test framework.
+The lobby's button actions and real disconnected-device UX have not been
+exercised in a live Relay session, so the preflight remains provisional there.
 
 ## Client visual interpolation source slice — 2026-10-28
 
@@ -170,8 +164,19 @@ accepted snapshots over the observed bounded arrival interval (35–120 ms).
 The first state, a recovery revision, or a correction of at least 8 m snaps
 immediately. It never extrapolates beyond the latest host state or writes
 Rigidbody, wheel, race, or input authority. Presentation executes before chase
-cameras in LateUpdate. The focused client presentation fixture now asserts
-ordinary easing and recovery snap behavior. These source changes have not been
-compiled or run because the same validation Editor remains live in Safe Mode;
-include this fixture with the pending HUD/lobby focused checks once that Editor
-is safely closed. Do not infer live-network smoothness from this source change.
+cameras in LateUpdate. Unity 6000.6 compiled this change and the focused
+`OnlineRaceClientPresentationTests` PlayMode fixture passed **1/1**, covering
+ordinary easing and recovery snap behavior
+(`/private/tmp/stage10-focus-20261029-client.xml`). Do not infer live-network
+smoothness from this in-process test.
+
+## Next Stage 10 integration boundary — 2026-10-29
+
+The three focused fixtures above are green; no full online/offline suite or
+player build was run for these source slices. The next implementation gap is
+host-authoritative online combat and pickups (including inventory, cooldowns,
+projectile/hit effects, and snapshot/event presentation) without changing
+offline combat authority. Fire/pause input and live two-peer Relay validation
+also remain. Unity service activation, terms, and billing still require the
+owner. Keep the protected `InputHandler`, feedback files, unrelated architecture
+draft, generated network-prefabs asset, solution file, and `.DS_Store` untouched.

@@ -1,6 +1,6 @@
 {
   "name": "ReReVolt.Online.World.Tests",
-  "references": ["ReReVolt.Online.Unity", "ReReVolt.Online.Contracts", "ReReVolt.Runtime", "ReReVolt.RaceRules"],
+  "references": ["ReReVolt.Online.Unity", "ReReVolt.Online.Contracts", "ReReVolt.Runtime", "ReReVolt.RaceRules", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
   "optionalUnityReferences": ["TestAssemblies"],
   "autoReferenced": false
 }
