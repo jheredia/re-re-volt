@@ -54,7 +54,10 @@ namespace ReReVolt.Tests.Online
                 },
                 Weapons = new[] { new DrivingWeaponState { Id = 1, ShooterId = lobby.Racers[0].Id,
                     Kind = Weapons.WeaponKind.Bolt, Position = new WorldVector(1, 2, 3),
-                    Direction = new WorldVector(0, 0, 1), Age = .1f } }
+                    Direction = new WorldVector(0, 0, 1), Age = .1f } },
+                CombatEvents = new[] { new DrivingCombatEvent { Id = 1, WeaponId = 1,
+                    ShooterId = lobby.Racers[0].Id, TargetId = 0, Weapon = Weapons.WeaponKind.Bolt,
+                    Kind = DrivingCombatEventKind.WorldImpact, Position = new WorldVector(2, 2, 3) } }
             };
 
             Assert.That(OnlineRaceWireCodec.TryEncodeSnapshot(source, out var bytes), Is.True);
@@ -64,6 +67,7 @@ namespace ReReVolt.Tests.Online
             Assert.That(receiver.Accept(decoded), Is.EqualTo(SnapshotError.None));
             Assert.That(receiver.Latest.Racers[0].Position.X, Is.EqualTo(1));
             Assert.That(receiver.Latest.Weapons[0].Id, Is.EqualTo(1));
+            Assert.That(receiver.Latest.CombatEvents[0].Kind, Is.EqualTo(DrivingCombatEventKind.WorldImpact));
         }
 
         [Test]
@@ -73,6 +77,31 @@ namespace ReReVolt.Tests.Online
             // The envelope cannot be expanded with an arbitrary untrusted string field; snapshots can.
             var snapshot = new DrivingWorldSnapshot { TrackId = new string('x', 9000), Racers = new DrivingRacerState[1] };
             Assert.That(OnlineRaceWireCodec.TryEncodeSnapshot(snapshot, out _), Is.False);
+        }
+
+        [Test]
+        public void MaximumBoundedCombatRepairSetFitsSnapshotWireBudget()
+        {
+            var snapshot = new DrivingWorldSnapshot
+            {
+                TrackId = "rc-club-workshop", Racers = new DrivingRacerState[4],
+                Pickups = new DrivingPickupState[4], Weapons = new DrivingWeaponState[16],
+                CombatEvents = new DrivingCombatEvent[16]
+            };
+            for (int i = 0; i < snapshot.Weapons.Length; i++)
+            {
+                snapshot.Weapons[i] = new DrivingWeaponState { Id = (uint)(i + 1),
+                    ShooterId = 1234567890, Kind = Weapons.WeaponKind.Bolt,
+                    Position = new WorldVector(123.456f, 2.345f, -99.123f),
+                    Direction = new WorldVector(.707f, 0, .707f), Age = 2.345f };
+                snapshot.CombatEvents[i] = new DrivingCombatEvent { Id = (uint)(i + 1),
+                    WeaponId = (uint)(i + 1), ShooterId = 1234567890,
+                    TargetId = 987654321, Weapon = Weapons.WeaponKind.Bolt,
+                    Kind = DrivingCombatEventKind.Hit,
+                    Position = new WorldVector(123.456f, 2.345f, -99.123f) };
+            }
+            Assert.That(OnlineRaceWireCodec.TryEncodeSnapshot(snapshot, out byte[] bytes), Is.True);
+            Assert.That(bytes.Length, Is.LessThanOrEqualTo(8192));
         }
 
         private static void ReadyAndStart(OnlineLobbyAuthority authority)

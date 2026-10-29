@@ -214,6 +214,10 @@ namespace ReReVolt.Tests.Online
                 yield return new WaitForFixedUpdate();
             Assert.That(world.Combat.HitCount, Is.EqualTo(1), "Only the target accepts the swept Bolt hit.");
             Assert.That(world.Combat.LiveCount, Is.Zero);
+            var impact = world.CaptureSnapshot().CombatEvents;
+            Assert.That(impact.Length, Is.EqualTo(1));
+            Assert.That(impact[0].Kind, Is.EqualTo(DrivingCombatEventKind.Hit));
+            Assert.That(impact[0].TargetId, Is.EqualTo(targetId));
         }
 
         [UnityTest] public IEnumerator HostOilArmsOnDrivableRoadAndHitsAnotherRacer()
@@ -239,6 +243,8 @@ namespace ReReVolt.Tests.Online
             world.Combat.Step(.61f);
             Assert.That(world.Combat.HitCount, Is.EqualTo(1));
             Assert.That(world.Combat.LiveCount, Is.Zero);
+            Assert.That(world.CaptureSnapshot().CombatEvents[0].Weapon,
+                Is.EqualTo(Weapons.WeaponKind.Oil));
             yield return null;
         }
 

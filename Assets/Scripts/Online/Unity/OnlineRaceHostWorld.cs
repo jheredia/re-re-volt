@@ -198,7 +198,7 @@ namespace ReReVolt.Online.Unity
             {
                 Epoch = roster.Epoch, Round = roster.Round, Sequence = ++snapshotSequence, Tick = tick,
                 TrackId = roster.TrackId, Elapsed = Race.ElapsedTime, Racers = states,
-                Pickups = pickupStates, Weapons = Combat.CaptureWeapons(),
+                Pickups = pickupStates, Weapons = Combat.CaptureWeapons(), CombatEvents = Combat.CaptureEvents(),
                 Phase = Race.CurrentState == RaceManager.RaceState.Countdown ? DrivingPhase.Countdown :
                     Race.CurrentState == RaceManager.RaceState.Finished ? DrivingPhase.Results : DrivingPhase.Racing,
                 Countdown = Race.CurrentState == RaceManager.RaceState.Countdown ? countdown : 0

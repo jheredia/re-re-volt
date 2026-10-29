@@ -61,6 +61,17 @@ namespace ReReVolt.Online.Contracts
         public float Age;
     }
 
+    public enum DrivingCombatEventKind { Hit, WorldImpact }
+
+    [Serializable]
+    public struct DrivingCombatEvent
+    {
+        public uint Id, WeaponId, ShooterId, TargetId;
+        public WeaponKind Weapon;
+        public DrivingCombatEventKind Kind;
+        public WorldVector Position;
+    }
+
     /// <summary>Host repair state for racers, pickups and the bounded live-weapon set.</summary>
     [Serializable]
     public sealed class DrivingWorldSnapshot
@@ -74,6 +85,7 @@ namespace ReReVolt.Online.Contracts
         public DrivingRacerState[] Racers;
         public DrivingPickupState[] Pickups;
         public DrivingWeaponState[] Weapons;
+        public DrivingCombatEvent[] CombatEvents;
     }
 
     /// <summary>Client-side, package-free snapshot validation. No vehicle or race authority is granted.</summary>
@@ -118,7 +130,8 @@ namespace ReReVolt.Online.Contracts
                 return SnapshotError.InvalidState;
             if (candidate.Racers == null || candidate.Racers.Length != racers.Count) return SnapshotError.InvalidRoster;
             if (candidate.Pickups == null || candidate.Pickups.Length != OnlineCombatInventoryAuthority.PickupCount ||
-                candidate.Weapons == null || candidate.Weapons.Length > 16) return SnapshotError.InvalidState;
+                candidate.Weapons == null || candidate.Weapons.Length > 16 ||
+                candidate.CombatEvents == null || candidate.CombatEvents.Length > 16) return SnapshotError.InvalidState;
             for (int i = 0; i < candidate.Pickups.Length; i++)
             {
                 DrivingPickupState pickup = candidate.Pickups[i];
@@ -138,6 +151,24 @@ namespace ReReVolt.Online.Contracts
                     (double)weapon.Direction.Y * weapon.Direction.Y + (double)weapon.Direction.Z * weapon.Direction.Z;
                 if (Math.Abs(directionLength - 1) > .03) return SnapshotError.InvalidState;
             }
+            uint previousEventId = 0;
+            foreach (DrivingCombatEvent effect in candidate.CombatEvents)
+            {
+                if (candidate.Phase != DrivingPhase.Racing || effect.Id <= previousEventId || effect.WeaponId == 0 ||
+                    !humans.Contains(effect.ShooterId) || !effect.Position.IsFinite ||
+                    (effect.Weapon != WeaponKind.Bolt && effect.Weapon != WeaponKind.Oil) ||
+                    (effect.Kind != DrivingCombatEventKind.Hit && effect.Kind != DrivingCombatEventKind.WorldImpact) ||
+                    (effect.Kind == DrivingCombatEventKind.Hit && !racers.Contains(effect.TargetId)) ||
+                    (effect.Kind == DrivingCombatEventKind.WorldImpact && effect.TargetId != 0))
+                    return SnapshotError.InvalidState;
+                previousEventId = effect.Id;
+            }
+            if (latest?.CombatEvents != null && latest.CombatEvents.Length > 0 &&
+                candidate.Phase == DrivingPhase.Racing &&
+                (candidate.CombatEvents.Length == 0 ||
+                 candidate.CombatEvents[candidate.CombatEvents.Length - 1].Id <
+                 latest.CombatEvents[latest.CombatEvents.Length - 1].Id))
+                return SnapshotError.InvalidState;
             var seen = new HashSet<uint>();
             var positions = new HashSet<int>();
             var finishes = new HashSet<int>();
@@ -181,7 +212,8 @@ namespace ReReVolt.Online.Contracts
             Epoch = value.Epoch, Sequence = value.Sequence, Tick = value.Tick, Round = value.Round,
             TrackId = value.TrackId, Phase = value.Phase, Countdown = value.Countdown, Elapsed = value.Elapsed,
             Racers = (DrivingRacerState[])value.Racers.Clone(),
-            Pickups = (DrivingPickupState[])value.Pickups.Clone(), Weapons = (DrivingWeaponState[])value.Weapons.Clone()
+            Pickups = (DrivingPickupState[])value.Pickups.Clone(), Weapons = (DrivingWeaponState[])value.Weapons.Clone(),
+            CombatEvents = (DrivingCombatEvent[])value.CombatEvents.Clone()
         };
     }
 }

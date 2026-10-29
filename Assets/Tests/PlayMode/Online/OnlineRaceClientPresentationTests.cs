@@ -95,9 +95,16 @@ namespace ReReVolt.Tests.Online
             snapshot.Weapons = new[] { new DrivingWeaponState { Id = 1, ShooterId = roster.Racers[0].Id,
                 Kind = WeaponKind.Bolt, Position = new WorldVector(-15, 1, 2),
                 Direction = new WorldVector(0, 0, 1), Age = .1f } };
+            snapshot.CombatEvents = new[] { new DrivingCombatEvent { Id = 1, WeaponId = 1,
+                ShooterId = roster.Racers[0].Id, TargetId = roster.Racers[1].Id,
+                Weapon = WeaponKind.Bolt, Kind = DrivingCombatEventKind.Hit,
+                Position = new WorldVector(-15, 1, 3) } };
             combat.ApplySnapshot(snapshot);
             Assert.That(combat.VisiblePickupCount, Is.EqualTo(1));
             Assert.That(combat.LiveWeaponViewCount, Is.EqualTo(1));
+            Assert.That(combat.ActivePulseCount, Is.EqualTo(1));
+            combat.ApplySnapshot(snapshot);
+            Assert.That(combat.ActivePulseCount, Is.EqualTo(1), "Repair history must not replay an effect twice.");
             yield return null;
             Assert.That(holder.GetComponentsInChildren<Rigidbody>(true), Is.Empty);
             foreach (Collider collider in holder.GetComponentsInChildren<Collider>(true))
@@ -146,7 +153,8 @@ namespace ReReVolt.Tests.Online
                     new DrivingPickupState { Index = 1, Offering = WeaponKind.Oil },
                     new DrivingPickupState { Index = 2, Offering = WeaponKind.Bolt },
                     new DrivingPickupState { Index = 3, Offering = WeaponKind.Oil } },
-                Weapons = System.Array.Empty<DrivingWeaponState>()
+                Weapons = System.Array.Empty<DrivingWeaponState>(),
+                CombatEvents = System.Array.Empty<DrivingCombatEvent>()
             };
         }
 

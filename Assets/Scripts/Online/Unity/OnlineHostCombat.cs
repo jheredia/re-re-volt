@@ -39,9 +39,10 @@ namespace ReReVolt.Online.Unity
         private readonly LayerMask drivableMask;
         private readonly List<Racer> racers = new List<Racer>(4);
         private readonly List<LiveWeapon> weapons = new List<LiveWeapon>(MaximumLiveWeapons);
+        private readonly List<DrivingCombatEvent> events = new List<DrivingCombatEvent>(16);
         private readonly Collider[] overlaps = new Collider[32];
         private readonly RaycastHit[] hits = new RaycastHit[32];
-        private uint nextWeaponId;
+        private uint nextWeaponId, nextEventId;
 
         public double SimulationTime { get; private set; }
         public int LiveCount => weapons.Count;
@@ -104,6 +105,8 @@ namespace ReReVolt.Online.Unity
             return result;
         }
 
+        public DrivingCombatEvent[] CaptureEvents() => events.ToArray();
+
         public void Step(float delta)
         {
             if (!CanSimulate || delta <= 0f) return;
@@ -141,7 +144,8 @@ namespace ReReVolt.Online.Unity
             weapons.Clear();
             SimulationTime = 0;
             HitCount = 0;
-            nextWeaponId = 0;
+            nextWeaponId = nextEventId = 0;
+            events.Clear();
         }
 
         private bool StepWeapon(LiveWeapon weapon, float delta)
@@ -157,7 +161,7 @@ namespace ReReVolt.Online.Unity
                 QueryTriggerInteraction.Ignore);
             if (count == overlaps.Length) return false;
             for (int i = 0; i < count; i++)
-                if (!IsShooter(weapon, overlaps[i])) { Impact(weapon, overlaps[i]); return false; }
+                if (!IsShooter(weapon, overlaps[i])) { Impact(weapon, overlaps[i], weapon.Position); return false; }
 
             float distance = BoltSpeed * delta;
             count = Physics.SphereCastNonAlloc(weapon.Position, BoltRadius, weapon.Direction, hits, distance,
@@ -172,7 +176,7 @@ namespace ReReVolt.Online.Unity
                 nearest = i;
                 nearestDistance = hits[i].distance;
             }
-            if (nearest >= 0) { Impact(weapon, hits[nearest].collider); return false; }
+            if (nearest >= 0) { Impact(weapon, hits[nearest].collider, hits[nearest].point); return false; }
             weapon.Position += weapon.Direction * distance;
             return true;
         }
@@ -196,17 +200,31 @@ namespace ReReVolt.Online.Unity
                     Vector3 nearest = collider.ClosestPoint(weapon.Position + Vector3.up * .35f);
                     if (Vector3.ProjectOnPlane(nearest - weapon.Position, Vector3.up).sqrMagnitude > OilRadius * OilRadius)
                         continue;
-                    if (TryHit(weapon, target)) return false;
+                    if (TryHit(weapon, target))
+                    {
+                        Record(weapon, target.Id, nearest, DrivingCombatEventKind.Hit);
+                        return false;
+                    }
                 }
             }
             return true;
         }
 
-        private void Impact(LiveWeapon weapon, Collider collider)
+        private void Impact(LiveWeapon weapon, Collider collider, Vector3 point)
         {
             if (collider == null) return;
             Racer target = Find(collider.attachedRigidbody);
-            if (target != null) TryHit(weapon, target);
+            bool accepted = target != null && TryHit(weapon, target);
+            Record(weapon, accepted ? target.Id : 0, point,
+                accepted ? DrivingCombatEventKind.Hit : DrivingCombatEventKind.WorldImpact);
+        }
+
+        private void Record(LiveWeapon weapon, uint targetId, Vector3 point, DrivingCombatEventKind kind)
+        {
+            if (events.Count == 16) events.RemoveAt(0);
+            events.Add(new DrivingCombatEvent { Id = ++nextEventId, WeaponId = weapon.Id,
+                ShooterId = weapon.ShooterId, TargetId = targetId, Weapon = weapon.Kind,
+                Kind = kind, Position = new WorldVector(point.x, point.y, point.z) });
         }
 
         private bool TryHit(LiveWeapon weapon, Racer target)

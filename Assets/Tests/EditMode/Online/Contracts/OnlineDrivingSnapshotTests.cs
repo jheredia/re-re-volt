@@ -40,7 +40,8 @@ namespace ReReVolt.Tests.Online
                     new DrivingPickupState { Index = 2, Offering = WeaponKind.Bolt, Available = true },
                     new DrivingPickupState { Index = 3, Offering = WeaponKind.Oil, Available = true }
                 },
-                Weapons = Array.Empty<DrivingWeaponState>()
+                Weapons = Array.Empty<DrivingWeaponState>(),
+                CombatEvents = Array.Empty<DrivingCombatEvent>()
             };
         }
         [Test] public void ReorderedDroppedAndDuplicateSnapshotsDoNotRollbackState()
@@ -145,6 +146,17 @@ namespace ReReVolt.Tests.Online
             Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
             next = Snapshot(2); next.Pickups[0].Offering = WeaponKind.None;
             Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
+            next = Snapshot(2); next.CombatEvents = new[] { new DrivingCombatEvent { Id = 1,
+                WeaponId = 1, ShooterId = bot, TargetId = human, Weapon = WeaponKind.Bolt,
+                Kind = DrivingCombatEventKind.Hit, Position = new WorldVector(1, 2, 3) } };
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState));
+            next.CombatEvents[0].ShooterId = human;
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.None));
+            next.CombatEvents[0].TargetId = 0;
+            Assert.That(receiver.Latest.CombatEvents[0].TargetId, Is.EqualTo(human));
+            next = Snapshot(3);
+            Assert.That(receiver.Accept(next), Is.EqualTo(SnapshotError.InvalidState),
+                "A racing snapshot cannot silently erase the bounded event history.");
         }
         [Test] public void AcceptsMissedCheckpointUpdatesAndRecoveryCorrectionsWithoutReversingProgress()
         {

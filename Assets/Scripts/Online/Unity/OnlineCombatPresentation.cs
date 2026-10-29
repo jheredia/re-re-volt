@@ -19,7 +19,15 @@ namespace ReReVolt.Online.Unity
             internal float BlendSeconds;
         }
 
+        private sealed class ImpactPulse
+        {
+            internal GameObject Object;
+            internal Renderer Renderer;
+            internal double BornAt;
+        }
+
         private readonly Dictionary<uint, WeaponView> weaponViews = new Dictionary<uint, WeaponView>(16);
+        private readonly List<ImpactPulse> pulses = new List<ImpactPulse>(16);
         private readonly HashSet<uint> seen = new HashSet<uint>();
         private readonly List<uint> stale = new List<uint>(16);
         private readonly GameObject[] boltPickups = new GameObject[4], oilPickups = new GameObject[4];
@@ -29,8 +37,10 @@ namespace ReReVolt.Online.Unity
         private GameObject root;
         private Material boltMaterial, oilMaterial;
         private bool host;
+        private uint lastEventId;
 
         public int LiveWeaponViewCount => weaponViews.Count;
+        public int ActivePulseCount => pulses.Count;
         public int VisiblePickupCount
         {
             get
@@ -89,7 +99,8 @@ namespace ReReVolt.Online.Unity
         public void ApplySnapshot(DrivingWorldSnapshot snapshot)
         {
             if (root == null || snapshot?.Pickups == null || snapshot.Pickups.Length != 4 ||
-                snapshot.Weapons == null || snapshot.Weapons.Length > 16) return;
+                snapshot.Weapons == null || snapshot.Weapons.Length > 16 ||
+                snapshot.CombatEvents == null || snapshot.CombatEvents.Length > 16) return;
             if (!host)
                 for (int i = 0; i < 4; i++)
                 {
@@ -126,12 +137,29 @@ namespace ReReVolt.Online.Unity
             stale.Clear();
             foreach (uint id in weaponViews.Keys) if (!seen.Contains(id)) stale.Add(id);
             for (int i = 0; i < stale.Count; i++) RemoveWeapon(stale[i]);
+            foreach (DrivingCombatEvent effect in snapshot.CombatEvents)
+            {
+                if (effect.Id <= lastEventId) continue;
+                if (pulses.Count == 16) RemovePulse(0);
+                Vector3 point = new Vector3(effect.Position.X, effect.Position.Y, effect.Position.Z);
+                GameObject visual = CreateVisual("Online " + effect.Kind + " pulse " + effect.Id,
+                    PrimitiveType.Sphere, point, Vector3.one * .35f, effect.Weapon, out Renderer renderer);
+                pulses.Add(new ImpactPulse { Object = visual, Renderer = renderer, BornAt = now });
+                lastEventId = effect.Id;
+            }
         }
 
         private void LateUpdate()
         {
             double now = Time.realtimeSinceStartupAsDouble;
             foreach (WeaponView view in weaponViews.Values) Advance(view, now);
+            for (int i = pulses.Count - 1; i >= 0; i--)
+            {
+                float age = (float)(now - pulses[i].BornAt);
+                if (age >= .4f) { RemovePulse(i); continue; }
+                if (pulses[i].Object != null)
+                    pulses[i].Object.transform.localScale = Vector3.one * (.35f + age * 3f);
+            }
         }
 
         private static void Advance(WeaponView view, double now)
@@ -174,6 +202,14 @@ namespace ReReVolt.Online.Unity
             weaponViews.Remove(id);
         }
 
+        private void RemovePulse(int index)
+        {
+            ImpactPulse pulse = pulses[index];
+            if (pulse.Renderer != null) style?.UnregisterRenderer(pulse.Renderer);
+            if (pulse.Object != null) Release(pulse.Object);
+            pulses.RemoveAt(index);
+        }
+
         public void Shutdown()
         {
             if (routing != null)
@@ -185,6 +221,7 @@ namespace ReReVolt.Online.Unity
             stale.Clear();
             foreach (uint id in weaponViews.Keys) stale.Add(id);
             for (int i = 0; i < stale.Count; i++) RemoveWeapon(stale[i]);
+            for (int i = pulses.Count - 1; i >= 0; i--) RemovePulse(i);
             for (int i = 0; i < pickupRenderers.Length; i++)
                 if (pickupRenderers[i] != null) style?.UnregisterRenderer(pickupRenderers[i]);
             Array.Clear(boltPickups, 0, boltPickups.Length);
@@ -198,6 +235,7 @@ namespace ReReVolt.Online.Unity
             style = null;
             seen.Clear();
             stale.Clear();
+            lastEventId = 0;
         }
 
         private static void Release(UnityEngine.Object value)

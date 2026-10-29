@@ -274,3 +274,21 @@ This remains in-process evidence. Effects have no replicated hit/impact event,
 online audio or polished VFX; the rough weapon shapes and pickup readability
 still need visual review across split-screen/style modes. The protocol change
 has not been tested over live Relay or latency, and Stage 10 is not accepted.
+
+## Host hit events and bounded impact pulses — 2026-10-29
+
+Host Bolt collisions now record accepted racer hits or world impacts, and Oil
+records accepted hits. A sliding 16-event repair history travels with the
+host snapshot; the client validates event order/owner/target/position and
+renders each new event once as a short colliderless pulse. This is a minimal
+visual cue, not final VFX or audio. Wire version and lobby fingerprint are now
+4; version-3 peers cannot join this changed schema.
+
+Unity 6000.6 focused evidence: snapshot contract EditMode **14/14**
+(`/private/tmp/stage10-combat-event-editmode-final.xml`), client presentation
+PlayMode **2/2** (`/private/tmp/stage10-combat-event-client.xml`), routing/codec
+PlayMode **4/4**, including the full 16-weapon/16-event wire-budget check
+(`/private/tmp/stage10-combat-event-wire-final.xml`), and host-world PlayMode
+**9/9** (`/private/tmp/stage10-combat-event-host.xml`). No actual Relay peer
+has received this event history yet. Impact audio, stronger VFX, network
+latency, disconnect/rematch and full-stage validation remain open.

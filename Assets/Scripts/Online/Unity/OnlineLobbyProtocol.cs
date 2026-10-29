@@ -282,7 +282,7 @@ namespace ReReVolt.Online.Unity
         private static string CompatibilityFingerprint()
         {
             // Bump protocol/content revision whenever wire semantics or online gameplay compatibility changes.
-            var text = new StringBuilder("rrv-stage10-lobby-3|").Append(Application.version);
+            var text = new StringBuilder("rrv-stage10-lobby-4|").Append(Application.version);
             foreach (var entry in TrackCatalog.Entries)
                 text.Append('|').Append(entry.Id).Append(':').Append(entry.LapCount).Append(':')
                     .Append(entry.OrderedCheckpointCount).Append(':').Append(entry.IsAvailable);
