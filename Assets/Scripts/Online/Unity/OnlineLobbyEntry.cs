@@ -13,7 +13,7 @@ using UnityEngine.UI;
 
 namespace ReReVolt.Online.Unity
 {
-    /// <summary>Opt-in, controller-navigable lobby. Online world simulation remains a separate integration.</summary>
+    /// <summary>Opt-in, controller-navigable lobby for the host-owned online round.</summary>
     public sealed class OnlineLobbyEntry : MonoBehaviour
     {
         private Stage3Bootstrap bootstrap;

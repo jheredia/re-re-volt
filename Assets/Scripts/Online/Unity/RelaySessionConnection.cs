@@ -11,8 +11,8 @@ using UnityEngine;
 namespace ReReVolt.Online.Unity
 {
     /// <summary>
-    /// Explicitly owned, opt-in transport session. This does not replicate a
-    /// race: a peer is not a racer and gameplay authority remains offline-only.
+    /// Explicitly owned, opt-in transport session. Gameplay ownership and
+    /// replication belong to the separate online lobby and round coordinator.
     /// Create exactly one instance for the lifetime of an online UI flow.
     /// </summary>
     public sealed class RelaySessionConnection

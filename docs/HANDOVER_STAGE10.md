@@ -349,3 +349,7 @@ verify source limits, cue routing and cleanup in-process, not what two friends
 hear over Relay. General collision/tire audio for online clients, listening
 balance across one-to-four local racers, latency, live connection, and the
 Stage 10 end-stage audit remain open.
+
+The lobby's `SimulationUnavailable` message now describes a failed host-round
+composition rather than incorrectly telling players online racing is not
+implemented. This is copy-only; it adds no Relay validation.

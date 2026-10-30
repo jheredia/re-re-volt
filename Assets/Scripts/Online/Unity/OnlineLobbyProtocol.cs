@@ -302,7 +302,7 @@ namespace ReReVolt.Online.Unity
                 case OnlineError.NotReady: return "Every human racer must be ready.";
                 case OnlineError.Locked: return "Race already started. Wait for the host to return to the lobby.";
                 case OnlineError.IncompatibleBuild: return "Both peers must use the same online build and track catalog.";
-                case OnlineError.SimulationUnavailable: return "Online simulation is not integrated yet. Race start is unavailable.";
+                case OnlineError.SimulationUnavailable: return "The host could not prepare this online race. Return to the lobby and retry.";
                 default: return "Lobby command rejected. Review the roster and retry.";
             }
         }
