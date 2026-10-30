@@ -29,7 +29,7 @@ namespace ReReVolt.Tests.Online
             await lobby.HostAsync();
             Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Joined));
             Assert.That(lobby.JoinCode, Is.EqualTo("ABC123"));
-            Assert.That(lobby.Message, Does.Contain("Negotiating"));
+            Assert.That(lobby.Message, Does.Contain("Private lobby connected"));
             await lobby.LeaveAsync();
             Assert.That(lobby.State, Is.EqualTo(OnlineLobbySession.LobbyState.Idle));
             Assert.That(lobby.JoinCode, Is.Null);

@@ -65,6 +65,13 @@ namespace Tests.PlayMode
             Transform identityMarker = keyboardPlayer.FamilyVisual.PresentationPivot.Find("PlayerIdentityMarker_P1");
             Assert.That(identityMarker, Is.Not.Null);
             Renderer wheelVisual = vehicle.transform.Find("Wheel_FL/WheelVisual").GetComponent<Renderer>();
+            Material retainedVehicleMaterial = Resources.Load<Material>("VehicleOpaqueMaterial");
+            Assert.That(retainedVehicleMaterial, Is.Not.Null);
+            Assert.That(retainedVehicleMaterial.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"));
+            Assert.That(wheelVisual.sharedMaterial, Is.SameAs(retainedVehicleMaterial));
+            foreach (Renderer sourceRenderer in keyboardPlayer.FamilyVisual.SourceRenderers)
+                Assert.That(sourceRenderer.sharedMaterial, Is.SameAs(retainedVehicleMaterial),
+                    "Code-built vehicle parts need a retained URP material in player builds.");
             Transform wheelOutline = wheelVisual.transform.Find("WheelVisual_InkOutline");
             Assert.That(wheelOutline, Is.Not.Null);
 

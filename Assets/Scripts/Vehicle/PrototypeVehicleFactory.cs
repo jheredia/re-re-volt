@@ -124,6 +124,7 @@ namespace Vehicle
     /// <summary>Minimal usable car for code-built scenes; authored prefabs can replace it.</summary>
     public static class PrototypeVehicleFactory
     {
+        private const string OpaqueMaterialResource = "VehicleOpaqueMaterial";
         internal const string StagedPartPrefix = "__StagedFamily__";
         internal const string RetiredPartPrefix = "__RetiredFamily__";
         private static readonly Vector3 ChassisSize = new(1.1f, .4f, 1.7f);
@@ -435,6 +436,10 @@ namespace Vehicle
             DisableAndRemovePrimitiveCollider(part);
 
             Renderer renderer = part.GetComponent<Renderer>();
+            Material opaqueMaterial = Resources.Load<Material>(OpaqueMaterialResource);
+            if (opaqueMaterial == null || opaqueMaterial.shader == null)
+                throw new InvalidOperationException($"Missing player-safe vehicle material Resources/{OpaqueMaterialResource}.");
+            renderer.sharedMaterial = opaqueMaterial;
             if (color.HasValue)
             {
                 MaterialPropertyBlock properties = new MaterialPropertyBlock();

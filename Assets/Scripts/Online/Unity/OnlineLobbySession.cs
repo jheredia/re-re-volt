@@ -56,7 +56,9 @@ namespace ReReVolt.Online.Unity
                     return;
                 }
                 State = LobbyState.Joined;
-                Message = "Transport connected. Negotiating the private lobby...";
+                Message = connection.IsHost
+                    ? "Private lobby connected. Share the code and ready your racers."
+                    : "Private lobby connected. Ready your racers and wait for the host.";
             }
             catch (Exception)
             {

@@ -440,3 +440,44 @@ It remains a single-process local UDP test. A live Relay friend session,
 separate-machine startup and join, network impairment, player-build UX,
 online AI completion across all tracks, and the consolidated Stage 10
 validation gate are still required for prototype acceptance.
+
+## First live Relay player/Editor smoke — 2026-10-30
+
+Unity 6000.6 produced a successful 85 MB arm64 macOS player build at
+`/private/tmp/stage10-macos-20261030/ReReVoltStage10.app`; its native startup
+reached `[Stage3] ready` in the player log. In a real UI session, that player
+hosted a private Unity Services/Relay session and displayed a share code. A
+second peer running the same project in Editor Play mode joined by that code.
+Both lobbies showed the same two-racer roster and ready states. With one
+keyboard-owned human on each peer, the host started a two-racer Workshop race;
+the client showed its own countdown, lap/position/item HUD and chase view.
+The client drove ahead, collected a Bolt, and its changed position appeared
+on the host's screen. This is the first actual Relay allocation/join/race and
+host-accepted remote-driving evidence, beyond local UDP fixtures.
+
+Limits: both peers were on the *same Mac* (native player plus Editor), not two
+machines or networks. Combat hits, all four tracks, mixed AI, results/rematch,
+leave/disconnect, latency/loss and WebGL interop were not exercised in this
+session. The lobby retained the stale line “Transport connected. Negotiating
+the private lobby...” after admission; the connection-status copy is now
+corrected in source to describe a connected private lobby; its focused
+EditMode fixture passes **10/10** (`/private/tmp/stage10-lobby-copy-20261030.xml`).
+Editor Play mode emitted
+one `DontDestroyOnLoad only works for root GameObjects` warning from
+GameManager on teardown; root cause is not established.
+
+The native player rendered both cars bright magenta while the Editor rendered
+their normal gray URP materials. Inspection found that code-built vehicle
+primitives kept Unity's default material, unlike the authored track. A
+player-safe candidate now assigns an explicitly retained opaque URP Lit
+material to generated body/detail/wheel renderers. A new assertion caught an
+initial Unlit shader reference (2/3 fixture), which was corrected to the URP
+Lit asset GUID; the full focused vehicle-family fixture then passed **3/3**
+(`/private/tmp/stage10-vehicle-material-fixture-20261030-v2.xml`). Unity 6000.6
+built the corrected macOS player successfully at
+`/private/tmp/stage10-vehicle-lit-20261030.app`.
+**Visual resolution is not yet accepted:** the Mac locked before the corrected
+player could be inspected. Resume by visually checking this *Lit* build.
+The earlier Unlit test player may still be open on the locked Mac; close it
+normally when access resumes. Do not count the first test invocation, which
+exited zero without result XML, as a pass.
