@@ -22,6 +22,7 @@ namespace ReReVolt.Online.Unity
         private OnlineLocalInputSender localInput;
         private OnlineRaceHud raceHud;
         private OnlineCombatPresentation combatPresentation;
+        private OnlineAudioPresentation onlineAudio;
         private OnlineRaceMessageRouting routing;
         private bool initialized;
         private bool stopping;
@@ -69,6 +70,12 @@ namespace ReReVolt.Online.Unity
                 combatPresentation = gameObject.AddComponent<OnlineCombatPresentation>();
                 combatPresentation.Initialize(hostWorld.PickupPositions, true, bootstrap.VisualStyle);
                 combatPresentation.Bind(routing);
+                if (bootstrap.AudioPresentation != null)
+                {
+                    onlineAudio = gameObject.AddComponent<OnlineAudioPresentation>();
+                    onlineAudio.Initialize(lockedRoster, protocol.LocalPeer, bootstrap.AudioPresentation);
+                    onlineAudio.Bind(routing);
+                }
                 SuspendOfflinePresentation();
                 hostWorld.Race.RaceStateChanged += OnHostRaceStateChanged;
                 RoundStarted?.Invoke();
@@ -108,6 +115,12 @@ namespace ReReVolt.Online.Unity
                 combatPresentation = gameObject.AddComponent<OnlineCombatPresentation>();
                 combatPresentation.Initialize(clientPresentation.PickupPositions, false, bootstrap.VisualStyle);
                 combatPresentation.Bind(routing);
+                if (bootstrap.AudioPresentation != null)
+                {
+                    onlineAudio = gameObject.AddComponent<OnlineAudioPresentation>();
+                    onlineAudio.Initialize(snapshot, protocol.LocalPeer, bootstrap.AudioPresentation);
+                    onlineAudio.Bind(routing);
+                }
                 SuspendOfflinePresentation();
                 RoundStarted?.Invoke();
             }
@@ -177,6 +190,12 @@ namespace ReReVolt.Online.Unity
                 combatPresentation.Shutdown();
                 Destroy(combatPresentation);
                 combatPresentation = null;
+            }
+            if (onlineAudio != null)
+            {
+                onlineAudio.Shutdown();
+                Destroy(onlineAudio);
+                onlineAudio = null;
             }
             routing?.Dispose();
             routing = null;

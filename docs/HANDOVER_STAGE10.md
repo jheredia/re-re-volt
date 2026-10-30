@@ -329,3 +329,23 @@ while local controls are suspended, and resumes afterward. The fixture passed
 Unity Relay, create a remote client, prove join-code admission, measure
 latency, or exercise two-machine disconnect/rematch. Those remain required
 before Stage 10 or the integrated prototype can be accepted.
+
+## Peer-local online audio reuse — 2026-10-29
+
+An online round now borrows the existing `RcAudioPresentation` central 2D mix
+instead of leaving offline race audio active or creating a second listener or
+voice pool. Each peer hears its local human racers' snapshot-derived engine,
+pickup, weapon launch, hit, recovery, countdown, go and finish cues. Accepted
+combat-event history is deduplicated by event ID; remote-only shots do not
+claim a local player cue. Teardown restores the offline audio subscriptions
+and bounded source ownership. Audio does not write gameplay or network state.
+
+Unity 6000.6 focused PlayMode results: online audio adapter **1/1**
+(`/private/tmp/stage10-online-audio-accepted.xml`, including local-slot order, results,
+and session rejection) and the existing offline audio
+regression fixture **6/6**
+(`/private/tmp/stage10-online-audio-offline-regression.xml`). These checks
+verify source limits, cue routing and cleanup in-process, not what two friends
+hear over Relay. General collision/tire audio for online clients, listening
+balance across one-to-four local racers, latency, live connection, and the
+Stage 10 end-stage audit remain open.

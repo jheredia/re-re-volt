@@ -58,6 +58,9 @@ namespace AudioPresentation
         private bool subscribed;
         private bool audioAvailable;
         private bool wasPaused;
+        private bool onlineMode;
+        private int onlineLocalCount;
+        private readonly float[] onlineSpeedKph = new float[MaximumEngineVoices];
         private float nextAmbienceAt;
         private uint ambienceSequence;
 
@@ -80,6 +83,45 @@ namespace AudioPresentation
         public int LastCuePlayerIndex { get; private set; } = -1;
         public float CurrentDuckScale { get; private set; } = 1f;
         public AudioCueId LastCue { get; private set; } = AudioCueId.Count;
+        public bool IsOnlineRound => onlineMode;
+
+        /// <summary>Loan the existing central mix to one online peer; offline race audio resumes on exit.</summary>
+        public void BeginOnlineRound(int localHumanCount)
+        {
+            if (!configured || onlineMode || localHumanCount < 1 || localHumanCount > MaximumEngineVoices)
+                throw new InvalidOperationException("A configured audio session and one to four local racers are required.");
+            Unsubscribe();
+            for (int i = 0; i < enginePlayers.Length; i++) ReleasePlayer(i);
+            ClearTransientAudio();
+            for (int i = 0; i < engineSources.Length; i++)
+                if (engineSources[i] != null) { engineSources[i].Stop(); engineSources[i].volume = 0f; }
+            Array.Clear(onlineSpeedKph, 0, onlineSpeedKph.Length);
+            onlineLocalCount = localHumanCount;
+            onlineMode = true;
+            ActiveEngineVoiceCount = localHumanCount;
+            nextAmbienceAt = Time.unscaledTime + 9f;
+        }
+
+        public void SetOnlineEngineSpeed(int localIndex, float speedKph)
+        {
+            if (!onlineMode || localIndex < 0 || localIndex >= onlineLocalCount ||
+                float.IsNaN(speedKph) || float.IsInfinity(speedKph)) return;
+            onlineSpeedKph[localIndex] = Mathf.Clamp(speedKph, 0f, 250f);
+        }
+
+        public void EndOnlineRound()
+        {
+            if (!onlineMode) return;
+            ClearTransientAudio();
+            for (int i = 0; i < engineSources.Length; i++)
+                if (engineSources[i] != null) { engineSources[i].Stop(); engineSources[i].volume = 0f; }
+            Array.Clear(onlineSpeedKph, 0, onlineSpeedKph.Length);
+            onlineMode = false;
+            onlineLocalCount = 0;
+            ActiveEngineVoiceCount = 0;
+            wasPaused = false;
+            if (isActiveAndEnabled) { Subscribe(); SynchronizePlayers(); }
+        }
 
         public void Configure(RaceManager raceManager, VehicleManager roster, WeaponManager combat = null,
             Stage3RacePresentation racePresentation = null, LayerMask? drivableMask = null)
@@ -155,6 +197,7 @@ namespace AudioPresentation
         {
             if (!configured) return;
             if (audioRoot != null) audioRoot.SetActive(true);
+            if (onlineMode) return;
             Subscribe();
             SynchronizePlayers();
             RefreshImpactSubscriptions();
@@ -162,7 +205,7 @@ namespace AudioPresentation
 
         private void Subscribe()
         {
-            if (subscribed) return;
+            if (subscribed || onlineMode) return;
             race.CountdownChanged += OnCountdownChanged;
             race.RaceCompleted += OnRaceCompleted;
             race.RaceStateChanged += OnRaceStateChanged;
@@ -333,6 +376,16 @@ namespace AudioPresentation
             wasPaused = paused;
             float now = Time.unscaledTime;
             RefreshOneShotMix(now);
+            if (onlineMode)
+            {
+                UpdateOnlineEngines(paused);
+                if (!paused && now >= nextAmbienceAt)
+                {
+                    TryPlayCue(AudioCueId.ClubAmbience);
+                    nextAmbienceAt = now + 9f + (ambienceSequence++ % 5);
+                }
+                return;
+            }
             float mixScale = RcAudioMixPolicy.PlayerScale(ActiveEngineVoiceCount);
             float response = 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime);
             for (int i = 0; i < enginePlayers.Length; i++)
@@ -360,6 +413,27 @@ namespace AudioPresentation
             }
         }
 
+        private void UpdateOnlineEngines(bool paused)
+        {
+            float response = 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime);
+            float mixScale = RcAudioMixPolicy.PlayerScale(onlineLocalCount);
+            for (int i = 0; i < engineSources.Length; i++)
+            {
+                AudioSource source = engineSources[i];
+                if (source == null) continue;
+                if (i >= onlineLocalCount || paused)
+                {
+                    source.volume = 0f;
+                    continue;
+                }
+                float speed = Mathf.Clamp01(onlineSpeedKph[i] / referenceTopSpeedKph);
+                float target = masterVolume * engineVolume * mixScale * CurrentDuckScale * (.32f + speed * .5f);
+                source.volume = Mathf.Lerp(source.volume, target, response);
+                source.pitch = .72f + speed * 1.08f;
+                if (!source.isPlaying && source.clip != null) source.Play();
+            }
+        }
+
         private void OnCountdownChanged(int number)
         {
             if (number > 0) TryPlayCue(AudioCueId.Countdown);
@@ -375,10 +449,10 @@ namespace AudioPresentation
             TryPlayRoutedCue(AudioCueId.Finish, -1, 1f, 1f, true);
         }
 
-        private bool IsPaused => (presentation != null && presentation.IsPaused) || Time.timeScale <= 0f;
+        private bool IsPaused => (!onlineMode && presentation != null && presentation.IsPaused) || Time.timeScale <= 0f;
 
         private bool OwnsConnectedPlayer(int slot) => slot >= 0 && slot < enginePlayers.Length &&
-            enginePlayers[slot] != null && enginePlayers[slot].IsConnected;
+            (onlineMode ? slot < onlineLocalCount : enginePlayers[slot] != null && enginePlayers[slot].IsConnected);
 
         private void OnSelectionChanged(LocalPlayer player) =>
             TryPlayPlayerCue(AudioCueId.UiConfirm, player.PlayerIndex);
