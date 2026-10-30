@@ -481,3 +481,16 @@ player could be inspected. Resume by visually checking this *Lit* build.
 The earlier Unlit test player may still be open on the locked Mac; close it
 normally when access resumes. Do not count the first test invocation, which
 exited zero without result XML, as a pass.
+
+## Consolidated online PlayMode checkpoint — 2026-10-30
+
+At commit `ada56cf`, Unity 6000.6 ran the complete
+`ReReVolt.Tests.Online` PlayMode namespace once in batch mode: **24/24
+passed**, 0 failed/skipped/inconclusive, 46.813 seconds
+(`/private/tmp/stage10-online-consolidated-20261030.xml`). Its log contains no
+`AssertionException`, `JobTempAlloc`, duplicate `AudioListener`, compiler
+error, or reported `Exception:` line. This covers the retained in-process
+host/client transport, four-human split viewports, combat, mixed AI, results/
+rematch, local device ownership, HUD, audio and loopback fixtures. It does not
+replace the live Relay/cross-machine, player-build visual, latency/loss, or
+full offline-regression gates. No gameplay source changed during this pass.
