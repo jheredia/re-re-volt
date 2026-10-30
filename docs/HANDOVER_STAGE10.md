@@ -494,3 +494,14 @@ host/client transport, four-human split viewports, combat, mixed AI, results/
 rematch, local device ownership, HUD, audio and loopback fixtures. It does not
 replace the live Relay/cross-machine, player-build visual, latency/loss, or
 full offline-regression gates. No gameplay source changed during this pass.
+
+## Consolidated EditMode checkpoint — 2026-10-30
+
+Unity 6000.6 ran the complete EditMode suite on the current Stage 10 branch:
+**165/165 passed**, with no failures, skips, or inconclusive cases
+(`/private/tmp/stage10-editmode-20261030.xml`). Its log is
+`/private/tmp/stage10-editmode-20261030.log`; it contains no
+`AssertionException`, `JobTempAlloc`, native-collection leak, duplicate
+`AudioListener`, C# compiler error, or reported `Exception:` line. This adds
+broad static/logic regression evidence, but does not replace the remaining
+player visual, separate-machine Relay, impairment, or broad PlayMode checks.
