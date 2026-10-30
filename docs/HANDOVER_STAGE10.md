@@ -423,3 +423,20 @@ This does not prove AI race completion or results/rematch over a network,
 nor mixed AI on all four tracks over Relay. The host-world composition test
 already covers three host bots on each of the four tracks in-process, but
 the live service, separate-machine, latency and stage-end gates remain open.
+
+## Two-peer Results and rematch lifecycle — 2026-10-30
+
+A retained two-peer local-UDP PlayMode fixture passes **1/1**
+(`/private/tmp/stage10-rematch-20261030.xml`). It finishes both racers
+through the host's ordered `RaceManager.ReportCheckpoint` authority, then
+checks that the remote peer receives Results in the lobby and driving HUD.
+Host Rematch returns both peers to Lobby with stable racer ownership, releases
+round cameras and device pairings, and allows a new ready/start cycle. Round
+two receives fresh client-owned input acknowledgment and a non-stale lap HUD;
+client departure aborts it and removes the remote racer. This fixture does
+not grant the client authority to set laps or results.
+
+It remains a single-process local UDP test. A live Relay friend session,
+separate-machine startup and join, network impairment, player-build UX,
+online AI completion across all tracks, and the consolidated Stage 10
+validation gate are still required for prototype acceptance.

@@ -170,8 +170,9 @@ package, transport, service, or authority choice is final.
      client admission/ready/start/input/snapshots, host-authoritative pickup,
      Fire and hit presentation, and disconnect cleanup. A separate Patio
      fixture passes one human per peer plus two host-owned driving AI and
-     client visual-only bot snapshots. They do not use Relay or prove internet
-     friend-session acceptance.
+     client visual-only bot snapshots. A local two-peer Results/rematch fixture
+     also passes stable ownership, cleanup, and a fresh second-round input/HUD
+     path. They do not use Relay or prove internet friend-session acceptance.
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
