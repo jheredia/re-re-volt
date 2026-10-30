@@ -384,3 +384,25 @@ play, WebGL/native interop, full four-racer load, packet-loss/latency behavior,
 or player-build usability. Fragmented reliable snapshots can queue under loss;
 latency profiling and a possible compact state/event transport remain Stage 10
 acceptance work, not an assumed performance pass.
+
+## Four-racer and combat local transport evidence — 2026-10-30
+
+Two retained Unity 6000.6 PlayMode fixtures now exercise real NGO peers over
+local UDP rather than only in-process routing. The expanded two-peer fixture
+passes **2/2** (`/private/tmp/stage10-four-racer-v2-20261030.xml`), including
+four human racers split two per peer, independent ready/input ownership and
+host acknowledgments, two peer-local viewports on each machine, client HUD
+snapshots, and cleanup after a peer owning two racers disconnects. The new
+combat fixture passes **1/1**
+(`/private/tmp/stage10-two-peer-combat-v2-20261030.xml`): a client racer
+physically collects a host pickup, receives inventory/availability in its HUD
+and visual view, fires a host-authorized Oil hazard, and receives the host hit
+event and visual pulse. A first combat run encountered a same-frame NGO
+shutdown exception in test teardown; the fixture now disconnects and waits
+for host abort before teardown, matching the previously passing peer fixture.
+
+These are local-UDP tests in one Editor process. They do **not** establish a
+live Unity Relay allocation/join-code session, separate-machine or cross-
+network compatibility, packet-loss behavior, four-racer performance, mixed
+human/AI results/rematch, or build usability. Do not call Stage 10 or the
+integrated prototype accepted until those gates are covered.

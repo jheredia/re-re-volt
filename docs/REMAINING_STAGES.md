@@ -165,11 +165,11 @@ package, transport, service, or authority choice is final.
      [Stage 10 handover](HANDOVER_STAGE10.md). The separate architecture draft
      remains owner-edited and must not be overwritten.
    - Local NGO host loopback verifies countdown-to-Racing publication, owned
-     driving input, and neutral input while the leave menu is open. A separate
-     two-peer local-UDP fixture now passes client admission, ready/start,
-     client-owned input, snapshot HUD, and disconnect cleanup after repairing
-     an oversized-snapshot delivery defect. Neither test uses Relay or proves
-     internet friend-session acceptance.
+     driving input, and neutral input while the leave menu is open. Two-peer
+     local-UDP fixtures now pass four-human ownership and split viewports,
+     client admission/ready/start/input/snapshots, host-authoritative pickup,
+     Fire and hit presentation, and disconnect cleanup. They do not use Relay
+     or prove internet friend-session acceptance.
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
