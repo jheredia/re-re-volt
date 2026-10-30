@@ -353,3 +353,34 @@ Stage 10 end-stage audit remain open.
 The lobby's `SimulationUnavailable` message now describes a failed host-round
 composition rather than incorrectly telling players online racing is not
 implemented. This is copy-only; it adds no Relay validation.
+
+## Two-peer local transport and snapshot delivery repair — 2026-10-30
+
+A retained two-NGO-peer PlayMode fixture exposed a real network send failure:
+the first ordinary two-racer host snapshot was 1,270 bytes, exceeding NGO's
+1,264-byte non-fragmented named-message limit on `UnreliableSequenced`. The
+previous codec's 8 KiB upper bound did not imply that transport delivery could
+carry that payload. The routing bridge now keeps small snapshots on the
+unreliable sequenced path and selects `ReliableFragmentedSequenced` for bounded
+snapshots above a conservative 1,000-byte payload ceiling. No wire schema,
+host authority, or race rule changed. The failed baseline and first exception
+are in `/private/tmp/stage10-two-peer-local-v2.xml` and `.log`.
+
+After the correction, the **1/1** two-peer local UDP fixture passes
+(`/private/tmp/stage10-two-peer-local-v3.xml`): client admission, both peers'
+ready/start path, client countdown-to-Racing transition, visual-only client
+round and local camera, a host-acknowledged client-owned input frame, the
+client's snapshot-fed lap HUD, and host round teardown on client disconnect.
+Nearby routing tests pass **4/4**
+(`/private/tmp/stage10-two-peer-wire-regression.xml`), and the existing host
+loopback passes **1/1** (`/private/tmp/stage10-two-peer-host-regression.xml`).
+The failed run's teardown `ObjectDisposedException` did not recur when the
+snapshot send no longer threw; it is not treated as an independently confirmed
+transport defect.
+
+This is meaningful two-peer evidence, but both peers were in one Unity test
+process on local UDP. It does **not** prove Unity Relay admission, cross-network
+play, WebGL/native interop, full four-racer load, packet-loss/latency behavior,
+or player-build usability. Fragmented reliable snapshots can queue under loss;
+latency profiling and a possible compact state/event transport remain Stage 10
+acceptance work, not an assumed performance pass.

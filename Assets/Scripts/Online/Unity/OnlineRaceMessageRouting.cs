@@ -21,6 +21,10 @@ namespace ReReVolt.Online.Unity
         private const string SnapshotChannel = "rrv.race-snapshot.v1";
         private const int MaximumInputBytes = 2048;
         private const int MaximumSnapshotBytes = 8192;
+        // NGO named-message and transport headers are outside the codec's byte cap.
+        // Keep the unreliable path well below the smallest non-fragmented payload;
+        // larger bounded snapshots use NGO's explicit fragmentation delivery.
+        private const int ConservativeUnreliablePayloadBytes = 1000;
         private const double SnapshotInterval = .05;
 
         private readonly NetworkManager network;
@@ -100,7 +104,10 @@ namespace ReReVolt.Online.Unity
             foreach (ulong peer in network.ConnectedClientsIds)
                 if (peer != network.LocalClientId) recipients.Add(peer);
             foreach (ulong peer in recipients)
-                Send(SnapshotChannel, peer, bytes, NetworkDelivery.UnreliableSequenced);
+                Send(SnapshotChannel, peer, bytes,
+                    bytes.Length + sizeof(int) <= ConservativeUnreliablePayloadBytes
+                        ? NetworkDelivery.UnreliableSequenced
+                        : NetworkDelivery.ReliableFragmentedSequenced);
         }
 
         private void ReceiveInput(ulong sender, FastBufferReader reader)
