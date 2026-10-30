@@ -406,3 +406,20 @@ live Unity Relay allocation/join-code session, separate-machine or cross-
 network compatibility, packet-loss behavior, four-racer performance, mixed
 human/AI results/rematch, or build usability. Do not call Stage 10 or the
 integrated prototype accepted until those gates are covered.
+
+## Mixed human/AI local transport evidence — 2026-10-30
+
+A separate two-peer local-UDP Patio fixture passes **1/1**
+(`/private/tmp/stage10-mixed-ai-v2-20261030.xml`). It selects two host-owned,
+driving-only bots alongside one human on each peer; confirms the four-racer
+cap and locked-round roster; checks that the host alone owns AI drivers while
+the client has visual-only bot proxies, no bot-local camera or input owner;
+and observes both bots move or make ordered progress with snapshot-fed proxy
+positions. Client disconnect aborts the host round. The first run was invalid
+because the fixture provided too few distinct controllers for both human
+peers; the retained test supplies separate devices and passes.
+
+This does not prove AI race completion or results/rematch over a network,
+nor mixed AI on all four tracks over Relay. The host-world composition test
+already covers three host bots on each of the four tracks in-process, but
+the live service, separate-machine, latency and stage-end gates remain open.

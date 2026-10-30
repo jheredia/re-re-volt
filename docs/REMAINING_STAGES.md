@@ -168,8 +168,10 @@ package, transport, service, or authority choice is final.
      driving input, and neutral input while the leave menu is open. Two-peer
      local-UDP fixtures now pass four-human ownership and split viewports,
      client admission/ready/start/input/snapshots, host-authoritative pickup,
-     Fire and hit presentation, and disconnect cleanup. They do not use Relay
-     or prove internet friend-session acceptance.
+     Fire and hit presentation, and disconnect cleanup. A separate Patio
+     fixture passes one human per peer plus two host-owned driving AI and
+     client visual-only bot snapshots. They do not use Relay or prove internet
+     friend-session acceptance.
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
