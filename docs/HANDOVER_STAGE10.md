@@ -528,3 +528,35 @@ specific player-material regression fix; it does not validate every vehicle
 family/style, online peer view, or other platform. Both test-owned player
 processes (the obsolete material build and corrected Lit build) were then
 closed normally and confirmed absent.
+
+## Live mixed-human/AI Relay smoke — 2026-10-31
+
+On the same Mac, the corrected arm64 player
+`/private/tmp/stage10-vehicle-lit-20261030.app` hosted a private Relay lobby;
+Unity 6000.6 Editor Play mode joined by share code. The host selected one AI
+opponent, producing a three-racer roster: one local human on each peer and one
+host-owned AI. Changing the AI count reset both human ready flags; both peers
+re-readied, then the host launched the Workshop race. Both screens entered
+their own countdown and race views. The client drove forward, acquired a Bolt,
+and the host view showed the remote car in a changed position while the HUDs
+reported positions out of three. This extends the earlier two-human live
+Relay smoke to a mixed roster and live client input; it does not prove a
+complete AI race or combat hit.
+
+The native player was built before the lobby-status copy correction above,
+so it still displayed the stale “Negotiating the private lobby...” line even
+after admission. That does not change the observed connection outcome.
+
+The host used the in-race Leave Session command. The client returned to the
+online menu with the explicit “Host connection lost. Host migration is
+unavailable” message. During cleanup, the Editor also logged the Unity
+Multiplayer Services warning
+`GameObjectsNetcodeNetworkHandler.StopAsync: Failed to stop session: session was never started`.
+The session had functioned, so classify this as a teardown/lifecycle warning
+to investigate, not proof of a failed join. The test player closed normally,
+and Editor Play mode stopped without changing the scene.
+
+Scope limits: this was still two processes on one Mac, not two devices or
+networks. Full race completion/results/rematch, actual weapon hits, all-track
+AI, latency/loss, and WebGL interop remain unverified live. Do not publish the
+ephemeral Relay share code in reports or commits.
