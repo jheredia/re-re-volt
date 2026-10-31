@@ -174,9 +174,14 @@ package, transport, service, or authority choice is final.
      also passes stable ownership, cleanup, and a fresh second-round input/HUD
      path. A first same-Mac native-player/Editor smoke has now hosted and
      joined through real Unity Relay, started a two-human Workshop race, and
-     shown a remotely driven car on the host. It does not prove cross-machine
-     or cross-network friend-session acceptance; a player-build magenta-car
-     material defect is under correction (see handover).
+     shown a remotely driven car on the host. A later same-Mac smoke added one
+     host-owned AI to the two-human roster and launched a three-racer race;
+     the client drove, collected a Bolt, and host leave returned the client
+     to the online menu with an explicit host-loss message. The native player
+     magenta-car material defect is corrected and visually checked. These
+     checks still do not prove cross-machine or cross-network friend-session
+     acceptance, complete race/results/rematch, or a live combat hit (see
+     handover).
    - Implement private host/join, ready and track selection, up-to-four-racer
      race/combat synchronization, results/rematch, disconnect handling, and
      actionable errors for internet friend tests.
