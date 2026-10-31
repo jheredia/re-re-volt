@@ -556,6 +556,17 @@ The session had functioned, so classify this as a teardown/lifecycle warning
 to investigate, not proof of a failed join. The test player closed normally,
 and Editor Play mode stopped without changing the scene.
 
+Source-level narrowing: this exact warning is emitted by Multiplayer Services
+2.4.0 when its NGO network handler's current-session field is already null at
+`StopAsync`. The client handles a host-disconnect terminal event by calling
+`OnlineLobbySession.ConnectionLostAsync`, which in turn invokes the service
+session's `LeaveAsync`. The service can also stop its network after the host
+removes network metadata. A double-stop during that transition is plausible,
+but the package call sequence was not instrumented, so root cause is *not*
+confirmed. Do not suppress the warning or skip service leave without proving
+cleanup safety first. A repeatable host-leave/client-cleanup fixture and a
+package-version compatibility check are the next discriminating steps.
+
 Scope limits: this was still two processes on one Mac, not two devices or
 networks. Full race completion/results/rematch, actual weapon hits, all-track
 AI, latency/loss, and WebGL interop remain unverified live. Do not publish the
