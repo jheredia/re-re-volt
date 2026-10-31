@@ -571,3 +571,25 @@ Scope limits: this was still two processes on one Mac, not two devices or
 networks. Full race completion/results/rematch, actual weapon hits, all-track
 AI, latency/loss, and WebGL interop remain unverified live. Do not publish the
 ephemeral Relay share code in reports or commits.
+
+## Second live Relay race and client Fire smoke — 2026-10-31
+
+The corrected arm64 player again hosted a private Relay session on the same
+Mac, with Unity 6000.6 Editor Play mode joining as the second human peer. Both
+players readied and the host started a two-racer Workshop race. The Editor
+client drove forward and acquired a Bolt; its HUD showed `BOLT`. Pressing the
+client's keyboard Fire key (Space) changed that HUD to `NO ITEM` during the
+shared race. The host screen showed the remote car moving and reported the
+complementary race position. This directly exercises live client-owned pickup
+and inventory consumption/Fire input over Relay, but does **not** establish a
+projectile hit, damage modifier, or remote combat VFX/audio: the peers were not
+in a position to observe a hit.
+
+The host used the in-race Leave Session command. The client returned to the
+online menu with the explicit host-loss message. The same Multiplayer Services
+`StopAsync: Failed to stop session: session was never started` warning appeared
+in the Editor on teardown, confirming the earlier lifecycle observation. The
+native player quit normally and Editor Play mode was stopped. The remaining
+live acceptance gaps are separate-machine/cross-network connection, full
+race/results/rematch, a directly observed combat hit, mixed AI completion on
+all tracks, latency/loss, and WebGL interop.

@@ -178,7 +178,9 @@ package, transport, service, or authority choice is final.
      host-owned AI to the two-human roster and launched a three-racer race;
      the client drove, collected a Bolt, and host leave returned the client
      to the online menu with an explicit host-loss message. The native player
-     magenta-car material defect is corrected and visually checked. These
+     magenta-car material defect is corrected and visually checked. A second
+     live two-human Relay race showed client Fire consuming the acquired Bolt
+     (`BOLT` to `NO ITEM`) and again propagated host leave. These
      checks still do not prove cross-machine or cross-network friend-session
      acceptance, complete race/results/rematch, or a live combat hit (see
      handover).
