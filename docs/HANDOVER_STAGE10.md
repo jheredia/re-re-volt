@@ -505,3 +505,26 @@ Unity 6000.6 ran the complete EditMode suite on the current Stage 10 branch:
 `AudioListener`, C# compiler error, or reported `Exception:` line. This adds
 broad static/logic regression evidence, but does not replace the remaining
 player visual, separate-machine Relay, impairment, or broad PlayMode checks.
+
+## Full non-capture PlayMode and native visual checkpoint — 2026-10-31
+
+Unity 6000.6 ran the full PlayMode suite with only the two previously authored
+screenshot methods excluded via the Test Framework's explicit exclusion
+filter: **117/117 passed**, 0 failed/skipped/inconclusive, 514.777 seconds
+(`/private/tmp/stage10-full-noncapture-playmode-20261030.xml`; log beside it).
+The log has no `AssertionException`, `JobTempAlloc`, native-collection leak,
+duplicate `AudioListener`, or C# compiler error. Its one
+`InvalidOperationException` line is the intentionally expected malformed
+renderer rollback case in `VisualStyleRuntimeIntegrationTests`, covered by
+`LogAssert.Expect`; it is not an unexpected runtime exception. The exclusion
+preserved the older screenshot artifacts instead of overwriting them.
+
+After the Mac was unlocked, the corrected arm64 player at
+`/private/tmp/stage10-vehicle-lit-20261030.app` was visually inspected in a
+one-player Workshop race. The generated car body, details, and wheels rendered
+with their intended opaque red/dark colors instead of the previous bright
+magenta, both at the grid and after keyboard driving. This accepts the
+specific player-material regression fix; it does not validate every vehicle
+family/style, online peer view, or other platform. Both test-owned player
+processes (the obsolete material build and corrected Lit build) were then
+closed normally and confirmed absent.
