@@ -567,6 +567,15 @@ confirmed. Do not suppress the warning or skip service leave without proving
 cleanup safety first. A repeatable host-leave/client-cleanup fixture and a
 package-version compatibility check are the next discriminating steps.
 
+Additional package-source evidence after the repeat smoke: in Multiplayer
+Services 2.4.0, the network module's `IModule.LeaveAsync` unconditionally calls
+`ResetAsync`, while a client observing removed host network metadata can also
+call `StopNetworkAsync` and thus `ResetAsync`. Each reset calls the NGO
+handler's `StopAsync`; its second call logs the observed warning when the
+current-session field is already null. This is a concrete duplicate-stop path,
+but its exact runtime ordering still needs a focused trace. No package or
+application cleanup behavior was changed on this evidence alone.
+
 Scope limits: this was still two processes on one Mac, not two devices or
 networks. Full race completion/results/rematch, actual weapon hits, all-track
 AI, latency/loss, and WebGL interop remain unverified live. Do not publish the
