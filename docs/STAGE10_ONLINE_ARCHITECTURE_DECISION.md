@@ -328,11 +328,12 @@ Phases are `Offline`, `Connecting`, `Lobby`, `Countdown`, `Racing`, `Results`,
 `Closing`, and `Error`. No mid-race joins are accepted. The session is locked
 when the authoritative countdown begins.
 
-Readiness is per racer; a peer is ready only when all of its local racers are
-connected and ready. Changing the roster, car, handling, or track clears the
-affected readiness (a track change clears all racers). Start succeeds only when
-the track/catalog/protocol match, all devices are connected, at least one racer
-exists, every racer is ready, and total racers are at most four.
+Readiness is per human racer; a peer is ready only when all of its local human
+racers are connected and ready. AI racers need neither a device nor a ready
+input. Changing the roster, car, handling, or track clears the affected human
+readiness (a track change clears all human readiness). Start succeeds only when
+the track/catalog/protocol match, all human devices are connected, at least one
+human racer exists, all humans are ready, and humans plus AI total at most four.
 
 ### Authority matrix
 
