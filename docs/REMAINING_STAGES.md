@@ -172,8 +172,13 @@ package, transport, service, or authority choice is final.
      fixture passes one human per peer plus two host-owned driving AI and
      client visual-only bot snapshots. A local two-peer Results/rematch fixture
      also passes stable ownership, cleanup, and a fresh second-round input/HUD
-     path. A first same-Mac native-player/Editor smoke has now hosted and
-     joined through real Unity Relay, started a two-human Workshop race, and
+     path. The retained four-track mixed-peer fixture passes 4/4: one host bot
+     physically completes three ordered laps on every course within 90 seconds,
+     while the client receives bot motion and Results without AI ownership.
+     Its parked human racers are finished through the checkpoint API, so this
+     remains local-UDP validation. A first same-Mac native-player/Editor smoke
+     has now hosted and joined through real Unity Relay, started a two-human
+     Workshop race, and
      shown a remotely driven car on the host. A later same-Mac smoke added one
      host-owned AI to the two-human roster and launched a three-racer race;
      the client drove, collected a Bolt, and host leave returned the client

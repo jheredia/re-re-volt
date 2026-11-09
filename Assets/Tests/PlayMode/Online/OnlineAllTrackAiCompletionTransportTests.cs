@@ -218,6 +218,21 @@ namespace ReReVolt.Tests.Online
             Assert.That(HasStatus(clientRoot.GetComponent<OnlineRaceHud>(), clientHuman, "FINISHED"), Is.True);
             Assert.That(clientView.LocalCameraCount, Is.EqualTo(1));
             Assert.That(clientView.TryGetLocalCamera(botId, out _), Is.False);
+
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.Rematch });
+            Assert.That(hostLobby.LastError, Is.EqualTo(OnlineError.None));
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((clientLobby.Snapshot?.Phase != OnlinePhase.Lobby ||
+                    hostRound.IsRoundActive || clientRound.IsRoundActive) &&
+                   Time.realtimeSinceStartup < deadline)
+            {
+                TickLobbies();
+                yield return null;
+            }
+            Assert.That(hostLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Lobby));
+            Assert.That(clientLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Lobby));
+            Assert.That(hostRound.IsRoundActive || clientRound.IsRoundActive, Is.False);
+            yield return null; // Allow deferred round-object destruction before peer teardown.
         }
 
         private void TickLobbies()
@@ -266,7 +281,15 @@ namespace ReReVolt.Tests.Online
             hostLobby?.Dispose();
             clientLobby?.Dispose();
             if (clientNetwork != null && clientNetwork.IsListening) clientNetwork.Shutdown();
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (clientNetwork != null && (clientNetwork.IsListening || clientNetwork.ShutdownInProgress) &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
             if (hostNetwork != null && hostNetwork.IsListening) hostNetwork.Shutdown();
+            deadline = Time.realtimeSinceStartup + 3f;
+            while (hostNetwork != null && (hostNetwork.IsListening || hostNetwork.ShutdownInProgress) &&
+                   Time.realtimeSinceStartup < deadline)
+                yield return null;
             if (clientRoot != null) Object.Destroy(clientRoot);
             if (hostRoot != null) Object.Destroy(hostRoot);
             yield return null;

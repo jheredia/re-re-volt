@@ -623,14 +623,19 @@ acceptance claim follows from this source-only aid.
 for each fixed track. It requires one host-owned bot to physically finish three
 ordered laps within the existing 90-second limit, while the remote client
 receives the bot proxy and Results state without owning a bot controller,
-Rigidbody, device, or viewport. The initial fixture source compiled in Unity
-6000.6; a subsequent static correction included the Workshop ground name and
-has not been recompiled. Its batch run did not produce result XML before the
-test-owned Editor was stopped to release the project for the owner. The log is
-`/private/tmp/stage10-all-track-ai-online-20261109-actual.log`. Transport
-shutdown exceptions appeared during that interrupted run; they are not yet
-classified as a fixture defect or a project startup failure. The fixture is
-not accepted as passing until a complete focused run produces valid XML.
+Rigidbody, device, or viewport. The first complete run reached test teardown
+on every track, but all four cases failed when the fixture destroyed NGO peers
+before deferred transport shutdown had finished. The fixture now takes the
+supported Results-to-Rematch cleanup path and awaits each network shutdown
+before destroying its peer root. A focused Workshop case passed 1/1, followed
+by a complete Unity 6000.6 PlayMode run passing **4/4** in 311.647 seconds:
+Bridge 84.922, Market 82.396, Patio 86.050, and Workshop 58.252 seconds per
+case (`/private/tmp/stage10-all-track-ai-complete.xml`; log beside it). The
+final log has no `ObjectDisposedException`, duplicate disconnect warning,
+`AssertionException`, `JobTempAlloc`, or C# compiler error. The tests use real
+local NGO/UDP transport and physical bot checkpoint crossings, but they report
+the parked humans' checkpoints through RaceManager to finish the round. This
+proves neither human driving nor Unity Relay behavior on four tracks.
 
 The [private Relay friend-test runbook](STAGE10_FRIEND_TEST_RUNBOOK.md) gives a
 short manual checklist for cross-machine racing, combat, Results/rematch, and
