@@ -602,3 +602,32 @@ native player quit normally and Editor Play mode was stopped. The remaining
 live acceptance gaps are separate-machine/cross-network connection, full
 race/results/rematch, a directly observed combat hit, mixed AI completion on
 all tracks, latency/loss, and WebGL interop.
+
+## Editor-only Relay Results/rematch smoke aid — 2026-11-09
+
+`Tools/ReReVolt/Online Smoke/Complete Host Race` is available only while the
+Editor is in Play mode and owns a Racing online host world. It reports every
+registered racer's ordered checkpoints through the host `RaceManager` API, so
+an actual second Relay peer can observe the host-published Results phase and
+then exercise Rematch without two people manually driving six laps. This
+command is excluded from player builds and does not alter runtime race rules.
+It deliberately bypasses vehicle movement and physical checkpoint triggers;
+those remain covered by separate gameplay fixtures. A Unity 6000.6 batch import
+compiled the Editor assembly, but the Test Framework did not produce XML and
+the command has **not** yet been run in a live Relay session. No Results/rematch
+acceptance claim follows from this source-only aid.
+
+## Four-track mixed-AI runtime fixture — 2026-11-09
+
+`OnlineAllTrackAiCompletionTransportTests` adds a two-peer local-UDP boundary
+for each fixed track. It requires one host-owned bot to physically finish three
+ordered laps within the existing 90-second limit, while the remote client
+receives the bot proxy and Results state without owning a bot controller,
+Rigidbody, device, or viewport. The initial fixture source compiled in Unity
+6000.6; a subsequent static correction included the Workshop ground name and
+has not been recompiled. Its batch run did not produce result XML before the
+test-owned Editor was stopped to release the project for the owner. The log is
+`/private/tmp/stage10-all-track-ai-online-20261109-actual.log`. Transport
+shutdown exceptions appeared during that interrupted run; they are not yet
+classified as a fixture defect or a project startup failure. The fixture is
+not accepted as passing until a complete focused run produces valid XML.
