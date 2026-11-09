@@ -631,3 +631,8 @@ test-owned Editor was stopped to release the project for the owner. The log is
 shutdown exceptions appeared during that interrupted run; they are not yet
 classified as a fixture defect or a project startup failure. The fixture is
 not accepted as passing until a complete focused run produces valid XML.
+
+The [private Relay friend-test runbook](STAGE10_FRIEND_TEST_RUNBOOK.md) gives a
+short manual checklist for cross-machine racing, combat, Results/rematch, and
+disconnect evidence. It distinguishes observed same-Mac behavior from the
+remaining unverified internet and WebGL paths.
