@@ -674,3 +674,22 @@ That test covers invalid-code state handling, not the frame-wait path; the
 successful compile is the only direct validation of the new await calls.
 No WebGL player build or browser-to-macOS Relay session was run for this
 correction; cross-platform online play remains unverified.
+
+## Same-Mac macOS/WebGL Relay smoke — 2026-11-10
+
+Matching macOS and WebGL players from commit `3e7f26a` were run on the same
+Mac. The macOS player hosted a private Unity Relay session; the WebGL player,
+served over local HTTP in Brave, joined with the temporary share code. Both
+lobbies showed two racers, both local racers were marked ready, and the host
+started the RC Club Workshop race. Both players rendered the two-car grid and
+their own race HUD. A brief WebGL throttle input visibly moved its local car.
+The macOS host then left through the in-race Leave Session panel; the WebGL
+client returned to the online menu with the expected host-loss message.
+
+This is a live native-to-WebGL Relay join/start and graceful disconnect smoke,
+not a complete online acceptance run. The brief check did not directly prove
+remote movement interpolation on the host, a combat hit, Results/rematch,
+other tracks, multiple local players, latency/loss, or a separate-machine and
+cross-network connection. The temporary share code is intentionally omitted.
+The test-owned native player, browser tab, and local HTTP server were closed
+normally. No source, build, or test files changed for this smoke.
