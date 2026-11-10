@@ -75,4 +75,24 @@ compilation and persisted authored references; it does not establish visual
 quality, drivable geometry, AI completion, player-build inclusion, or Relay
 loading. Those are gates for the later runtime integration slices.
 
+## Scene runtime binding slice
+
+`SceneAuthoredTrackRuntime` can load an included scene additively by path and
+stable ID, or bind a scene already loaded by the caller. It validates the
+authored root and race configuration before enabling host/offline checkpoint
+triggers. Visual-only binding disables every collider and owns no race rules.
+Both modes expose the existing `ITrackRuntime` references, register marked
+renderers with the selected visual style, and release registration plus the
+loaded scene on disposal. `DisposeAsync` waits for Unity's scene unload; callers
+must await it before reusing the scene path. Cancellation after a load begins
+waits for Unity's non-cancelable operation and unloads the scene before failing.
+
+The saved template was directly loaded in Editor PlayMode and bound/unloaded as
+both an authoritative and visual-only track; repeated visual-only loads passed
+**2/2** focused tests (`/private/tmp/scene-authored-track-runtime-tests-final.xml`).
+These direct tests use Unity's Editor-only scene loader because the template is
+not yet in the player build list. `SceneAuthoredTrackRuntime.LoadAsync`, local
+selection, online host/client loading, and player-build behavior remain
+unverified until the next integration slices.
+
 A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.
