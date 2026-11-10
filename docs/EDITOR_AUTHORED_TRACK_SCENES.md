@@ -18,7 +18,7 @@ Use **one** `TrackDefinition` roster and **one** `ITrackRuntime` result for ever
 
 ## Authoring contract
 
-The root component serializes the stable catalog ID, four ordered grid poses, an indexed checkpoint chain, a safe recovery pose for each checkpoint, exactly four pickup positions, drivable collider layers/marked surfaces, and the intended style renderers. The root starts inactive in the authored asset so a client loader can disable all physical colliders before activation. Checkpoints are bound to the host/offline `RaceManager` only; the client builds a non-authoritative visual copy and never enables triggers, vehicle physics, or AI. Loading validates the scene's ID against the selected catalog entry and checks all required references, indices, masks, and bounds before allowing Start.
+The root component serializes the stable catalog ID and lap count. Indexed child anchors identify the four grid poses, recovery poses, and four pickup positions; `RaceCheckpoint` components form the ordered checkpoint chain. Drivable colliders use the road layer and `TrackSurfaceMarker`, while each renderer carries a `TrackAuthoringVisual` style marker. Keep the root active while editing. The future client loader must disable all physical colliders before creating client proxies or local views. Checkpoints are bound to the host/offline `RaceManager` only; the client builds a non-authoritative visual copy and never enables triggers, vehicle physics, or AI. Loading validates the scene's ID against the selected catalog entry and checks all required references, indices, masks, and bounds before allowing Start.
 
 An Editor validator should report missing/duplicate indices, grid overlap, checkpoint ordering and orientation, unreachable recovery anchors, pickup placement off road, unmarked drivable surfaces, cameras/listeners/gameplay owners inside the track scene, and renderers not registered for Clean 3D/Ink Lite/Full Ink. It should fail the beta build if the new track is missing from the scene list. A playtest is still required to prove the path is drivable; static validation cannot establish that.
 
@@ -41,5 +41,38 @@ This refactor is real work: `TrackRuntimeBuilder` and online round composition a
 5. A fresh player build starts at the front end, races the new track, and returns to the lobby. Capture one- and four-player readability and verify the authored geometry does not block the chase camera.
 
 The planned **in-game block track editor** remains a later, separate feature. This first pipeline lets us hand-build and ship a fixed track with the Unity Editor; it does not expose editing tools to players.
+
+## First Editor authoring slice
+
+Use `Tools > ReReVolt > Tracks > Create Editable Beta Track Template` to create
+`Assets/Scenes/Track_BetaTemplate.unity`. Unity opens the scene and selects its
+`TrackAuthoringRoot`. Duplicate and rename the scene before designing the beta
+course; change the root's stable ID to a new ID before it enters the catalog.
+The template's four materials are shared assets under
+`Assets/Scenes/TrackTemplateMaterials`; duplicate and reassign them if the new
+course needs its own palette, so edits do not recolor the template.
+The template provides movable road pieces, eight checkpoint triggers with
+matching recovery anchors, four grid anchors, four pickup anchors, surface
+markers, and visual-style markers. Checkpoint trigger colliders are deliberately
+disabled in the authored asset; the future host loader must bind its own
+`RaceManager` before enabling them, and the client must leave them disabled.
+Use `Tools > ReReVolt > Tracks > Validate Open Track Scene` to check structural
+references and index counts. The validator
+does not prove that a car or bot can complete a lap; drive and AI tests are
+still needed after runtime integration.
+
+This authoring slice does **not** yet add the template to the build scene list
+or `TrackCatalog`. It cannot be selected or raced locally or online until the
+scene-backed `ITrackRuntime` loader and host/client loading handshake are
+implemented. The four existing code-built tracks remain the playable ones.
+
+On 2026-11-10, Unity 6000.6.0f1 imported the new authoring components, created
+the template scene, then reopened the saved scene in a separate batch run and
+passed its structural validator. Both batch commands exited 0; logs are
+`/private/tmp/editor-track-template-final-create-20261110.log` and
+`/private/tmp/editor-track-template-reopen-20261110.log`. This checks
+compilation and persisted authored references; it does not establish visual
+quality, drivable geometry, AI completion, player-build inclusion, or Relay
+loading. Those are gates for the later runtime integration slices.
 
 A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.
