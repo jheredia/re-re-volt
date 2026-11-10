@@ -197,6 +197,12 @@ package, transport, service, or authority choice is final.
      a later enhancement. Validate mixed human/AI results and rematches.
    - Preserve local split-screen as an independent first-class mode. Public
      matchmaking, accounts, ranked play, and persistent servers are excluded.
+   - Before the online beta handoff, provide a Unity Editor workflow for one
+     hand-authored track that local and Relay sessions can select. Use the same
+     track identity/runtime contract for the existing four tracks, then migrate
+     those code-built courses to editable scenes one at a time without changing
+     their IDs or accepted race behavior. See the
+     [editor-authored track scene plan](EDITOR_AUTHORED_TRACK_SCENES.md).
    - Before acceptance, prove host and remote client over Relay (join code,
      race/combat, 0–3 host AI across four tracks, results/rematch, disconnect
      and recovery), then complete the stage-end visual/audio/performance and

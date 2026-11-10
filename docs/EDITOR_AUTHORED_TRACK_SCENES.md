@@ -1,0 +1,45 @@
+# Editor-authored track scenes for the online beta
+
+**Decision:** use a small persistent front-end scene and separately authored track scenes, loaded additively for a race. Build one scene-authored beta track first; retain the four current code-built tracks while the loading seam is proven. This is a Unity Editor content workflow, distinct from the later in-game block track editor.
+
+## Current state and reason for the change
+
+`Assets/Scenes/SampleScene.unity` is the only enabled build scene. `Stage3Bootstrap` and `OnlineLobbyEntry` install themselves only when that scene is active. `TrackCatalog` holds four stable IDs, each mapped to a synchronous code builder returning `ITrackRuntime` (root, four grid transforms, ordered checkpoints, drivable mask, four pickup positions). Offline setup constructs the selected circuit immediately. Online host and client construct their own copy by the lobby's track ID; the host owns physics and checkpoints, while the client disables the track colliders and renders cars from accepted snapshots. These contracts already separate track *identity* from race authority, but there is no serialized Unity scene track to edit by hand.
+
+Unity supports additive scene loading and unloading; asynchronous loading is preferable so a track switch does not stall the lobby. A scene must be included in the player build's scene list for a direct `SceneManager` load. [Unity additive scenes](https://docs.unity3d.com/6000.1/Documentation/ScriptReference/SceneManagement.LoadSceneMode.Additive.html), [asynchronous loading](https://docs.unity3d.com/ja/current/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html), [scene list](https://docs.unity3d.com/kr/6000.0/Manual/build-profile-scene-list.html).
+
+## Target layout
+
+- `FrontEnd.unity`: bootstraps title/setup, saved preferences, local input ownership, private Relay lobby, and audio/style services. It persists through track changes and rematches. It contains no drivable circuit, race checkpoint, or duplicate camera/listener.
+- `Track_<stable-id>.unity`: contains only one `TrackAuthoringRoot` and child geometry/dressing. Designers can open and edit it directly in Unity, place road pieces and decorations, position grid/checkpoints/pickups, assign surfaces and recovery poses, and test the result in Play mode through a small Editor launch command.
+- Race/session owners remain outside the track scene. A scene-backed `ITrackRuntime` adapter binds the loaded content to the existing `RaceManager`, `VehicleManager`, AI, combat, style, and recovery contracts. One owner unloads the scene on track switch, leave, failed load, and final teardown. The scene must not install another `Stage3Bootstrap`, lobby, `RaceManager`, camera, or `AudioListener`.
+
+Use **one** `TrackDefinition` roster and **one** `ITrackRuntime` result for every course. A definition may resolve through a scene loader or a generator, but setup, online lobby, race rules, and presentation should not care which source made the runtime. Unity's `.unity` asset already serializes the placed objects, transforms, colliders, and component references; a second geometry file would duplicate that data. A small ScriptableObject can later hold catalog metadata, preview art, and a scene reference if hand-editing the static catalog becomes painful, but it should not be a second authority for checkpoint positions or road geometry.
+
+## Authoring contract
+
+The root component serializes the stable catalog ID, four ordered grid poses, an indexed checkpoint chain, a safe recovery pose for each checkpoint, exactly four pickup positions, drivable collider layers/marked surfaces, and the intended style renderers. The root starts inactive in the authored asset so a client loader can disable all physical colliders before activation. Checkpoints are bound to the host/offline `RaceManager` only; the client builds a non-authoritative visual copy and never enables triggers, vehicle physics, or AI. Loading validates the scene's ID against the selected catalog entry and checks all required references, indices, masks, and bounds before allowing Start.
+
+An Editor validator should report missing/duplicate indices, grid overlap, checkpoint ordering and orientation, unreachable recovery anchors, pickup placement off road, unmarked drivable surfaces, cameras/listeners/gameplay owners inside the track scene, and renderers not registered for Clean 3D/Ink Lite/Full Ink. It should fail the beta build if the new track is missing from the scene list. A playtest is still required to prove the path is drivable; static validation cannot establish that.
+
+## Integration sequence
+
+1. Add a scene-backed catalog entry and the `TrackAuthoringRoot`/validator, plus one minimal original track scene. Wrap the existing four synchronous builders in a loader that returns the same runtime contract. Keep `SampleScene` as the temporary front-end shell for this first slice; this avoids changing menu and online ownership while proving authoring.
+2. Change track composition to a load-then-bind operation. The host locks the track ID in the lobby, preloads and validates that scene, then permits Start. The client resolves the same ID from its own build and acknowledges successful visual load before the round begins. On failed/mismatched load, show a clear lobby error and do not start a partial race. Do not send scene GameObjects or local paths over Relay; only the stable ID and a build/content revision belong in session metadata.
+3. Move the persistent shell into `FrontEnd.unity`, update both runtime bootstrap guards and the build scene list, and keep the track scene additive while racing. Remove the old scene-name dependency only after local and online paths use the new shell. Keep `SampleScene` as a migration/test scene until fixtures are updated; do not rename it blindly.
+4. Give the owner a duplicateable track template and a short Editor checklist. Beta friends must use builds from the same commit/content revision. If track content differs, reject before Ready/Start rather than allowing mismatched collision and checkpoint geometry.
+5. Migrate the existing four generated tracks **after** the scene-backed beta track works. Preserve their IDs, names, lap counts, checkpoint order, grid, pickups, road markings, and visual modes. Migrate one at a time and compare the authored scene against the accepted runtime fixture before deleting its builder. An Editor bake command may help turn generated geometry into a starting scene, but the builders currently create runtime objects/materials; baking must convert those to persistent assets, then a designer must inspect and clean the scene. Do not save a Play-mode hierarchy and assume it is a durable authored asset. A manual rebuild from the template is also valid for a track where the generated layout needs redesign.
+
+This refactor is real work: `TrackRuntimeBuilder` and online round composition are synchronous today, so asynchronous scene loading needs an explicit pending/loading state and cancellation on track switch, leave, and host loss. `SceneManager.LoadScene` is not a safe synchronous shortcut: Unity documents that it completes in a later frame. [Unity LoadScene timing](https://docs.unity3d.com/ja/current/ScriptReference/SceneManagement.SceneManager.LoadScene.html).
+
+## Acceptance for the first hand-built beta track
+
+1. The new track opens independently in Unity Editor and passes the authoring validator; its ID is selectable in local setup and the online lobby, and its scene is included in macOS/WebGL builds.
+2. One to four local humans and zero to three AI use its four-place grid, checkpoint/lap order, recovery anchors, marked surfaces, and four combat pickups. A bot completes three laps without a special global AI retune.
+3. Two peers using matching builds load the same ID through Relay. The host owns collision, checkpoints, pickups, combat, and AI; the client renders the course/proxies with no active track colliders, extra local devices, or extra viewports.
+4. Track switching, canceled load, failed load, leave, Results, rematch, and repeated rounds release scene, renderers, materials, and input ownership cleanly. All four existing generated tracks still select and race as before.
+5. A fresh player build starts at the front end, races the new track, and returns to the lobby. Capture one- and four-player readability and verify the authored geometry does not block the chase camera.
+
+The planned **in-game block track editor** remains a later, separate feature. This first pipeline lets us hand-build and ship a fixed track with the Unity Editor; it does not expose editing tools to players.
+
+A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.
