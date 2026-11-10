@@ -89,12 +89,15 @@ namespace ReReVolt.Online.Unity
 
         private async Task WaitForTransportAsync()
         {
+            // Unity Transport and NetworkManager are main-thread objects. A frame await also works in
+            // WebGL, where Task.Delay's thread-pool timer is unavailable.
+            await Awaitable.MainThreadAsync();
             var timer = Stopwatch.StartNew();
             while (Network != null && !Network.IsConnectedClient)
             {
                 if (timer.Elapsed.TotalSeconds >= 15)
                     throw new TimeoutException("Relay transport did not connect.");
-                await Task.Delay(50);
+                await Awaitable.NextFrameAsync();
             }
             if (Network == null) throw new InvalidOperationException("Relay transport was destroyed.");
         }

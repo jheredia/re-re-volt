@@ -658,3 +658,17 @@ normally; the app inventory showed Unity no longer running. A later test needs
 a UI control surface the action review can verify, or explicit user approval
 for the network action after the risk and target are presented. Do not count
 this attempt as a live Relay pass.
+
+## WebGL Relay wait compatibility — 2026-11-10
+
+Unity Multiplayer Services 2.4.0 selects WSS for WebGL and DTLS for native
+players through its default Relay protocol. The project-owned
+`RelaySessionConnection.WaitForTransportAsync` still used `Task.Delay(50)`,
+which Unity lists among WebGL threading limitations. It now switches to the
+Unity main thread and awaits the next frame between transport checks, retaining
+the existing 15-second monotonic timeout and destroyed-network failure path.
+Unity 6000.6 compiled the change and focused EditMode
+`RelaySessionConnectionTests` passed **1/1**
+(`/private/tmp/stage10-webgl-relay-await-editmode-run.xml`; log beside it).
+No WebGL player build or browser-to-macOS Relay session was run for this
+correction; cross-platform online play remains unverified.
