@@ -641,3 +641,20 @@ The [private Relay friend-test runbook](STAGE10_FRIEND_TEST_RUNBOOK.md) gives a
 short manual checklist for cross-machine racing, combat, Results/rematch, and
 disconnect evidence. It distinguishes observed same-Mac behavior from the
 remaining unverified internet and WebGL paths.
+
+## Live Results/rematch smoke attempt — 2026-11-10
+
+The fresh arm64 macOS player build at
+`/private/tmp/stage10-relay-20261109.app` completed successfully from the
+current Stage 10 branch (`/private/tmp/stage10-relay-macos-build-20261109.log`;
+Unity reported `Build Finished, Result: Success` and exited normally). The
+Editor opened `SampleScene`, entered Play mode, and displayed the private
+online lobby with `HOST PRIVATE SESSION` selected. The computer-use automatic
+review rejected the subsequent confirm key because it could not verify that
+selection and the resulting network action from its available UI state. No
+Relay session was hosted, no player peer was launched, and Results/rematch were
+not exercised in this attempt. Editor Play mode and the Editor were closed
+normally; the app inventory showed Unity no longer running. A later test needs
+a UI control surface the action review can verify, or explicit user approval
+for the network action after the risk and target are presented. Do not count
+this attempt as a live Relay pass.
