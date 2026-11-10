@@ -264,6 +264,11 @@ namespace ReReVolt.Online.Unity
                         Add("LEAVE SESSION", Leave);
                         return;
                     }
+                    if (snapshot.Phase == OnlinePhase.Loading)
+                    {
+                        Add("CANCEL TRACK LOAD / LEAVE SESSION", Leave);
+                        return;
+                    }
                     var racer = FindLocal(snapshot, localSlot);
                     Add("SELECT LOCAL SLOT: " + (localSlot + 1), () => localSlot = (localSlot + 1) % 4);
                     if (racer == null)
@@ -337,7 +342,7 @@ namespace ReReVolt.Online.Unity
         }
         private void CycleTrack()
         {
-            var entries = TrackCatalog.Entries;
+            var entries = TrackCatalog.SelectableEntries;
             for (int i = 0; i < entries.Count; i++)
             {
                 if (entries[i].Id != protocol.Snapshot.TrackId) continue;
@@ -375,6 +380,8 @@ namespace ReReVolt.Online.Unity
                     if (snapshot != null)
                     {
                         content.Append("TRACK: ").Append(TrackCatalog.TryGet(snapshot.TrackId, out var track) ? track.DisplayName : snapshot.TrackId).Append('\n');
+                        if (snapshot.Phase == OnlinePhase.Loading)
+                            content.Append("LOADING TRACK ON EVERY PEER — START WAITS FOR MATCHING CONTENT\n");
                         foreach (var racer in snapshot.Racers)
                             content.Append("R").Append(racer.Id).Append(racer.Bot ? "  HOST AI" :
                                 (racer.Peer == protocol.LocalPeer ? "  YOU / SLOT " : "  FRIEND / SLOT ") + (racer.Slot + 1))

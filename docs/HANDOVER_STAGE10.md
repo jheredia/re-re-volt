@@ -1,5 +1,21 @@
 # Stage 10 handover — Relay foundation in progress
 
+## 2026-11-10 scene-authored online loading checkpoint
+
+The editable `custom-beta-track` template is selectable in the private online
+lobby. A scene-only `Loading` phase waits for host and client load reports that
+match the locked track ID and `beta-template-v1` revision before Countdown.
+Host authority binds the authored course; the client binds a collider-free
+visual copy. Timeout, mismatch, leave, peer loss, and rematch release scenes.
+The four generated tracks retain their prior synchronous composition. The
+focused local UDP PlayMode fixture passed **4/4** at
+`/private/tmp/scene-online-final-four-results.xml`. The authored scene path
+has not yet been tested in a fresh macOS/WebGL pair through Relay, and the
+template has not been proven as a completed three-lap course. The revision is
+explicit metadata, not an asset hash; bump root and catalog revisions together
+after editing track content. The separate FrontEnd scene and conversion of the
+four generated tracks to editable scenes are still planned.
+
 The owner selected Unity Relay for private online friend sessions. A player
 still hosts the race; online AI must be simulated by that host, with at most
 four human and AI racers combined. Offline local play remains supported.

@@ -10,6 +10,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Users;
 using UnityEngine.TestTools;
+using UnityEngine.SceneManagement;
 using Vehicle;
 
 namespace ReReVolt.Tests.Online
@@ -22,6 +23,154 @@ namespace ReReVolt.Tests.Online
         private NetworkManager hostNetwork, clientNetwork;
         private OnlineLobbyProtocol hostLobby, clientLobby;
         private OnlineRoundCoordinator hostRound, clientRound;
+
+        [UnityTest]
+        public IEnumerator SceneAuthoredRoundWaitsForBothPeersAndReleasesOnRematch()
+        {
+            yield return ConnectScenePeers();
+            yield return SelectAndReadyScene();
+
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.Start });
+            Assert.That(hostLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Loading));
+            Assert.That(hostRound.IsRoundActive, Is.False, "A scene cannot begin Countdown before peer load reports.");
+            float deadline = Time.realtimeSinceStartup + 12f;
+            while ((clientLobby.Snapshot?.Phase != OnlinePhase.Racing || !clientRound.IsRoundActive) &&
+                   Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostRound.IsHostRound && clientRound.IsRoundActive, Is.True);
+            Assert.That(clientLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Racing));
+            Assert.That(LoadedTemplateSceneCount(), Is.EqualTo(2), "Each peer owns its own additive scene instance.");
+            int authoritativeTriggers = 0, visualOnlyScenes = 0;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.path != TrackCatalog.BetaTemplateScenePath) continue;
+                int enabled = 0;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                    foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
+                        if (collider.enabled) enabled++;
+                if (enabled == 0) visualOnlyScenes++; else authoritativeTriggers++;
+            }
+            Assert.That(authoritativeTriggers, Is.EqualTo(1));
+            Assert.That(visualOnlyScenes, Is.EqualTo(1), "Client course must have no collision or checkpoint authority.");
+
+            Assert.That(hostLobby.HostAuthority.CompleteRace(), Is.True);
+            hostLobby.PublishAuthoritySnapshot();
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.Rematch });
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((hostRound.IsRoundActive || clientRound.IsRoundActive || LoadedTemplateSceneCount() != 0) &&
+                   Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostRound.IsRoundActive || clientRound.IsRoundActive, Is.False);
+            Assert.That(LoadedTemplateSceneCount(), Is.Zero, "Rematch must unload both authored scenes.");
+            Assert.That(hostLobby.Snapshot.TrackId, Is.EqualTo(TrackCatalog.BetaTemplateId));
+
+            yield return SelectAndReadyScene();
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.Start });
+            deadline = Time.realtimeSinceStartup + 12f;
+            while ((clientLobby.Snapshot?.Phase != OnlinePhase.Racing || !clientRound.IsRoundActive) &&
+                   Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostRound.IsHostRound && clientRound.IsRoundActive, Is.True,
+                "The same authored scene must load again for a rematch.");
+            Assert.That(LoadedTemplateSceneCount(), Is.EqualTo(2));
+            clientNetwork.Shutdown();
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((hostRound.IsRoundActive || LoadedTemplateSceneCount() != 0) &&
+                   Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostRound.IsRoundActive, Is.False);
+            Assert.That(LoadedTemplateSceneCount(), Is.Zero, "Peer loss must unload the host's track scene.");
+        }
+
+        [UnityTest]
+        public IEnumerator MismatchedSceneContentReportAbortsBeforeCountdownAndCleansUp()
+        {
+            yield return ConnectScenePeers();
+            yield return SelectAndReadyScene();
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.Start });
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (clientLobby.Snapshot?.Phase != OnlinePhase.Loading && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(clientLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Loading));
+            clientLobby.ReportTrackLoaded(true, TrackCatalog.BetaTemplateId, "mismatched-revision", clientLobby.Snapshot.Round);
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((hostLobby.Snapshot.Phase != OnlinePhase.Lobby || clientLobby.Snapshot.Phase != OnlinePhase.Lobby ||
+                    LoadedTemplateSceneCount() != 0) && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Lobby));
+            Assert.That(clientLobby.Snapshot.Phase, Is.EqualTo(OnlinePhase.Lobby));
+            Assert.That(hostRound.IsRoundActive || clientRound.IsRoundActive, Is.False);
+            Assert.That(LoadedTemplateSceneCount(), Is.Zero);
+        }
+
+        private IEnumerator ConnectScenePeers()
+        {
+            InputSystem.AddDevice<Keyboard>();
+            InputSystem.AddDevice<Gamepad>();
+            InputSystem.AddDevice<Gamepad>();
+            hostRoot = new GameObject("Authored scene host");
+            var hostTransport = hostRoot.AddComponent<UnityTransport>();
+            hostTransport.SetConnectionData("127.0.0.1", Port, "127.0.0.1");
+            hostNetwork = hostRoot.AddComponent<NetworkManager>();
+            hostNetwork.NetworkConfig = new NetworkConfig { NetworkTransport = hostTransport, EnableSceneManagement = false };
+            Assert.That(hostNetwork.StartHost(), Is.True);
+            clientRoot = new GameObject("Authored scene client");
+            var clientTransport = clientRoot.AddComponent<UnityTransport>();
+            clientTransport.SetConnectionData("127.0.0.1", Port);
+            clientNetwork = clientRoot.AddComponent<NetworkManager>();
+            clientNetwork.NetworkConfig = new NetworkConfig { NetworkTransport = clientTransport, EnableSceneManagement = false };
+            Assert.That(clientNetwork.StartClient(), Is.True);
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!clientNetwork.IsConnectedClient && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(clientNetwork.IsConnectedClient, Is.True);
+            hostLobby = new OnlineLobbyProtocol(hostNetwork, Time.realtimeSinceStartupAsDouble);
+            clientLobby = new OnlineLobbyProtocol(clientNetwork, Time.realtimeSinceStartupAsDouble);
+            hostRound = hostRoot.AddComponent<OnlineRoundCoordinator>();
+            clientRound = clientRoot.AddComponent<OnlineRoundCoordinator>();
+            hostRound.Initialize(hostLobby, hostRoot.AddComponent<Stage3Bootstrap>());
+            clientRound.Initialize(clientLobby, clientRoot.AddComponent<Stage3Bootstrap>());
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((clientLobby.Snapshot == null || hostLobby.Snapshot.Racers.Length != 2) && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(hostLobby.Snapshot.Racers, Has.Length.EqualTo(2));
+        }
+
+        private IEnumerator SelectAndReadyScene()
+        {
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.SelectTrack, TrackId = TrackCatalog.BetaTemplateId });
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (clientLobby.Snapshot?.TrackId != TrackCatalog.BetaTemplateId && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(clientLobby.Snapshot.TrackContentRevision, Is.EqualTo("beta-template-v1"));
+            uint hostId = 0, clientId = 0;
+            foreach (LobbyRacer racer in hostLobby.Snapshot.Racers)
+                if (racer.Peer == hostLobby.LocalPeer) hostId = racer.Id;
+                else clientId = racer.Id;
+            hostLobby.Submit(new LobbyCommand { Action = LobbyAction.SetReady, RacerId = hostId, Ready = true });
+            deadline = Time.realtimeSinceStartup + 5f;
+            while (clientLobby.Snapshot.Revision != hostLobby.Snapshot.Revision && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            clientLobby.Submit(new LobbyCommand { Action = LobbyAction.SetReady, RacerId = clientId, Ready = true });
+            deadline = Time.realtimeSinceStartup + 5f;
+            while ((!AllReady(hostLobby.Snapshot) || clientLobby.RequestPending) && Time.realtimeSinceStartup < deadline)
+            { TickLobbies(); yield return null; }
+            Assert.That(AllReady(hostLobby.Snapshot), Is.True);
+        }
+
+        private static bool AllReady(LobbySnapshot snapshot)
+        {
+            foreach (LobbyRacer racer in snapshot.Racers) if (!racer.Ready) return false;
+            return true;
+        }
+
+        private static int LoadedTemplateSceneCount()
+        {
+            int count = 0;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i).path == TrackCatalog.BetaTemplateScenePath) count++;
+            return count;
+        }
 
         [UnityTest]
         public IEnumerator ClientJoinsHostSubmitsOwnedInputAndDisconnectClearsRound()
@@ -374,7 +523,9 @@ namespace ReReVolt.Tests.Online
             hostLobby?.Dispose();
             clientLobby?.Dispose();
             if (clientNetwork != null && clientNetwork.IsListening) clientNetwork.Shutdown();
+            yield return null;
             if (hostNetwork != null && hostNetwork.IsListening) hostNetwork.Shutdown();
+            yield return null;
             if (clientRoot != null) Object.Destroy(clientRoot);
             if (hostRoot != null) Object.Destroy(hostRoot);
             yield return null;

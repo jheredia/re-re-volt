@@ -102,7 +102,8 @@ namespace ReReVolt.Online.Contracts
         public OnlineDrivingSnapshotReceiver(LobbySnapshot lobby, int totalLaps, int checkpointCount)
         {
             if (lobby == null || lobby.Epoch == 0 || lobby.Round == 0 || string.IsNullOrEmpty(lobby.TrackId) ||
-                lobby.Phase == OnlinePhase.Lobby || lobby.Racers == null || lobby.Racers.Length < 1 || lobby.Racers.Length > 4 || totalLaps < 1 || checkpointCount < 1)
+                (lobby.Phase == OnlinePhase.Lobby || lobby.Phase == OnlinePhase.Loading) ||
+                lobby.Racers == null || lobby.Racers.Length < 1 || lobby.Racers.Length > 4 || totalLaps < 1 || checkpointCount < 1)
                 throw new ArgumentException("A locked race roster and valid track rules are required.");
             foreach (var racer in lobby.Racers)
             {

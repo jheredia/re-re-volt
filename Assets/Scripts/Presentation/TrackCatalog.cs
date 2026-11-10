@@ -22,7 +22,8 @@ namespace Presentation
     public sealed class TrackDefinition
     {
         public TrackDefinition(string id, string displayName, string flowDescription, string previewMetadata,
-            int lapCount, int orderedCheckpointCount, TrackRuntimeBuilder builder, string scenePath = null)
+            int lapCount, int orderedCheckpointCount, TrackRuntimeBuilder builder, string scenePath = null,
+            string contentRevision = "code-v1")
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A track needs a stable ID.", nameof(id));
             if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("A track needs a name.", nameof(displayName));
@@ -36,6 +37,7 @@ namespace Presentation
             OrderedCheckpointCount = orderedCheckpointCount;
             Builder = builder;
             ScenePath = scenePath;
+            ContentRevision = contentRevision;
         }
 
         public string Id { get; }
@@ -47,6 +49,7 @@ namespace Presentation
         public bool IsAvailable => Builder != null || !string.IsNullOrWhiteSpace(ScenePath);
         public bool IsSceneAuthored => !string.IsNullOrWhiteSpace(ScenePath);
         public string ScenePath { get; }
+        public string ContentRevision { get; }
         internal TrackRuntimeBuilder Builder { get; }
     }
 
@@ -84,17 +87,17 @@ namespace Presentation
                 3, 12, Stage9CAuthoredTrackBuilder.BuildBridgeExhibition)
         };
 
-        // Keep the online roster on its four accepted synchronous tracks until online round
-        // composition can pre-load a scene. Local setup may opt into the scene-backed entry.
         private static readonly TrackDefinition betaTemplate = new(BetaTemplateId, "BETA TRACK TEMPLATE",
             "EDITOR-AUTHORED TEST COURSE", "EDITABLE ROAD / 8 CHECKPOINTS", 3, 8,
-            null, BetaTemplateScenePath);
+            null, BetaTemplateScenePath, "beta-template-v1");
         private static readonly TrackDefinition[] localEntries =
         {
             entries[0], entries[1], entries[2], entries[3], betaTemplate
         };
 
+        // Generated builders remain a useful synchronous subset for existing callers.
         public static IReadOnlyList<TrackDefinition> Entries => entries;
+        public static IReadOnlyList<TrackDefinition> SelectableEntries => localEntries;
         public static IReadOnlyList<TrackDefinition> LocalEntries => localEntries;
         public static TrackDefinition Default => entries[0];
 
@@ -102,10 +105,10 @@ namespace Presentation
         {
             definition = null;
             if (string.IsNullOrWhiteSpace(id)) return false;
-            for (int i = 0; i < entries.Length; i++)
+            for (int i = 0; i < localEntries.Length; i++)
             {
-                if (!string.Equals(entries[i].Id, id, StringComparison.Ordinal)) continue;
-                definition = entries[i];
+                if (!string.Equals(localEntries[i].Id, id, StringComparison.Ordinal)) continue;
+                definition = localEntries[i];
                 return true;
             }
             return false;

@@ -13,10 +13,12 @@ namespace Presentation
     public sealed class TrackAuthoringRoot : MonoBehaviour
     {
         [SerializeField] private string stableId = "custom-beta-track";
+        [SerializeField] private string contentRevision = "beta-template-v1";
         [Min(1)] [SerializeField] private int laps = 3;
         [SerializeField] private LayerMask drivableMask = 1 << PrototypeCircuitBuilder.DrivableLayer;
 
         public string StableId => stableId;
+        public string ContentRevision => contentRevision;
         public int Laps => laps;
         public LayerMask DrivableMask => drivableMask;
 
@@ -33,6 +35,7 @@ namespace Presentation
         {
             var errors = new List<string>();
             if (string.IsNullOrWhiteSpace(stableId)) errors.Add("Set a non-empty stable track ID.");
+            if (string.IsNullOrWhiteSpace(contentRevision)) errors.Add("Set a non-empty content revision.");
             if (laps < 1) errors.Add("Lap count must be at least one.");
             if (drivableMask.value == 0) errors.Add("Assign a non-empty drivable layer mask.");
 
@@ -64,7 +67,8 @@ namespace Presentation
                 drivableCount++;
                 if (collider.isTrigger)
                     errors.Add($"Drivable collider '{collider.name}' must not be a trigger.");
-                if (!TrackSurfaceMarker.TryResolve(collider, out _))
+                TrackSurfaceMarker marker = collider.GetComponentInParent<TrackSurfaceMarker>(true);
+                if (marker == null || marker.Kind == TrackSurfaceKind.Unclassified)
                     errors.Add($"Drivable collider '{collider.name}' needs a classified TrackSurfaceMarker.");
             }
             if (drivableCount == 0) errors.Add("Place at least one marked drivable collider on the drivable layer.");

@@ -59,10 +59,12 @@ namespace ReReVolt.Online.Unity
         /// Creates the static client presentation roster. The caller must pass the locked
         /// roster and its own authenticated peer id; no state in this class is authoritative.
         /// </summary>
-        public void Initialize(LobbySnapshot lockedRoster, string localPeer, VisualStyleController style = null)
+        public void Initialize(LobbySnapshot lockedRoster, string localPeer, VisualStyleController style = null,
+            SceneAuthoredTrackPreload preload = null)
         {
             if (initialized || content != null) throw new InvalidOperationException("This client presentation already owns a round.");
-            if (lockedRoster == null || lockedRoster.Phase == OnlinePhase.Lobby || lockedRoster.Round == 0 ||
+            if (lockedRoster == null || lockedRoster.Phase == OnlinePhase.Lobby ||
+                lockedRoster.Phase == OnlinePhase.Loading || lockedRoster.Round == 0 ||
                 lockedRoster.Racers == null || lockedRoster.Racers.Length < 1 || lockedRoster.Racers.Length > LocalPlayerRules.MaximumPlayers ||
                 string.IsNullOrWhiteSpace(localPeer))
                 throw new ArgumentException("A locked race roster and authenticated local peer are required.");
@@ -96,8 +98,11 @@ namespace ReReVolt.Online.Unity
                 visualRules.ControlsGlobalGameState = false;
                 if (!visualRules.ConfigureRace(definition.LapCount, definition.OrderedCheckpointCount))
                     throw new InvalidOperationException("The visual track rejected its authored configuration.");
-                visualTrack = new TrackSession(TrackCatalog.Entries, roster.TrackId)
-                    .BuildSelected(visualRules, content.transform, visualStyle);
+                visualTrack = definition.IsSceneAuthored
+                    ? (preload ?? throw new InvalidOperationException("Authored online track was not preloaded."))
+                        .Bind(definition.Id, null, visualStyle, SceneTrackMode.VisualOnly)
+                    : new TrackSession(TrackCatalog.Entries, roster.TrackId)
+                        .BuildSelected(visualRules, content.transform, visualStyle);
                 foreach (Collider collider in visualTrack.Root.GetComponentsInChildren<Collider>(true))
                     collider.enabled = false;
                 for (int i = 0; i < roster.Racers.Length; i++) CreateProxy(roster.Racers[i], i);
@@ -289,7 +294,8 @@ namespace ReReVolt.Online.Unity
             return new LobbySnapshot
             {
                 Epoch = source.Epoch, Revision = source.Revision, Round = source.Round, HostPeer = source.HostPeer,
-                TrackId = source.TrackId, Phase = source.Phase, Peers = source.Peers == null ? null : (string[])source.Peers.Clone(), Racers = racers
+                TrackId = source.TrackId, TrackContentRevision = source.TrackContentRevision,
+                Phase = source.Phase, Peers = source.Peers == null ? null : (string[])source.Peers.Clone(), Racers = racers
             };
         }
 

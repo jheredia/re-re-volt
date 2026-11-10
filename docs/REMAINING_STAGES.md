@@ -203,6 +203,10 @@ package, transport, service, or authority choice is final.
      those code-built courses to editable scenes one at a time without changing
      their IDs or accepted race behavior. See the
      [editor-authored track scene plan](EDITOR_AUTHORED_TRACK_SCENES.md).
+     The editable template and local/online selection/loading seam are now
+     implemented; focused two-peer local UDP coverage passes 4/4. A finished
+     hand-authored course, live Relay player-build check, separate front-end
+     scene, and migration of the four generated courses remain.
    - Before acceptance, prove host and remote client over Relay (join code,
      race/combat, 0–3 host AI across four tracks, results/rematch, disconnect
      and recovery), then complete the stage-end visual/audio/performance and

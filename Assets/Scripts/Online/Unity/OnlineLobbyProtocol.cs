@@ -26,6 +26,11 @@ namespace ReReVolt.Online.Unity
             public LobbyCommand Command;
             public LobbySnapshot Snapshot;
             public OnlineError Error;
+            public bool TrackLoadReport;
+            public bool TrackLoadSucceeded;
+            public string TrackId;
+            public string TrackContentRevision;
+            public uint Round;
         }
         private sealed class Budget { public double Start; public int Count; }
         private readonly NetworkManager network;
@@ -36,6 +41,8 @@ namespace ReReVolt.Online.Unity
         private readonly Dictionary<ulong, Budget> budgets = new Dictionary<ulong, Budget>();
         private readonly Dictionary<ulong, double> rejected = new Dictionary<ulong, double>();
         private readonly List<ulong> scratch = new List<ulong>(4);
+        private readonly HashSet<ulong> loadedPeers = new HashSet<ulong>();
+        private double loadingStarted;
         private readonly double createdAt;
         private double nextHello;
         private double requestStarted;
@@ -61,10 +68,12 @@ namespace ReReVolt.Online.Unity
             if (network.IsHost)
             {
                 var ids = new List<string>(4);
-                foreach (var entry in TrackCatalog.Entries) if (entry.IsAvailable) ids.Add(entry.Id);
+                foreach (var entry in TrackCatalog.SelectableEntries) if (entry.IsAvailable) ids.Add(entry.Id);
                 byte[] epochBytes = Guid.NewGuid().ToByteArray();
                 ulong epoch = BitConverter.ToUInt64(epochBytes, 0);
-                authority = new OnlineLobbyAuthority(LocalPeer, epoch == 0 ? 1UL : epoch, ids, TrackCatalog.Default.Id);
+                authority = new OnlineLobbyAuthority(LocalPeer, epoch == 0 ? 1UL : epoch, ids,
+                    TrackCatalog.Default.Id, id => TrackCatalog.TryGet(id, out var track) ? track.ContentRevision : null,
+                    id => TrackCatalog.TryGet(id, out var track) && track.IsSceneAuthored);
                 admitted.Add(network.LocalClientId);
                 Snapshot = authority.Snapshot();
             }
@@ -88,6 +97,13 @@ namespace ReReVolt.Online.Unity
                 nextHello = now + 1;
                 Send(NetworkManager.ServerClientId, new Envelope { Hello = true });
                 return;
+            }
+            if (authority.Phase == OnlinePhase.Loading && now - loadingStarted >= 20)
+            {
+                authority.AbortRound();
+                loadedPeers.Clear();
+                LastError = OnlineError.SimulationUnavailable;
+                Broadcast(OnlineError.SimulationUnavailable);
             }
             foreach (ulong id in network.ConnectedClientsIds)
                 if (!admitted.Contains(id) && !awaiting.ContainsKey(id) && !rejected.ContainsKey(id)) awaiting.Add(id, now);
@@ -121,6 +137,17 @@ namespace ReReVolt.Online.Unity
         {
             if (!IsHost) throw new InvalidOperationException("Only the NGO host may compose an online round.");
             roundComposition = handler;
+        }
+
+        /// <summary>Reports only the current locked scene and content revision; no path or object crosses the wire.</summary>
+        public void ReportTrackLoaded(bool success, string trackId, string contentRevision, uint round)
+        {
+            if (disposed || Snapshot == null || Snapshot.Phase != OnlinePhase.Loading ||
+                Snapshot.Round != round) return;
+            var report = new Envelope { TrackLoadReport = true, TrackLoadSucceeded = success,
+                TrackId = trackId, TrackContentRevision = contentRevision, Round = round };
+            if (IsHost) AcceptTrackLoad(network.LocalClientId, report);
+            else Send(NetworkManager.ServerClientId, report);
         }
 
         private void Receive(ulong sender, FastBufferReader reader)
@@ -159,6 +186,7 @@ namespace ReReVolt.Online.Unity
                     awaiting.Remove(sender);
                     Broadcast();
                 }
+                else if (admitted.Contains(sender) && message.TrackLoadReport) AcceptTrackLoad(sender, message);
                 else if (admitted.Contains(sender) && message.Command != null) Apply(sender, message.Command);
                 return;
             }
@@ -181,36 +209,65 @@ namespace ReReVolt.Online.Unity
         {
             bool start = command.Action == LobbyAction.Start;
             OnlineError error = authority.Apply(Peer(sender), command, simulationAvailable: !start || roundComposition != null);
-            if (error == OnlineError.None && start)
+            if (error == OnlineError.None && start && authority.Phase == OnlinePhase.Loading)
             {
-                Snapshot = authority.Snapshot();
-                bool composed;
-                try { composed = roundComposition != null && roundComposition(Snapshot); }
-                catch (Exception exception)
-                {
-                    Debug.LogException(exception);
-                    composed = false;
-                }
-                if (!composed)
-                {
-                    authority.AbortRound();
-                    error = OnlineError.SimulationUnavailable;
-                }
+                loadedPeers.Clear();
+                loadingStarted = Time.realtimeSinceStartupAsDouble;
+            }
+            if (error == OnlineError.None && start && authority.Phase == OnlinePhase.Countdown)
+            {
+                if (!ComposeRound()) error = OnlineError.SimulationUnavailable;
             }
             if (sender == network.LocalClientId) LastError = error;
             if (error == OnlineError.None) Broadcast();
             else if (sender != network.LocalClientId)
                 Send(sender, new Envelope { Error = error, Snapshot = authority.Snapshot() });
-            else if (start)
-                Broadcast();
+            else if (start && error == OnlineError.SimulationUnavailable)
+                Broadcast(error);
         }
 
-        private void Broadcast()
+        private void AcceptTrackLoad(ulong sender, Envelope report)
+        {
+            if (authority.Phase != OnlinePhase.Loading) return;
+            LobbySnapshot locked = authority.Snapshot();
+            if (report.Round != locked.Round || report.TrackId != locked.TrackId ||
+                report.TrackContentRevision != locked.TrackContentRevision || !report.TrackLoadSucceeded)
+            {
+                authority.AbortRound();
+                loadedPeers.Clear();
+                LastError = OnlineError.SimulationUnavailable;
+                Broadcast(OnlineError.SimulationUnavailable);
+                return;
+            }
+            loadedPeers.Add(sender);
+            foreach (string peer in locked.Peers)
+                if (!ulong.TryParse(peer, NumberStyles.None, CultureInfo.InvariantCulture, out ulong id) ||
+                    !loadedPeers.Contains(id)) return;
+            if (!authority.BeginCountdown() || !ComposeRound())
+            {
+                authority.AbortRound();
+                LastError = OnlineError.SimulationUnavailable;
+            }
+            loadedPeers.Clear();
+            Broadcast(authority.Phase == OnlinePhase.Lobby ? OnlineError.SimulationUnavailable : OnlineError.None);
+        }
+
+        private bool ComposeRound()
         {
             Snapshot = authority.Snapshot();
+            try { if (roundComposition != null && roundComposition(Snapshot)) return true; }
+            catch (Exception exception) { Debug.LogException(exception); }
+            authority.AbortRound();
+            return false;
+        }
+
+        private void Broadcast(OnlineError error = OnlineError.None)
+        {
+            Snapshot = authority.Snapshot();
+            if (error != OnlineError.None) LastError = error;
             SnapshotChanged?.Invoke(Snapshot);
             foreach (ulong peer in admitted)
-                if (peer != network.LocalClientId) Send(peer, new Envelope { Snapshot = Snapshot });
+                if (peer != network.LocalClientId) Send(peer, new Envelope { Snapshot = Snapshot, Error = error });
         }
 
         /// <summary>Publishes a phase change owned by the composed host race world.</summary>
@@ -264,7 +321,9 @@ namespace ReReVolt.Online.Unity
         {
             if (snapshot == null || snapshot.Epoch == 0 || snapshot.Racers == null || snapshot.Racers.Length > 4 ||
                 snapshot.Peers == null || snapshot.Peers.Length < 1 || snapshot.Peers.Length > 4 ||
-                !TrackCatalog.IsAvailable(snapshot.TrackId) || !Enum.IsDefined(typeof(OnlinePhase), snapshot.Phase)) return false;
+                !TrackCatalog.TryGet(snapshot.TrackId, out var track) || !track.IsAvailable ||
+                snapshot.TrackContentRevision != track.ContentRevision ||
+                !Enum.IsDefined(typeof(OnlinePhase), snapshot.Phase)) return false;
             var peers = new HashSet<string>(snapshot.Peers, StringComparer.Ordinal);
             if (peers.Count != snapshot.Peers.Length || !peers.Contains(snapshot.HostPeer)) return false;
             var ids = new HashSet<uint>();
@@ -282,10 +341,11 @@ namespace ReReVolt.Online.Unity
         private static string CompatibilityFingerprint()
         {
             // Bump protocol/content revision whenever wire semantics or online gameplay compatibility changes.
-            var text = new StringBuilder("rrv-stage10-lobby-4|").Append(Application.version);
-            foreach (var entry in TrackCatalog.Entries)
+            var text = new StringBuilder("rrv-stage10-lobby-5|").Append(Application.version);
+            foreach (var entry in TrackCatalog.SelectableEntries)
                 text.Append('|').Append(entry.Id).Append(':').Append(entry.LapCount).Append(':')
-                    .Append(entry.OrderedCheckpointCount).Append(':').Append(entry.IsAvailable);
+                    .Append(entry.OrderedCheckpointCount).Append(':').Append(entry.IsAvailable)
+                    .Append(':').Append(entry.ContentRevision);
             using (var sha = SHA256.Create())
                 return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(text.ToString())));
         }

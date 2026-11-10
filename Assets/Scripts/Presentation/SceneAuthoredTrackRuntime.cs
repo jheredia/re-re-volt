@@ -10,6 +10,100 @@ namespace Presentation
 {
     public enum SceneTrackMode { Authoritative, VisualOnly }
 
+    /// <summary>An inactive, validated scene owned by one peer until round composition.</summary>
+    public sealed class SceneAuthoredTrackPreload : IDisposable
+    {
+        private Scene scene;
+        private GameObject root;
+        private bool taken;
+
+        private SceneAuthoredTrackPreload(Scene scene, GameObject root)
+        { this.scene = scene; this.root = root; }
+
+        public bool IsReady => !taken && scene.IsValid() && scene.isLoaded && root != null;
+
+        public static async Task<SceneAuthoredTrackPreload> LoadAsync(string scenePath,
+            string expectedId, string expectedRevision, CancellationToken cancellation = default)
+        {
+            await Awaitable.MainThreadAsync();
+            cancellation.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(scenePath) || string.IsNullOrWhiteSpace(expectedId) ||
+                string.IsNullOrWhiteSpace(expectedRevision))
+                throw new ArgumentException("A scene path, stable track ID and content revision are required.");
+            // Unity serializes additive scene activation; local UDP tests can run both
+            // peers in one process, so queue their loads rather than reject the second.
+            while (!SceneAuthoredTrackRuntime.TryBeginLoad(scenePath))
+            {
+                cancellation.ThrowIfCancellationRequested();
+                await Awaitable.NextFrameAsync();
+            }
+            Scene loaded = default;
+            try
+            {
+                var before = new HashSet<Scene>();
+                for (int i = 0; i < SceneManager.sceneCount; i++) before.Add(SceneManager.GetSceneAt(i));
+                AsyncOperation operation = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Additive);
+                if (operation == null) throw new InvalidOperationException("Could not load authored track: " + scenePath);
+                while (!operation.isDone) await Awaitable.NextFrameAsync();
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene candidate = SceneManager.GetSceneAt(i);
+                    if (candidate.isLoaded && candidate.path == scenePath && !before.Contains(candidate))
+                    { loaded = candidate; break; }
+                }
+                if (!loaded.IsValid()) throw new InvalidOperationException("Could not identify loaded track scene.");
+                GameObject[] roots = loaded.GetRootGameObjects();
+                if (roots.Length != 1 || roots[0].GetComponent<TrackAuthoringRoot>() == null)
+                    throw new InvalidOperationException("Authored track scene has no unique track root.");
+                GameObject root = roots[0];
+                root.SetActive(false);
+                cancellation.ThrowIfCancellationRequested();
+                TrackAuthoringRoot authoring = root.GetComponent<TrackAuthoringRoot>();
+                if (!string.Equals(authoring.StableId, expectedId, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Authored scene track ID mismatch.");
+                if (!string.Equals(authoring.ContentRevision, expectedRevision, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Authored scene content revision mismatch.");
+                IReadOnlyList<string> errors = authoring.Validate();
+                if (errors.Count != 0)
+                    throw new InvalidOperationException("Authored scene invalid: " + string.Join("; ", errors));
+                return new SceneAuthoredTrackPreload(loaded, root);
+            }
+            catch
+            {
+                if (loaded.IsValid() && loaded.isLoaded)
+                {
+                    AsyncOperation unload = SceneManager.UnloadSceneAsync(loaded);
+                    if (unload != null) while (!unload.isDone) await Awaitable.NextFrameAsync();
+                }
+                throw;
+            }
+            finally { SceneAuthoredTrackRuntime.EndLoad(scenePath); }
+        }
+
+        public SceneAuthoredTrackRuntime Bind(string expectedId, RaceManager race,
+            VisualStyleController style, SceneTrackMode mode)
+        {
+            if (!IsReady) throw new InvalidOperationException("Authored track preload is not ready.");
+            // BindLoadedScene disables every client collider before activating the root.
+            SceneAuthoredTrackRuntime runtime = SceneAuthoredTrackRuntime.BindLoadedScene(scene,
+                expectedId, race, style, mode);
+            taken = true;
+            root.SetActive(true);
+            root = null;
+            scene = default;
+            return runtime;
+        }
+
+        public void Dispose()
+        {
+            if (taken) return;
+            if (root != null) root.SetActive(false);
+            if (scene.IsValid() && scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+            root = null;
+            scene = default;
+        }
+    }
+
     /// <summary>
     /// Owns one additively loaded, Editor-authored track scene. The existing code-built
     /// tracks keep their synchronous ITrackRuntime construction path.
@@ -17,6 +111,8 @@ namespace Presentation
     public sealed class SceneAuthoredTrackRuntime : ITrackRuntime
     {
         private static readonly HashSet<string> LoadingPaths = new(StringComparer.Ordinal);
+        internal static bool TryBeginLoad(string path) => LoadingPaths.Add(path);
+        internal static void EndLoad(string path) => LoadingPaths.Remove(path);
 
         private readonly Scene scene;
         private readonly VisualStyleController visualStyle;

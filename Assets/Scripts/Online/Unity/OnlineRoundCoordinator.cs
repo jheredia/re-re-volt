@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Presentation;
 using ReReVolt.Online.Contracts;
 using UnityEngine;
@@ -30,6 +31,9 @@ namespace ReReVolt.Online.Unity
         private bool offlineCircuitWasActive;
         private Canvas suspendedOfflineCanvas;
         private bool offlineCanvasWasEnabled;
+        private SceneAuthoredTrackPreload scenePreload;
+        private CancellationTokenSource sceneLoadCancellation;
+        private uint loadingRound;
 
         public bool IsRoundActive => hostWorld != null || clientPresentation != null;
         public bool IsHostRound => hostWorld != null;
@@ -58,7 +62,8 @@ namespace ReReVolt.Online.Unity
             {
                 hostWorld = gameObject.AddComponent<OnlineRaceHostWorld>();
                 hostWorld.Aborted += OnHostAborted;
-                hostWorld.Initialize(protocol.HostAuthority, bootstrap.VisualStyle);
+                hostWorld.Initialize(protocol.HostAuthority, bootstrap.VisualStyle, scenePreload);
+                scenePreload = null;
                 routing = new OnlineRaceMessageRouting(protocol.Network, lockedRoster, hostWorld);
                 hostPresentation = gameObject.AddComponent<OnlineHostLocalPresentation>();
                 hostPresentation.Initialize(lockedRoster, protocol.LocalPeer, hostWorld);
@@ -94,7 +99,14 @@ namespace ReReVolt.Online.Unity
             if (!initialized || snapshot == null) return;
             if (snapshot.Phase == OnlinePhase.Lobby)
             {
+                CancelSceneLoad();
                 if (IsRoundActive) CleanupRound(publishHostAbort: false, "Online round returned to the lobby.");
+                return;
+            }
+
+            if (snapshot.Phase == OnlinePhase.Loading)
+            {
+                if (loadingRound != snapshot.Round) _ = LoadSceneForRoundAsync(snapshot);
                 return;
             }
 
@@ -105,7 +117,8 @@ namespace ReReVolt.Online.Unity
             {
                 routing = new OnlineRaceMessageRouting(protocol.Network, snapshot);
                 clientPresentation = gameObject.AddComponent<OnlineRaceClientPresentation>();
-                clientPresentation.Initialize(snapshot, protocol.LocalPeer, bootstrap.VisualStyle);
+                clientPresentation.Initialize(snapshot, protocol.LocalPeer, bootstrap.VisualStyle, scenePreload);
+                scenePreload = null;
                 clientPresentation.BindAcceptedSnapshots(routing);
                 localInput = gameObject.AddComponent<OnlineLocalInputSender>();
                 localInput.Initialize(snapshot, protocol.LocalPeer, protocol, routing);
@@ -129,6 +142,48 @@ namespace ReReVolt.Online.Unity
                 Debug.LogException(exception, this);
                 CleanupRound(publishHostAbort: false, "Online client round could not start: " + exception.Message);
             }
+        }
+
+        private async System.Threading.Tasks.Task LoadSceneForRoundAsync(LobbySnapshot snapshot)
+        {
+            CancelSceneLoad();
+            loadingRound = snapshot.Round;
+            if (!TrackCatalog.TryGet(snapshot.TrackId, out TrackDefinition definition) ||
+                !definition.IsSceneAuthored || definition.ContentRevision != snapshot.TrackContentRevision)
+            {
+                protocol?.ReportTrackLoaded(false, snapshot.TrackId, snapshot.TrackContentRevision, snapshot.Round);
+                return;
+            }
+            var cancellation = new CancellationTokenSource();
+            sceneLoadCancellation = cancellation;
+            try
+            {
+                SceneAuthoredTrackPreload loaded = await SceneAuthoredTrackPreload.LoadAsync(
+                    definition.ScenePath, definition.Id, definition.ContentRevision, cancellation.Token);
+                if (cancellation.IsCancellationRequested || protocol == null ||
+                    protocol.Snapshot?.Phase != OnlinePhase.Loading ||
+                    protocol.Snapshot.Round != snapshot.Round)
+                { loaded.Dispose(); return; }
+                scenePreload = loaded;
+                protocol.ReportTrackLoaded(true, snapshot.TrackId, snapshot.TrackContentRevision, snapshot.Round);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception, this);
+                if (!cancellation.IsCancellationRequested)
+                    protocol?.ReportTrackLoaded(false, snapshot.TrackId, snapshot.TrackContentRevision, snapshot.Round);
+            }
+        }
+
+        private void CancelSceneLoad()
+        {
+            sceneLoadCancellation?.Cancel();
+            sceneLoadCancellation?.Dispose();
+            sceneLoadCancellation = null;
+            scenePreload?.Dispose();
+            scenePreload = null;
+            loadingRound = 0;
         }
 
         private void FixedUpdate()
@@ -168,6 +223,8 @@ namespace ReReVolt.Online.Unity
             if (stopping) return;
             stopping = true;
             bool hadRound = IsRoundActive;
+            if (protocol == null || protocol.Snapshot?.Phase == OnlinePhase.Lobby)
+                CancelSceneLoad();
             if (hostWorld != null)
             {
                 if (hostWorld.Race != null) hostWorld.Race.RaceStateChanged -= OnHostRaceStateChanged;
@@ -255,6 +312,7 @@ namespace ReReVolt.Online.Unity
         {
             if (!initialized) return;
             CleanupRound(publishHostAbort: false, "Online round coordinator was disabled.");
+            CancelSceneLoad();
             if (protocol != null)
             {
                 protocol.SnapshotChanged -= OnLobbySnapshot;

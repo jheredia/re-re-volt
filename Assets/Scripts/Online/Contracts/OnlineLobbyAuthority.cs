@@ -4,7 +4,7 @@ using Core;
 
 namespace ReReVolt.Online.Contracts
 {
-    public enum OnlinePhase { Lobby, Countdown, Racing, Results }
+    public enum OnlinePhase { Lobby, Countdown, Racing, Results, Loading }
     public enum LobbyAction { AddHuman, RemoveHuman, SetReady, SelectTrack, SetBots, Start, Rematch }
     public enum OnlineError
     {
@@ -43,6 +43,7 @@ namespace ReReVolt.Online.Contracts
         public uint Round;
         public string HostPeer;
         public string TrackId;
+        public string TrackContentRevision;
         public OnlinePhase Phase;
         public string[] Peers;
         public LobbyRacer[] Racers;
@@ -54,6 +55,8 @@ namespace ReReVolt.Online.Contracts
         private readonly OnlineRacerRoster roster;
         private readonly string host;
         private readonly HashSet<string> tracks;
+        private readonly Func<string, string> trackRevision;
+        private readonly Func<string, bool> requiresLoad;
         private readonly List<string> peers = new List<string>(4);
         private readonly HashSet<uint> ready = new HashSet<uint>();
         private string track;
@@ -62,13 +65,16 @@ namespace ReReVolt.Online.Contracts
         public uint Round { get; private set; }
         public OnlinePhase Phase { get; private set; }
 
-        public OnlineLobbyAuthority(string hostPeer, ulong epoch, IEnumerable<string> trackIds, string initialTrack)
+        public OnlineLobbyAuthority(string hostPeer, ulong epoch, IEnumerable<string> trackIds, string initialTrack,
+            Func<string, string> revision = null, Func<string, bool> loadRequired = null)
         {
             tracks = new HashSet<string>(trackIds ?? throw new ArgumentNullException(nameof(trackIds)), StringComparer.Ordinal);
             if (!tracks.Contains(initialTrack)) throw new ArgumentException("Initial track must be in the catalog.");
             roster = new OnlineRacerRoster(hostPeer, epoch);
             host = hostPeer;
             track = initialTrack;
+            trackRevision = revision ?? (_ => "code-v1");
+            requiresLoad = loadRequired ?? (_ => false);
             peers.Add(host);
             roster.AddHuman(host, 0, Epoch, roster.Revision, out _);
         }
@@ -165,7 +171,7 @@ namespace ReReVolt.Online.Contracts
                     if (Round == uint.MaxValue) return OnlineError.InvalidCommand;
                     roster.SetLocked(host, true, Epoch, roster.Revision);
                     Round++;
-                    Phase = OnlinePhase.Countdown;
+                    Phase = requiresLoad(track) ? OnlinePhase.Loading : OnlinePhase.Countdown;
                     Revision++;
                     return OnlineError.None;
                 default: return OnlineError.InvalidCommand;
@@ -173,6 +179,14 @@ namespace ReReVolt.Online.Contracts
         }
 
         // These are deliberately host-runtime methods, never deserialized client actions.
+        public bool BeginCountdown()
+        {
+            if (Phase != OnlinePhase.Loading) return false;
+            Phase = OnlinePhase.Countdown;
+            Revision++;
+            return true;
+        }
+
         public bool BeginRace()
         {
             if (Phase != OnlinePhase.Countdown) return false;
@@ -192,7 +206,7 @@ namespace ReReVolt.Online.Contracts
         /// <summary>Host-runtime abort after composition failure or an interrupted active round.</summary>
         public bool AbortRound()
         {
-            if (Phase != OnlinePhase.Countdown && Phase != OnlinePhase.Racing) return false;
+            if (Phase != OnlinePhase.Loading && Phase != OnlinePhase.Countdown && Phase != OnlinePhase.Racing) return false;
             Phase = OnlinePhase.Lobby;
             roster.SetLocked(host, false, Epoch, roster.Revision);
             Changed();
@@ -210,7 +224,8 @@ namespace ReReVolt.Online.Contracts
                     Slot = racers[i].LocalSlot.HasValue ? racers[i].LocalSlot.Value : -1,
                     Bot = racers[i].IsBot, Ready = racers[i].IsBot || ready.Contains(racers[i].Id) };
             return new LobbySnapshot { Epoch = Epoch, Revision = Revision, Round = Round,
-                HostPeer = host, TrackId = track, Phase = Phase, Peers = peers.ToArray(), Racers = result };
+                HostPeer = host, TrackId = track, TrackContentRevision = trackRevision(track),
+                Phase = Phase, Peers = peers.ToArray(), Racers = result };
         }
 
         private bool AllReady()

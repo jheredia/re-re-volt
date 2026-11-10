@@ -50,7 +50,8 @@ namespace ReReVolt.Online.Unity
             this.network = network != null ? network : throw new ArgumentNullException(nameof(network));
             if (!network.IsConnectedClient || !network.IsListening)
                 throw new InvalidOperationException("A connected NGO transport is required.");
-            if (lockedRoster == null || lockedRoster.Phase == OnlinePhase.Lobby)
+            if (lockedRoster == null || lockedRoster.Phase == OnlinePhase.Lobby ||
+                lockedRoster.Phase == OnlinePhase.Loading)
                 throw new ArgumentException("A locked countdown/race roster is required.", nameof(lockedRoster));
             if (!TrackCatalog.TryGet(lockedRoster.TrackId, out TrackDefinition track) || !track.IsAvailable)
                 throw new ArgumentException("The selected track is unavailable.", nameof(lockedRoster));

@@ -48,7 +48,8 @@ namespace ReReVolt.Online.Unity
         public event Action<string> Aborted;
 
         /// <summary>The host must first validate Start and lock the roster in Countdown.</summary>
-        public void Initialize(OnlineLobbyAuthority lobby, VisualStyleController style = null)
+        public void Initialize(OnlineLobbyAuthority lobby, VisualStyleController style = null,
+            SceneAuthoredTrackPreload preload = null)
         {
             if (initialized || content != null) throw new InvalidOperationException("This world already owns a round.");
             if (lobby == null || lobby.Phase != OnlinePhase.Countdown || lobby.Round == 0)
@@ -65,8 +66,11 @@ namespace ReReVolt.Online.Unity
                 Race.ControlsGlobalGameState = false;
                 if (!Race.ConfigureRace(definition.LapCount, definition.OrderedCheckpointCount))
                     throw new InvalidOperationException("Online race rules rejected track configuration.");
-                var tracks = new TrackSession(TrackCatalog.Entries, roster.TrackId);
-                track = tracks.BuildSelected(Race, content.transform, style);
+                track = definition.IsSceneAuthored
+                    ? (preload ?? throw new InvalidOperationException("Authored online track was not preloaded."))
+                        .Bind(definition.Id, Race, style, SceneTrackMode.Authoritative)
+                    : new TrackSession(TrackCatalog.Entries, roster.TrackId)
+                        .BuildSelected(Race, content.transform, style);
                 if (track.Grid == null || track.Grid.Length < roster.Racers.Length || track.Checkpoints == null ||
                     track.Checkpoints.Length != definition.OrderedCheckpointCount)
                     throw new InvalidOperationException("Online track runtime is incomplete.");

@@ -102,12 +102,31 @@ load, bind, or previous-scene unload is pending. A failed or canceled load
 keeps the previously active track. Saved local selection can restore the
 template on the next launch. The scene is included in the player scene list.
 
-`TrackCatalog.Entries` remains the existing four-track online roster until a
-separate online async composition and peer-ready handshake is implemented.
+`TrackCatalog.Entries` remains the existing four synchronous generated builders.
 `TrackCatalog.LocalEntries` reuses those same four definition objects and adds
-the single template definition; it is a temporary exposure boundary, not a
-second source of track metadata. The template's authored geometry is a test
-starting point and has not yet passed content-quality, three-lap AI, player
-build, or Relay gates.
+the single template definition. Online selection now uses the same five
+selectable definitions. The template's authored geometry is a test starting
+point and has not yet passed content-quality, three-lap AI, player-build, or
+live Relay gates.
+
+## Online authored-scene loading slice
+
+Selecting `custom-beta-track` in a private lobby locks its stable ID and
+`beta-template-v1` content revision. Start enters `Loading`; host and client
+each load and validate their included scene and report success for that round.
+Only matching reports permit Countdown and race composition. The host binds
+checkpoints, recovery, pickups and collision authority. The client binds a
+visual scene with colliders disabled. A failed load, mismatch, timeout, leave,
+or peer loss returns to the lobby and releases the scene. The existing four
+generated tracks retain their synchronous path.
+
+Unity 6000.6 focused local UDP PlayMode coverage passed **4/4**, including
+authored loading, a second round after rematch, peer-loss disposal, mismatch
+abort, and the existing generated path
+(`/private/tmp/scene-online-final-four-results.xml`). This is not a live Relay
+or macOS/WebGL authored-track player check. Authors must update both the root
+and catalog revision when hand-editing the scene; matching revision strings do
+not prove asset-byte identity. A real course and its three-lap AI path remain
+to be authored and validated.
 
 A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.
