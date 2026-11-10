@@ -670,5 +670,7 @@ the existing 15-second monotonic timeout and destroyed-network failure path.
 Unity 6000.6 compiled the change and focused EditMode
 `RelaySessionConnectionTests` passed **1/1**
 (`/private/tmp/stage10-webgl-relay-await-editmode-run.xml`; log beside it).
+That test covers invalid-code state handling, not the frame-wait path; the
+successful compile is the only direct validation of the new await calls.
 No WebGL player build or browser-to-macOS Relay session was run for this
 correction; cross-platform online play remains unverified.
