@@ -152,7 +152,7 @@ namespace Presentation
 
             if (payload.version >= 4)
             {
-                if (TrackCatalog.IsAvailable(payload.trackId)) TrackId = payload.trackId;
+                if (TrackCatalog.IsLocalAvailable(payload.trackId)) TrackId = payload.trackId;
                 else repaired = true;
             }
 
@@ -221,7 +221,7 @@ namespace Presentation
 
         public bool SetTrackId(string trackId)
         {
-            if (!TrackCatalog.IsAvailable(trackId)) throw new ArgumentOutOfRangeException(nameof(trackId));
+            if (!TrackCatalog.IsLocalAvailable(trackId)) throw new ArgumentOutOfRangeException(nameof(trackId));
             if (string.Equals(TrackId, trackId, StringComparison.Ordinal)) return !dirty || Save();
             TrackId = trackId;
             dirty = true;

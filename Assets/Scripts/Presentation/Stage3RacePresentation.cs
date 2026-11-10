@@ -75,6 +75,7 @@ namespace Presentation
         private Stage9BVfxPresentation vfxPresentation;
         private TrackSession tracks;
         private Func<int, bool> trackSelectionCommand;
+        private Func<bool> trackReady;
         private string trackSelectionMessage;
         private bool applyingPreferences;
 
@@ -99,7 +100,7 @@ namespace Presentation
         public PresentationResponseLevel VehicleMotionSetting => preferences?.VehicleMotion ?? PresentationResponseLevel.Full;
         public VfxDensityLevel VfxDensitySetting => preferences?.VfxDensity ?? VfxDensityLevel.Full;
         public string SelectedTrackId => tracks?.SelectedTrackId ?? string.Empty;
-        public bool SelectedTrackAvailable => tracks == null || tracks.CanStart;
+        public bool SelectedTrackAvailable => (tracks == null || tracks.CanStart) && (trackReady == null || trackReady());
 
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
@@ -113,7 +114,8 @@ namespace Presentation
         public void Configure(RaceManager raceManager, VehicleManager vehicleManager,
             VisualStyleController visualStyleController = null, DriverPortraitAtlas portraitAtlasSource = null,
             DemoFlowPreferences preferenceSource = null, AIManager aiManager = null,
-            TrackSession trackSession = null, Func<int, bool> selectTrackCommand = null)
+            TrackSession trackSession = null, Func<int, bool> selectTrackCommand = null,
+            Func<bool> isTrackReady = null)
         {
             if (raceManager == null) throw new ArgumentNullException(nameof(raceManager));
             if (vehicleManager == null) throw new ArgumentNullException(nameof(vehicleManager));
@@ -127,6 +129,7 @@ namespace Presentation
             preferences = preferenceSource;
             tracks = trackSession;
             trackSelectionCommand = selectTrackCommand;
+            trackReady = isTrackReady;
             ApplySavedVisualStyle();
             ApplyPresentationResponseSettings();
             BuildInterface();
@@ -266,13 +269,20 @@ namespace Presentation
                 bool pressed = device is Keyboard keyboard && keyboard.spaceKey.wasPressedThisFrame ||
                                device is Gamepad pad && pad.buttonWest.wasPressedThisFrame;
                 if (!pressed) continue;
-                trackSelectionMessage = trackSelectionCommand(1)
-                    ? string.Empty
-                    : "TRACK CHANGE COULD NOT BE APPLIED — CURRENT TRACK IS ACTIVE";
-                if (tracks.CanStart && preferences != null) preferences.SetTrackId(tracks.SelectedTrackId);
+                if (!trackSelectionCommand(1))
+                    trackSelectionMessage = "TRACK CHANGE COULD NOT BE APPLIED — CURRENT TRACK IS ACTIVE";
+                else if (trackReady == null)
+                    trackSelectionMessage = string.Empty;
                 RefreshLobbyText();
                 return;
             }
+        }
+
+        /// <summary>Setup-only status from the owner of an asynchronous track load.</summary>
+        public void SetTrackSelectionMessage(string message)
+        {
+            trackSelectionMessage = message ?? string.Empty;
+            RefreshLobbyText();
         }
 
         private void OnConfirmRequested(LocalPlayer player)
@@ -374,9 +384,10 @@ namespace Presentation
         private void StartRaceFromLobby()
         {
             if (vehicles.Players.Count == 0 || AnyPlayerDisconnected()) return;
-            if (tracks != null && !tracks.CanStart)
+            if (!SelectedTrackAvailable)
             {
-                trackSelectionMessage = "SELECTED TRACK IS NOT AVAILABLE — CHOOSE AN AVAILABLE TRACK";
+                if (trackReady == null || trackReady())
+                    trackSelectionMessage = "SELECTED TRACK IS NOT AVAILABLE — CHOOSE AN AVAILABLE TRACK";
                 RefreshLobbyText();
                 return;
             }
@@ -804,7 +815,8 @@ namespace Presentation
                 {
                     TrackDefinition selected = tracks.SelectedTrack;
                     builder.Append("TRACK  ").Append(selected.DisplayName).Append("  [")
-                        .Append(selected.IsAvailable ? "AVAILABLE" : "UNAVAILABLE").Append("]  ")
+                        .Append(!SelectedTrackAvailable && selected.IsAvailable ? "LOADING" :
+                            selected.IsAvailable ? "AVAILABLE" : "UNAVAILABLE").Append("]  ")
                         .Append(selected.LapCount).Append(" LAPS  /  ").Append(selected.FlowDescription)
                         .AppendLine("  [SPACE / X-SQUARE]");
                     if (!string.IsNullOrEmpty(trackSelectionMessage))
@@ -812,10 +824,12 @@ namespace Presentation
                 }
                 else builder.AppendLine();
                 if (AnyPlayerDisconnected()) builder.Append("RECONNECT BEFORE STARTING");
-                else if (tracks == null || tracks.CanStart)
+                else if (SelectedTrackAvailable)
                     builder.Append("ENTER / A / CROSS   START ")
                         .Append(tracks?.SelectedTrack.LapCount ?? race.TotalLaps).Append("-LAP RACE");
-                else builder.Append("START LOCKED — TRACK UNAVAILABLE");
+                else builder.Append(trackReady != null && !trackReady()
+                    ? "START LOCKED — WAIT FOR TRACK TO LOAD"
+                    : "START LOCKED — TRACK UNAVAILABLE");
                 if (ai != null)
                 {
                     builder.AppendLine().Append("AI TEST CARS  ").Append(ai.SelectedBotCount)

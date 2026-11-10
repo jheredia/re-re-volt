@@ -61,10 +61,9 @@ references and index counts. The validator
 does not prove that a car or bot can complete a lap; drive and AI tests are
 still needed after runtime integration.
 
-This authoring slice does **not** yet add the template to the build scene list
-or `TrackCatalog`. It cannot be selected or raced locally or online until the
-scene-backed `ITrackRuntime` loader and host/client loading handshake are
-implemented. The four existing code-built tracks remain the playable ones.
+The first authoring slice did not add the template to the build scene list or
+`TrackCatalog`; the later local-selection slice below does. Online selection
+still needs its host/client loading handshake.
 
 On 2026-11-10, Unity 6000.6.0f1 imported the new authoring components, created
 the template scene, then reopened the saved scene in a separate batch run and
@@ -90,9 +89,25 @@ waits for Unity's non-cancelable operation and unloads the scene before failing.
 The saved template was directly loaded in Editor PlayMode and bound/unloaded as
 both an authoritative and visual-only track; repeated visual-only loads passed
 **2/2** focused tests (`/private/tmp/scene-authored-track-runtime-tests-final.xml`).
-These direct tests use Unity's Editor-only scene loader because the template is
-not yet in the player build list. `SceneAuthoredTrackRuntime.LoadAsync`, local
-selection, online host/client loading, and player-build behavior remain
-unverified until the next integration slices.
+Those direct tests used Unity's Editor-only scene loader before the template
+entered the player build list. Online host/client loading and player-build
+behavior remain unverified until later integration slices.
+
+## Local selection integration (temporary online boundary)
+
+The template has one `TrackDefinition` with stable ID `custom-beta-track` and
+scene path `Assets/Scenes/Track_BetaTemplate.unity`. Local setup lists it after
+the four generated tracks, loads it additively, and locks Start while the
+load, bind, or previous-scene unload is pending. A failed or canceled load
+keeps the previously active track. Saved local selection can restore the
+template on the next launch. The scene is included in the player scene list.
+
+`TrackCatalog.Entries` remains the existing four-track online roster until a
+separate online async composition and peer-ready handshake is implemented.
+`TrackCatalog.LocalEntries` reuses those same four definition objects and adds
+the single template definition; it is a temporary exposure boundary, not a
+second source of track metadata. The template's authored geometry is a test
+starting point and has not yet passed content-quality, three-lap AI, player
+build, or Relay gates.
 
 A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.

@@ -22,7 +22,7 @@ namespace Presentation
     public sealed class TrackDefinition
     {
         public TrackDefinition(string id, string displayName, string flowDescription, string previewMetadata,
-            int lapCount, int orderedCheckpointCount, TrackRuntimeBuilder builder)
+            int lapCount, int orderedCheckpointCount, TrackRuntimeBuilder builder, string scenePath = null)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A track needs a stable ID.", nameof(id));
             if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentException("A track needs a name.", nameof(displayName));
@@ -35,6 +35,7 @@ namespace Presentation
             LapCount = lapCount;
             OrderedCheckpointCount = orderedCheckpointCount;
             Builder = builder;
+            ScenePath = scenePath;
         }
 
         public string Id { get; }
@@ -43,7 +44,9 @@ namespace Presentation
         public string PreviewMetadata { get; }
         public int LapCount { get; }
         public int OrderedCheckpointCount { get; }
-        public bool IsAvailable => Builder != null;
+        public bool IsAvailable => Builder != null || !string.IsNullOrWhiteSpace(ScenePath);
+        public bool IsSceneAuthored => !string.IsNullOrWhiteSpace(ScenePath);
+        public string ScenePath { get; }
         internal TrackRuntimeBuilder Builder { get; }
     }
 
@@ -57,6 +60,8 @@ namespace Presentation
         public const string PatioSweepId = "sunset-patio-sweep";
         public const string MarketAislesId = "market-aisle-dash";
         public const string BridgeExhibitionId = "club-bridge-exhibition";
+        public const string BetaTemplateId = "custom-beta-track";
+        public const string BetaTemplateScenePath = "Assets/Scenes/Track_BetaTemplate.unity";
 
         private static readonly TrackDefinition[] entries =
         {
@@ -79,7 +84,18 @@ namespace Presentation
                 3, 12, Stage9CAuthoredTrackBuilder.BuildBridgeExhibition)
         };
 
+        // Keep the online roster on its four accepted synchronous tracks until online round
+        // composition can pre-load a scene. Local setup may opt into the scene-backed entry.
+        private static readonly TrackDefinition betaTemplate = new(BetaTemplateId, "BETA TRACK TEMPLATE",
+            "EDITOR-AUTHORED TEST COURSE", "EDITABLE ROAD / 8 CHECKPOINTS", 3, 8,
+            null, BetaTemplateScenePath);
+        private static readonly TrackDefinition[] localEntries =
+        {
+            entries[0], entries[1], entries[2], entries[3], betaTemplate
+        };
+
         public static IReadOnlyList<TrackDefinition> Entries => entries;
+        public static IReadOnlyList<TrackDefinition> LocalEntries => localEntries;
         public static TrackDefinition Default => entries[0];
 
         public static bool TryGet(string id, out TrackDefinition definition)
@@ -96,6 +112,15 @@ namespace Presentation
         }
 
         public static bool IsAvailable(string id) => TryGet(id, out TrackDefinition definition) && definition.IsAvailable;
+
+        public static bool TryGetLocal(string id, out TrackDefinition definition)
+        {
+            if (TryGet(id, out definition)) return true;
+            definition = string.Equals(id, betaTemplate.Id, StringComparison.Ordinal) ? betaTemplate : null;
+            return definition != null;
+        }
+
+        public static bool IsLocalAvailable(string id) => TryGetLocal(id, out TrackDefinition definition) && definition.IsAvailable;
     }
 
     /// <summary>Explicit local-session track choice; suitable for later serialization by Stage 10 authority.</summary>
@@ -156,6 +181,8 @@ namespace Presentation
             VisualStyleController visualStyle = null)
         {
             if (!CanStart) throw new InvalidOperationException($"Track '{SelectedTrackId}' is not available.");
+            if (SelectedTrack.IsSceneAuthored)
+                throw new InvalidOperationException($"Track '{SelectedTrackId}' requires an additive scene load.");
             ITrackRuntime runtime = SelectedTrack.Builder(race, parent, visualStyle);
             if (runtime == null) throw new InvalidOperationException($"Track '{SelectedTrackId}' returned no runtime.");
             return runtime;
