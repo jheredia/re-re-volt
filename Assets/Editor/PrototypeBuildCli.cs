@@ -7,6 +7,37 @@ using UnityEditor.Build.Reporting;
 /// <summary>Reproducible command-line player build without changing build profiles.</summary>
 public static class PrototypeBuildCli
 {
+    public static void BuildMac()
+    {
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneOSX)
+            throw new InvalidOperationException("Launch Unity with -buildTarget osx.");
+
+        string output = RequiredOutputPath();
+        if (!output.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("macOS build output must end with .app.");
+        string[] scenes = EditorBuildSettings.scenes
+            .Where(scene => scene.enabled)
+            .Select(scene => scene.path)
+            .ToArray();
+        if (scenes.Length == 0)
+            throw new InvalidOperationException("No enabled scenes in Editor Build Settings.");
+        if (Directory.Exists(output) || File.Exists(output))
+            throw new InvalidOperationException("Build output already exists: " + output);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(output));
+        BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        {
+            scenes = scenes,
+            locationPathName = output,
+            target = BuildTarget.StandaloneOSX,
+            options = BuildOptions.None
+        });
+        if (report.summary.result != BuildResult.Succeeded)
+            throw new InvalidOperationException("macOS build failed: " + report.summary.result);
+
+        UnityEngine.Debug.Log("[PrototypeBuildCli] macOS build ready: " + output);
+    }
+
     public static void BuildWebGL()
     {
         if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
