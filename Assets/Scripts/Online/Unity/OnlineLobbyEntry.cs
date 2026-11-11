@@ -49,7 +49,7 @@ namespace ReReVolt.Online.Unity
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (SceneManager.GetActiveScene().name != Stage3Bootstrap.PrototypeSceneName ||
+            if (!Stage3Bootstrap.IsRuntimeEntryScene(SceneManager.GetActiveScene().name) ||
                 FindAnyObjectByType<OnlineLobbyEntry>() != null) return;
             new GameObject("Online Private Lobby").AddComponent<OnlineLobbyEntry>();
         }

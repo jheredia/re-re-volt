@@ -8,4 +8,5 @@
   <Project Path="ReReVolt.Online.Contracts.csproj" />
   <Project Path="ReReVolt.Online.World.Tests.csproj" />
   <Project Path="ReReVolt.Online.Contracts.Tests.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
 </Solution>

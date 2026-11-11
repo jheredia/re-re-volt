@@ -11,11 +11,15 @@ using Weapons;
 
 namespace Presentation
 {
-    /// <summary>Composes the Stage 3 vertical slice when the enabled prototype scene launches.</summary>
+    /// <summary>Composes the local and private online front end at runtime.</summary>
     [DisallowMultipleComponent]
     public sealed class Stage3Bootstrap : MonoBehaviour
     {
+        public const string FrontEndSceneName = "FrontEnd";
         public const string PrototypeSceneName = "SampleScene";
+
+        public static bool IsRuntimeEntryScene(string sceneName) =>
+            sceneName == FrontEndSceneName || sceneName == PrototypeSceneName;
         private static readonly Color[] PlayerColors =
         {
             new(.95f, .2f, .12f),
@@ -48,9 +52,10 @@ namespace Presentation
         public string ActiveTrackId => activeTrackId;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void BootstrapEnabledPrototypeScene()
+        private static void BootstrapRuntimeEntryScene()
         {
-            if (SceneManager.GetActiveScene().name != PrototypeSceneName || FindAnyObjectByType<Stage3Bootstrap>() != null)
+            if (!IsRuntimeEntryScene(SceneManager.GetActiveScene().name) ||
+                FindAnyObjectByType<Stage3Bootstrap>() != null)
                 return;
 
             GameObject bootstrapObject = new GameObject("Stage3_RuntimeBootstrap");
