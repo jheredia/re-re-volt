@@ -241,6 +241,9 @@ package, transport, service, or authority choice is final.
 - Demo → Early Access → Full release packaging and later Steam-readiness work.
 - Reproducible step-by-step implementation tutorial.
 - Broader car, character, track, music, and club-content production.
+- Race HUD flair: a readable speed dial and RC-motor tachometer treatment,
+  scaled for one to four split-screen views, with restrained motion and audio
+  feedback. Keep essential lap, position, and held-item information legible.
 
 ## Current implementation boundary
 

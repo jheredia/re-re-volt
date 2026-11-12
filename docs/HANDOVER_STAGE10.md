@@ -13,8 +13,20 @@ focused local UDP PlayMode fixture passed **4/4** at
 has not yet been tested in a fresh macOS/WebGL pair through Relay, and the
 template has not been proven as a completed three-lap course. The revision is
 explicit metadata, not an asset hash; bump root and catalog revisions together
-after editing track content. The separate FrontEnd scene and conversion of the
-four generated tracks to editable scenes are still planned.
+after editing track content. Conversion of the four generated tracks to
+editable scenes is still planned.
+
+## 2026-11-12 FrontEnd startup check
+
+Commit `04c268f` adds `FrontEnd.unity` as the first enabled build scene and
+keeps `SampleScene.unity` disabled as a migration/test scene. In Unity
+6000.6.0f1, an Editor Play Mode check opened the FrontEnd title, entered and
+left the private lobby with F8/Escape, joined one keyboard player, and reached
+a running three-lap local race with HUD and timer. The final Console had zero
+warnings and errors. This establishes front-end startup and local flow, not a
+Relay host/join or authored-track player-build check. The current FrontEnd
+still composes code-built courses at runtime; those courses have not been
+migrated to separate editable scenes.
 
 The owner selected Unity Relay for private online friend sessions. A player
 still hosts the race; online AI must be simulated by that host, with at most
