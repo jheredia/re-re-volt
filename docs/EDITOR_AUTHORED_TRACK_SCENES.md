@@ -176,7 +176,7 @@ remain pending the next user-approved validation pass.
 ## Generated-track bake commands
 
 The Editor-only **Tools > ReReVolt > Tracks > Bake ... Scene** commands prepare
-editable Sunset Patio Sweep, Market Aisle Dash, and Club Bridge Exhibition
+editable RC Club Workshop, Sunset Patio Sweep, Market Aisle Dash, and Club Bridge Exhibition
 scenes under `Assets/Scenes/CustomTracks/<stable-id>/Track_<stable-id>.unity`.
 Each refuses an existing destination, builds the current generated course in
 an isolated scene, maps its grid, ordered checkpoint/recovery, and pickup
@@ -190,3 +190,8 @@ executed in Unity, and no generated scene asset has been accepted. After the
 owner approves validation, run each bake in the Editor, reopen the saved scene,
 then check physical laps, recovery, pickups, AI, visual styles, and cleanup
 before replacing the generated track entry.
+
+The Workshop bake additionally persists the eight authored-surface decal meshes
+and their runtime material, retaining referenced texture assets. It copies the
+builder's exact outline eligibility and preserve-source-material flags so the
+optional ink modes can use the same renderer categories after scene migration.

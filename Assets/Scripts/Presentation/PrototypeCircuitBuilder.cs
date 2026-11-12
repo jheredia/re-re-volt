@@ -54,6 +54,8 @@ namespace Presentation
             private readonly VisualStyleController visualStyle;
             private readonly Renderer[] renderers;
             private readonly Stage8SurfaceArtBuilder.Result surfaceArt;
+            private readonly RcClubVenueBuilder.Result venue;
+            private readonly int circuitRendererCount;
 
             internal Result(GameObject root, Transform[] grid, RaceCheckpoint[] checkpoints, Material[] materials,
                 VisualStyleController styleController, Renderer[] registeredRenderers,
@@ -65,6 +67,9 @@ namespace Presentation
                 RuntimeMaterials = materials;
                 visualStyle = styleController;
                 renderers = registeredRenderers;
+                this.venue = venue;
+                circuitRendererCount = registeredRenderers.Length - stage8SurfaceArt.Renderers.Length -
+                                       venue.Renderers.Length;
                 VenueRoot = venue.Root;
                 VenueRendererCount = venue.Renderers.Length;
                 VenueOutlineEligibleRendererCount = venue.OutlineEligibleRendererCount;
@@ -98,6 +103,26 @@ namespace Presentation
             {
                 for (int i = 0; i < RuntimeMaterials.Length; i++)
                     if (ReferenceEquals(RuntimeMaterials[i], candidate)) return true;
+                return false;
+            }
+
+            /// <summary>Returns the exact style flags used when this generated renderer is registered at runtime.</summary>
+            public bool TryGetVisualStyle(Renderer candidate, out bool outlineEligible,
+                out bool preserveSourceMaterial)
+            {
+                outlineEligible = false;
+                preserveSourceMaterial = false;
+                for (int index = 0; index < renderers.Length; index++)
+                {
+                    if (!ReferenceEquals(renderers[index], candidate)) continue;
+                    if (index < circuitRendererCount)
+                        outlineEligible = IsOutlineEligible(candidate.gameObject.name);
+                    else if (index < circuitRendererCount + surfaceArt.Renderers.Length)
+                        preserveSourceMaterial = true;
+                    else
+                        outlineEligible = venue.IsOutlineEligible(candidate);
+                    return true;
+                }
                 return false;
             }
 
@@ -380,7 +405,7 @@ namespace Presentation
             item.transform.SetLocalPositionAndRotation(position, rotation == default ? Quaternion.identity : rotation);
             item.transform.localScale = scale;
             item.GetComponent<Renderer>().sharedMaterial = material;
-            if (!collider) UnityEngine.Object.Destroy(item.GetComponent<Collider>());
+            if (!collider) DestroyPresentationCollider(item);
             else if (surfaceKind != TrackSurfaceKind.Unclassified)
                 item.AddComponent<TrackSurfaceMarker>().Configure(surfaceKind);
             return item;
@@ -395,10 +420,17 @@ namespace Presentation
             item.transform.localPosition = position;
             item.transform.localScale = scale;
             item.GetComponent<Renderer>().sharedMaterial = material;
-            if (!collider) UnityEngine.Object.Destroy(item.GetComponent<Collider>());
+            if (!collider) DestroyPresentationCollider(item);
             else if (surfaceKind != TrackSurfaceKind.Unclassified)
                 item.AddComponent<TrackSurfaceMarker>().Configure(surfaceKind);
             return item;
+        }
+
+        private static void DestroyPresentationCollider(GameObject item)
+        {
+            Collider collider = item.GetComponent<Collider>();
+            if (Application.isPlaying) UnityEngine.Object.Destroy(collider);
+            else UnityEngine.Object.DestroyImmediate(collider);
         }
 
         private static Material CreateMaterial(string name, Color color, float metallic = 0f)

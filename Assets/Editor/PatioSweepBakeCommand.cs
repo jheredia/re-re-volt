@@ -14,10 +14,13 @@ public static class PatioSweepBakeCommand
     public static string Bake() => Stage9CGeneratedTrackBakeCommand.Bake(TrackCatalog.PatioSweepId);
 }
 
-/// <summary>Bakes a Stage 9C generated course into an isolated, editable scene.</summary>
+/// <summary>Bakes a generated course into an isolated, editable scene.</summary>
 public static class Stage9CGeneratedTrackBakeCommand
 {
     private const string MenuRoot = "Tools/ReReVolt/Tracks/";
+
+    [MenuItem(MenuRoot + "Bake RC Club Workshop Scene")]
+    private static void BakeWorkshopFromMenu() => BakeFromMenu(TrackCatalog.WorkshopCircuitId);
 
     [MenuItem(MenuRoot + "Bake Sunset Patio Sweep Scene")]
     private static void BakePatioFromMenu() => BakeFromMenu(TrackCatalog.PatioSweepId);
@@ -131,13 +134,7 @@ public static class Stage9CGeneratedTrackBakeCommand
 
             CheckCanceled(definition.DisplayName, "Persisting materials and meshes", .45f);
             PersistRuntimeAssets(authoring, folder);
-            foreach (Renderer renderer in authoring.GetComponentsInChildren<Renderer>(true))
-            {
-                bool decoration = renderer.GetComponent<NearCameraPresentationOccludable>() is
-                    { Kind: NearCameraOcclusionKind.Decoration };
-                bool outline = decoration || renderer.gameObject.name.StartsWith("Barrier_", StringComparison.Ordinal);
-                renderer.gameObject.AddComponent<TrackAuthoringVisual>().Configure(outline);
-            }
+            ConfigureVisuals(authoring, runtime);
             if (!TrackAuthoringEditorTools.TryValidateScene(temporaryScene, out string report))
                 throw new InvalidOperationException("Baked " + id + " scene failed structural validation:\n" + report);
             CheckCanceled(definition.DisplayName, "Saving scene", .85f);
@@ -186,6 +183,8 @@ public static class Stage9CGeneratedTrackBakeCommand
     {
         switch (id)
         {
+            case TrackCatalog.WorkshopCircuitId:
+                return (race, parent, style) => PrototypeCircuitBuilder.Build(race, parent, style);
             case TrackCatalog.PatioSweepId:
                 return Stage9CAuthoredTrackBuilder.BuildPatioSweep;
             case TrackCatalog.MarketAislesId:
@@ -193,7 +192,31 @@ public static class Stage9CGeneratedTrackBakeCommand
             case TrackCatalog.BridgeExhibitionId:
                 return Stage9CAuthoredTrackBuilder.BuildBridgeExhibition;
             default:
-                throw new ArgumentException("Only Stage 9C generated tracks can be baked.", nameof(id));
+                throw new ArgumentException("Only supported generated tracks can be baked.", nameof(id));
+        }
+    }
+
+    private static void ConfigureVisuals(TrackAuthoringRoot authoring, ITrackRuntime runtime)
+    {
+        var workshop = runtime as PrototypeCircuitBuilder.Result;
+        foreach (Renderer renderer in authoring.GetComponentsInChildren<Renderer>(true))
+        {
+            bool outline;
+            bool preserveSourceMaterial = false;
+            if (workshop != null)
+            {
+                if (!workshop.TryGetVisualStyle(renderer, out outline, out preserveSourceMaterial))
+                    throw new InvalidOperationException("Workshop renderer is missing its generated visual style: " +
+                                                        renderer.name);
+            }
+            else
+            {
+                bool decoration = renderer.GetComponent<NearCameraPresentationOccludable>() is
+                    { Kind: NearCameraOcclusionKind.Decoration };
+                outline = decoration || renderer.gameObject.name.StartsWith("Barrier_", StringComparison.Ordinal);
+            }
+            renderer.gameObject.AddComponent<TrackAuthoringVisual>()
+                .Configure(outline, preserveSourceMaterial);
         }
     }
 
@@ -236,6 +259,7 @@ public static class Stage9CGeneratedTrackBakeCommand
         if (copies.TryGetValue(source, out Mesh existing)) return existing;
         Mesh copy = UnityEngine.Object.Instantiate(source);
         copy.name = source.name;
+        copy.hideFlags = HideFlags.None;
         string path = $"{folder}/Mesh_{copies.Count:00}.asset";
         AssetDatabase.CreateAsset(copy, path);
         if (AssetDatabase.LoadAssetAtPath<Mesh>(path) != copy)
