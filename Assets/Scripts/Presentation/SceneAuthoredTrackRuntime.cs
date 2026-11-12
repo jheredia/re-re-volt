@@ -148,10 +148,12 @@ namespace Presentation
         /// non-cancelable load to finish, then unloads it before returning the cancellation.
         /// </summary>
         public static async Task<SceneAuthoredTrackRuntime> LoadAsync(string scenePath,
-            string expectedId, RaceManager race, VisualStyleController style,
+            string expectedId, string expectedRevision, RaceManager race, VisualStyleController style,
             SceneTrackMode mode, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(scenePath)) throw new ArgumentException("A track scene path is required.", nameof(scenePath));
+            if (string.IsNullOrWhiteSpace(expectedRevision))
+                throw new ArgumentException("A track content revision is required.", nameof(expectedRevision));
             await Awaitable.MainThreadAsync();
             if (!Application.isPlaying) throw new InvalidOperationException("Load authored track scenes during Play mode.");
             cancellationToken.ThrowIfCancellationRequested();
@@ -179,6 +181,10 @@ namespace Presentation
                 }
                 if (!loaded.IsValid())
                     throw new InvalidOperationException("Loaded track scene could not be identified: " + scenePath);
+                GameObject[] roots = loaded.GetRootGameObjects();
+                if (roots.Length != 1 || !roots[0].TryGetComponent(out TrackAuthoringRoot authoring) ||
+                    !string.Equals(authoring.ContentRevision, expectedRevision, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Loaded track scene content revision differs from its catalog entry.");
                 cancellationToken.ThrowIfCancellationRequested();
                 return BindLoadedScene(loaded, expectedId, race, style, mode);
             }

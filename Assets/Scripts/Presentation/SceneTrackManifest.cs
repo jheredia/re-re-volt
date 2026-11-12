@@ -32,6 +32,8 @@ namespace Presentation
             foreach (SceneTrackRecord track in manifest.tracks)
             {
                 if (track == null || !IsValidId(track.Id) || !ids.Add(track.Id) ||
+                    track.OverridesBuiltIn != IsBuiltInTrackId(track.Id) ||
+                    string.Equals(track.Id, TrackCatalog.BetaTemplateId, StringComparison.Ordinal) ||
                     string.IsNullOrWhiteSpace(track.DisplayName) ||
                     string.IsNullOrWhiteSpace(track.Description) ||
                     !IsValidRevision(track.ContentRevision) ||
@@ -53,6 +55,12 @@ namespace Presentation
             }
             return id[id.Length - 1] != '-';
         }
+
+        public static bool IsBuiltInTrackId(string id) =>
+            string.Equals(id, TrackCatalog.WorkshopCircuitId, StringComparison.Ordinal) ||
+            string.Equals(id, TrackCatalog.PatioSweepId, StringComparison.Ordinal) ||
+            string.Equals(id, TrackCatalog.MarketAislesId, StringComparison.Ordinal) ||
+            string.Equals(id, TrackCatalog.BridgeExhibitionId, StringComparison.Ordinal);
 
         public static bool IsValidRevision(string revision)
         {
@@ -102,9 +110,11 @@ namespace Presentation
         [SerializeField] private string contentRevision;
         [SerializeField] private int lapCount;
         [SerializeField] private int orderedCheckpointCount;
+        [SerializeField] private bool overridesBuiltIn;
 
         public SceneTrackRecord(string id, string displayName, string description, string previewMetadata,
-            string scenePath, string contentRevision, int lapCount, int orderedCheckpointCount)
+            string scenePath, string contentRevision, int lapCount, int orderedCheckpointCount,
+            bool overridesBuiltIn = false)
         {
             this.id = id;
             this.displayName = displayName;
@@ -114,6 +124,7 @@ namespace Presentation
             this.contentRevision = contentRevision;
             this.lapCount = lapCount;
             this.orderedCheckpointCount = orderedCheckpointCount;
+            this.overridesBuiltIn = overridesBuiltIn;
         }
 
         public string Id => id;
@@ -124,5 +135,6 @@ namespace Presentation
         public string ContentRevision => contentRevision;
         public int LapCount => lapCount;
         public int OrderedCheckpointCount => orderedCheckpointCount;
+        public bool OverridesBuiltIn => overridesBuiltIn;
     }
 }

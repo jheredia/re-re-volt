@@ -89,16 +89,16 @@ namespace Presentation
             // The accepted generated circuit remains the initial shell while an authored
             // scene saved in preferences is loaded and validated additively.
             TrackSession = new TrackSession(TrackCatalog.LocalEntries);
-            TrackDefinition selectedTrack = TrackSession.SelectedTrack;
+            TrackDefinition initialShell = TrackCatalog.Entries[0];
 
-            if (!RaceManager.ConfigureRace(selectedTrack.LapCount, selectedTrack.OrderedCheckpointCount))
+            if (!RaceManager.ConfigureRace(initialShell.LapCount, initialShell.OrderedCheckpointCount))
             {
                 Debug.LogError("[Stage3] RaceManager must be idle and empty before the circuit is composed.", this);
                 return false;
             }
 
-            circuit = TrackSession.BuildSelected(RaceManager, transform, VisualStyle);
-            activeTrackId = selectedTrack.Id;
+            circuit = initialShell.Builder(RaceManager, transform, VisualStyle);
+            activeTrackId = initialShell.Id;
             if (!VehicleManager.Configure(RaceManager, circuit.Grid, null, lobbyCamera, VisualStyle))
             {
                 Debug.LogError("[Stage3] VehicleManager could not accept the generated four-place grid.", this);
@@ -117,7 +117,10 @@ namespace Presentation
             }
             Presentation = gameObject.AddComponent<Stage3RacePresentation>();
             Presentation.Configure(RaceManager, VehicleManager, VisualStyle, DriverPortraitAtlas.Runtime,
-                DemoPreferences, AIManager, TrackSession, TryCycleTrack, () => !trackLoadPending);
+                DemoPreferences, AIManager, TrackSession, TryCycleTrack,
+                () => !trackLoadPending && circuit != null &&
+                      string.Equals(TrackSession.SelectedTrackId, activeTrackId, StringComparison.Ordinal) &&
+                      TrackSession.SelectedTrack.IsSceneAuthored == (circuit is SceneAuthoredTrackRuntime));
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
@@ -133,8 +136,10 @@ namespace Presentation
             HandlingBakeOff.Configure(RaceManager, VehicleManager);
             ConfigureGameManager();
             initialized = true;
-            if (!string.Equals(DemoPreferences.TrackId, activeTrackId, StringComparison.Ordinal) &&
-                TrackSession.TrySelect(DemoPreferences.TrackId))
+            if (!string.Equals(DemoPreferences.TrackId, activeTrackId, StringComparison.Ordinal))
+                TrackSession.TrySelect(DemoPreferences.TrackId);
+            if (!string.Equals(TrackSession.SelectedTrackId, activeTrackId, StringComparison.Ordinal) ||
+                TrackSession.SelectedTrack.IsSceneAuthored)
                 BeginTrackActivation(activeTrackId);
             Debug.Log("[Stage3] Craft-room circuit and controller-first race presentation are ready.", this);
             return true;
@@ -148,7 +153,8 @@ namespace Presentation
             string previousSelection = TrackSession.SelectedTrackId;
             if (!TrackSession.TryCycle(direction)) return false;
             if (!TrackSession.CanStart) return true;
-            if (string.Equals(activeTrackId, TrackSession.SelectedTrackId, System.StringComparison.Ordinal))
+            if (string.Equals(activeTrackId, TrackSession.SelectedTrackId, System.StringComparison.Ordinal) &&
+                TrackSession.SelectedTrack.IsSceneAuthored == (circuit is SceneAuthoredTrackRuntime))
             {
                 DemoPreferences.SetTrackId(TrackSession.SelectedTrackId);
                 return true;
@@ -180,6 +186,7 @@ namespace Presentation
                         throw new InvalidOperationException("Race rules rejected the authored track.");
                     rulesChanged = true;
                     candidate = await SceneAuthoredTrackRuntime.LoadAsync(selected.ScenePath, selected.Id,
+                        selected.ContentRevision,
                         RaceManager, VisualStyle, SceneTrackMode.Authoritative, cancellation.Token);
                 }
                 else candidate = TrackSession.BuildSelected(RaceManager, transform, VisualStyle);

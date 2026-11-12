@@ -23,6 +23,18 @@ scene before its stable catalog ID is switched to scene loading. RC Club
 Workshop's extra surface-decal meshes and exact style flags are included in
 the source-only command; saved-scene and player behavior remain unverified.
 
+## Opt-in built-in scene overrides — source-only checkpoint
+
+The catalog can now replace any of its four generated courses with a
+scene-backed definition under the same stable ID and selection slot. An Editor
+activation command accepts only a saved, structurally valid bake with matching
+lap/checkpoint counts and a new explicit content revision; it updates the
+scene, manifest, and build list with rollback. Startup retains the generated
+Workshop shell while an overridden default scene loads, and Start remains
+locked unless the selected ID and runtime type match the active circuit.
+The online compatibility fingerprint includes scene-vs-generated source and
+revision. No override has been activated or tested in Unity.
+
 ## Scene-track authoring workflow — source-only checkpoint
 
 A scene-track manifest and two Unity Editor commands now let a designer copy

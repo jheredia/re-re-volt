@@ -54,8 +54,8 @@ namespace Presentation
     }
 
     /// <summary>
-    /// Generated courses and the beta template keep their original definitions. Scene entries are loaded from
-    /// a deterministic manifest; the scene itself owns geometry, anchors, and checkpoints.
+    /// Generated definitions remain the fallback. Explicit scene overrides take their four stable selection
+    /// slots; additional scene IDs follow the beta template in ordinal ID order.
     /// </summary>
     public static class TrackCatalog
     {
@@ -125,6 +125,22 @@ namespace Presentation
                 foreach (TrackDefinition builtIn in result) ids.Add(builtIn.Id);
                 foreach (SceneTrackRecord track in manifest.Tracks)
                 {
+                    if (track.OverridesBuiltIn)
+                    {
+                        int index = -1;
+                        for (int i = 0; i < entries.Length; i++)
+                            if (string.Equals(entries[i].Id, track.Id, StringComparison.Ordinal))
+                            { index = i; break; }
+                        if (index < 0) throw new FormatException($"Unknown built-in override '{track.Id}'.");
+                        TrackDefinition builtIn = entries[index];
+                        if (track.LapCount != builtIn.LapCount ||
+                            track.OrderedCheckpointCount != builtIn.OrderedCheckpointCount)
+                            throw new FormatException($"Built-in override '{track.Id}' changes race metadata.");
+                        result[index] = new TrackDefinition(builtIn.Id, builtIn.DisplayName,
+                            builtIn.FlowDescription, builtIn.PreviewMetadata, builtIn.LapCount,
+                            builtIn.OrderedCheckpointCount, null, track.ScenePath, track.ContentRevision);
+                        continue;
+                    }
                     if (!ids.Add(track.Id))
                         throw new FormatException($"Scene track ID '{track.Id}' conflicts with an existing track.");
                     result.Add(new TrackDefinition(track.Id, track.DisplayName, track.Description,

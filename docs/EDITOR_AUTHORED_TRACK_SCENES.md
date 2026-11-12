@@ -195,3 +195,19 @@ The Workshop bake additionally persists the eight authored-surface decal meshes
 and their runtime material, retaining referenced texture assets. It copies the
 builder's exact outline eligibility and preserve-source-material flags so the
 optional ink modes can use the same renderer categories after scene migration.
+
+## Opting a baked course into play
+
+After a baked course has been inspected and saved, open that scene alone and use
+**Tools > ReReVolt > Tracks > Activate Open Baked Track Scene**. Enter a new
+content revision. The command checks the scene's stable ID/path, keeps the
+original lap and checkpoint counts, checks the authoring structure, enables
+the scene in Build Settings, and records an explicit built-in override in the
+manifest. It restores the prior scene bytes, manifest, and build list if the
+transaction fails. The four stable selection slots and names stay in place;
+the generated builders remain in source as fallback definitions. Additional
+custom scenes follow those four and the beta template in sorted ID order.
+
+No built-in override has been activated. This source-only implementation still
+needs owner-approved Unity compilation, Editor command execution, saved-scene
+inspection, local/AI race checks, online compatibility, and player builds.
