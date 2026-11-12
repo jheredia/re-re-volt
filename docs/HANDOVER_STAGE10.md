@@ -1,5 +1,13 @@
 # Stage 10 handover — Relay foundation in progress
 
+## Scene View track-authoring overlay — source-only checkpoint
+
+Selecting an authored track root now displays checkpoint order/direction,
+grid and recovery poses, pickup positions, and missing/duplicate/out-of-range
+index status in the Unity Scene View. It is read-only and does not alter the
+runtime track contract. Unity import and visual inspection are deferred with
+the other owner-approved validation groups.
+
 ## Race telemetry dials — source-only checkpoint
 
 Offline and private online per-player HUDs now include viewport-local speed

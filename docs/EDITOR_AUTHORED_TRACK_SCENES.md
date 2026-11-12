@@ -211,3 +211,12 @@ custom scenes follow those four and the beta template in sorted ID order.
 No built-in override has been activated. This source-only implementation still
 needs owner-approved Unity compilation, Editor command execution, saved-scene
 inspection, local/AI race checks, online compatibility, and player builds.
+
+## Scene View authoring overlay
+
+Selecting a `TrackAuthoringRoot` now shows numbered checkpoints and route
+arrows, grid and recovery poses, pickup positions, and index-count/status
+labels in the Scene View. Missing, duplicate, and out-of-range indices are
+flagged without changing the scene; the structural validator remains the
+acceptance check. This Editor-only aid has been reviewed in source but still
+needs owner-approved Unity import and a Scene View readability check.
