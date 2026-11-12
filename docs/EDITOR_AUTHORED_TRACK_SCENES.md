@@ -62,8 +62,8 @@ does not prove that a car or bot can complete a lap; drive and AI tests are
 still needed after runtime integration.
 
 The first authoring slice did not add the template to the build scene list or
-`TrackCatalog`; the later local-selection slice below does. Online selection
-still needs its host/client loading handshake.
+`TrackCatalog`; the later local-selection slice below did. The online loading
+handshake is described below as well.
 
 On 2026-11-10, Unity 6000.6.0f1 imported the new authoring components, created
 the template scene, then reopened the saved scene in a separate batch run and
@@ -130,3 +130,45 @@ not prove asset-byte identity. A real course and its three-lap AI path remain
 to be authored and validated.
 
 A future **single changing course** can use the same catalog/runtime contract with a deterministic generator. Its seed and generator/content revision must be locked in the lobby and shared with clients; it need not become a fixed scene. Static environment pieces could still be authored as scene or prefab assets. Keep this course an exception so the other tracks retain learnable shortcuts and lines.
+
+## Creating another playable scene track
+
+Use **Tools > ReReVolt > Tracks > Create Playable Scene Track** in the Unity
+Editor. Enter a permanent lowercase ID, display name, one-line flow description,
+and content revision (for example `v1`). The command copies
+`Track_BetaTemplate.unity` into
+`Assets/Scenes/CustomTracks/<id>/Track_<id>.unity`, copies its referenced
+template materials into that track's `Materials` folder, rewires the copied
+renderers, and sets the copied `TrackAuthoringRoot` ID and revision. It checks
+the scene structure, adds the new scene to the enabled build scene list, and
+registers it in `Assets/Resources/SceneTrackManifest.json`. If creation fails,
+the command restores the previous manifest and build scene list and removes
+the copied assets. It leaves the new scene open for geometry editing on success.
+
+The manifest stores only selection and race setup metadata: ID, name,
+description, preview label, scene path, content revision, laps, and checkpoint
+count. Road geometry, materials, anchors, checkpoints, pickups, and surfaces
+remain in the scene. The four generated entries and beta template remain in
+their original order; additional scene entries are sorted by stable ID on load.
+This order and the explicit revision feed the online compatibility fingerprint.
+The creation command starts with the template's three laps and eight
+checkpoints. After changing the lap count, checkpoint count, or other playable
+scene content, change the root's `contentRevision` in the Inspector, then save
+the scene. Use **Tools > ReReVolt > Tracks > Sync Open Scene Track Registration**
+to copy the saved root's lap count and revision plus the scene's checkpoint
+count into its existing manifest entry. The command preserves the stable ID,
+display name, and description, updates the checkpoint preview label, and keeps
+manifest order deterministic. It rejects unsaved changes, the beta template,
+unregistered scenes, invalid scene structure, and scenes missing from the
+enabled build list. A mismatch stops scene preload; a matching revision is
+still an author-controlled claim, not an asset hash. Ship the manifest,
+scenes, and materials from the same project revision to all Relay peers.
+
+The existing scene validator checks structure and references. It does not
+prove a drivable route or AI completion, so a new course still needs a one to
+four local player pass, zero to three AI pass, and a matching-build Relay pass
+before release. The generated tracks have not been migrated to scenes.
+
+This manifest/Editor-command slice was reviewed in source only. Unity import,
+compilation, command execution, local selection, and online player behavior
+remain pending the next user-approved validation pass.

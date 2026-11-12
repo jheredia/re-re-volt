@@ -24,10 +24,17 @@ namespace Presentation
 
         public void Configure(string id, int lapCount)
         {
+            Configure(id, lapCount, contentRevision);
+        }
+
+        public void Configure(string id, int lapCount, string revision)
+        {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A track needs a stable ID.", nameof(id));
             if (lapCount < 1) throw new ArgumentOutOfRangeException(nameof(lapCount));
+            if (string.IsNullOrWhiteSpace(revision)) throw new ArgumentException("A track needs a content revision.", nameof(revision));
             stableId = id.Trim();
             laps = lapCount;
+            contentRevision = revision.Trim();
         }
 
         /// <summary>Returns actionable authoring errors without changing the scene.</summary>

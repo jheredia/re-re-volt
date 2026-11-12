@@ -1,5 +1,17 @@
 # Stage 10 handover — Relay foundation in progress
 
+## Scene-track authoring workflow — source-only checkpoint
+
+A scene-track manifest and two Unity Editor commands now let a designer copy
+the beta template into a registered custom course, then synchronize saved lap,
+checkpoint, and revision metadata after editing. Custom entries follow the
+four generated courses and beta template in deterministic ID order for local
+and private online selection. The scene remains geometry authority; the
+manifest holds selection and race-setup metadata. This slice has received
+source review only. Unity compilation, actual Editor command execution, local
+selection, and online player behavior remain unverified until the owner
+authorizes the pending validation set.
+
 ## 2026-11-10 scene-authored online loading checkpoint
 
 The editable `custom-beta-track` template is selectable in the private online

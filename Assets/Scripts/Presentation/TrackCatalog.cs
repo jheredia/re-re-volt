@@ -54,8 +54,8 @@ namespace Presentation
     }
 
     /// <summary>
-    /// Authored track roster. Stage 9C intentionally starts with one genuine entry; later content builders add
-    /// definitions here rather than changing demo-flow or session authority.
+    /// Generated courses and the beta template keep their original definitions. Scene entries are loaded from
+    /// a deterministic manifest; the scene itself owns geometry, anchors, and checkpoints.
     /// </summary>
     public static class TrackCatalog
     {
@@ -90,16 +90,55 @@ namespace Presentation
         private static readonly TrackDefinition betaTemplate = new(BetaTemplateId, "BETA TRACK TEMPLATE",
             "EDITOR-AUTHORED TEST COURSE", "EDITABLE ROAD / 8 CHECKPOINTS", 3, 8,
             null, BetaTemplateScenePath, "beta-template-v1");
-        private static readonly TrackDefinition[] localEntries =
-        {
-            entries[0], entries[1], entries[2], entries[3], betaTemplate
-        };
+        private static TrackDefinition[] localEntries = BuildSelectableEntries();
 
         // Generated builders remain a useful synchronous subset for existing callers.
         public static IReadOnlyList<TrackDefinition> Entries => entries;
         public static IReadOnlyList<TrackDefinition> SelectableEntries => localEntries;
         public static IReadOnlyList<TrackDefinition> LocalEntries => localEntries;
         public static TrackDefinition Default => entries[0];
+
+        /// <summary>Refresh after an Editor authoring command changes the manifest without a domain reload.</summary>
+#if UNITY_EDITOR
+        public static void ReloadSceneManifest(string json) => localEntries = BuildSelectableEntries(json);
+#endif
+
+        private static TrackDefinition[] BuildSelectableEntries(string manifestJson = null)
+        {
+            var result = new List<TrackDefinition>(entries.Length + 1);
+            result.AddRange(entries);
+            result.Add(betaTemplate);
+            if (manifestJson == null)
+            {
+                TextAsset asset = Resources.Load<TextAsset>(SceneTrackManifest.ResourceName);
+                if (asset == null)
+                {
+                    Debug.LogError("[TrackCatalog] Missing scene track manifest: " + SceneTrackManifest.AssetPath);
+                    return result.ToArray();
+                }
+                manifestJson = asset.text;
+            }
+            try
+            {
+                SceneTrackManifest manifest = SceneTrackManifest.Parse(manifestJson);
+                var ids = new HashSet<string>(StringComparer.Ordinal);
+                foreach (TrackDefinition builtIn in result) ids.Add(builtIn.Id);
+                foreach (SceneTrackRecord track in manifest.Tracks)
+                {
+                    if (!ids.Add(track.Id))
+                        throw new FormatException($"Scene track ID '{track.Id}' conflicts with an existing track.");
+                    result.Add(new TrackDefinition(track.Id, track.DisplayName, track.Description,
+                        track.PreviewMetadata, track.LapCount, track.OrderedCheckpointCount,
+                        null, track.ScenePath, track.ContentRevision));
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError("[TrackCatalog] Invalid scene track manifest: " + exception.Message);
+                return new[] { entries[0], entries[1], entries[2], entries[3], betaTemplate };
+            }
+            return result.ToArray();
+        }
 
         public static bool TryGet(string id, out TrackDefinition definition)
         {
