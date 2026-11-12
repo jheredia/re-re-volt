@@ -18,10 +18,12 @@ namespace Presentation
     public sealed class NearCameraPresentationOccludable : MonoBehaviour
     {
         private static readonly HashSet<NearCameraPresentationOccludable> ActiveCandidates = new();
+        [SerializeField] private NearCameraOcclusionKind kind;
+        [SerializeField] private Transform visibilityOwner;
         private Renderer[] renderers = Array.Empty<Renderer>();
 
-        public NearCameraOcclusionKind Kind { get; private set; }
-        public Transform VisibilityOwner { get; private set; }
+        public NearCameraOcclusionKind Kind => kind;
+        public Transform VisibilityOwner => visibilityOwner;
         public int RendererCount => renderers.Length;
         internal static IEnumerable<NearCameraPresentationOccludable> Candidates => ActiveCandidates;
         internal Renderer[] Renderers => renderers;
@@ -31,8 +33,8 @@ namespace Presentation
 
         public void Configure(NearCameraOcclusionKind kind, Transform visibilityOwner = null)
         {
-            Kind = kind;
-            VisibilityOwner = visibilityOwner;
+            this.kind = kind;
+            this.visibilityOwner = visibilityOwner;
             renderers = GetComponentsInChildren<Renderer>(true);
         }
 

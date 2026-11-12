@@ -10,6 +10,16 @@ fingerprint changed, so peers need matching builds. The source was reviewed,
 but Unity compilation, one-to-four-player layout captures, snapshot tests,
 and live Relay behavior remain pending owner-approved validation.
 
+## Patio generated-to-scene bake — source-only checkpoint
+
+An Editor command now prepares a durable editable Sunset Patio Sweep scene
+from the current generated layout without changing the playable catalog or
+build scene list. It persists generated material/mesh assets and translates
+grid, checkpoint, recovery, pickup, surface, visual-style, and decoration
+markers. The command has not run in Unity; no Patio scene has been generated
+or accepted. Later owner-approved validation must inspect and compare the
+saved scene before its stable catalog ID is switched to scene loading.
+
 ## Scene-track authoring workflow — source-only checkpoint
 
 A scene-track manifest and two Unity Editor commands now let a designer copy

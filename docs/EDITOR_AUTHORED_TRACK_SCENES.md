@@ -172,3 +172,21 @@ before release. The generated tracks have not been migrated to scenes.
 This manifest/Editor-command slice was reviewed in source only. Unity import,
 compilation, command execution, local selection, and online player behavior
 remain pending the next user-approved validation pass.
+
+## First generated-track bake command
+
+**Tools > ReReVolt > Tracks > Bake Sunset Patio Sweep Scene** is an Editor-only
+command that prepares an editable scene at
+`Assets/Scenes/CustomTracks/sunset-patio-sweep/Track_sunset-patio-sweep.unity`.
+It refuses an existing destination, builds the current generated Patio course
+in an isolated scene, maps its grid, ordered checkpoint/recovery, and pickup
+data to authoring markers, saves owned materials and meshes as assets, and
+leaves the original Editor scene active. It does not switch the production
+Patio catalog entry or enable the baked scene in builds. Those changes require
+comparing the saved scene with the accepted generated course first.
+
+The bake command has been reviewed in source only; it has not been executed in
+Unity, and no Patio scene asset has been accepted. After the owner approves
+validation, run the bake in the Editor, reopen and inspect the saved scene,
+then check physical laps, recovery, pickups, AI, visual styles, and cleanup
+before replacing the generated track entry.
