@@ -187,6 +187,8 @@ namespace ReReVolt.Online.Unity
                 {
                     RacerId = racer.Id, Position = Vector(p), Velocity = Vector(v), AngularVelocity = Vector(a),
                     Rotation = new WorldRotation { X = q.x, Y = q.y, Z = q.z, W = q.w },
+                    SpeedKph = BoundedTelemetry(racer.Vehicle.CurrentSpeed, DrivingRacerState.MaximumSpeedKph),
+                    RearWheelRpm = BoundedTelemetry(racer.Vehicle.RearWheelRpm, DrivingRacerState.MaximumRearWheelRpm),
                     CompletedLaps = racer.Progress.CompletedLaps, NextCheckpoint = racer.Progress.NextCheckpointIndex,
                     PositionInRace = racer.Progress.CurrentPosition, FinishPosition = racer.Progress.FinishPosition,
                     FinishTime = racer.Progress.FinishTime, AcknowledgedInput = racer.AcknowledgedInput,
@@ -215,6 +217,9 @@ namespace ReReVolt.Online.Unity
             vehicle = null;
             return false;
         }
+
+        private static float BoundedTelemetry(float value, float maximum) =>
+            float.IsNaN(value) || float.IsInfinity(value) ? 0f : Mathf.Clamp(value, 0f, maximum);
 
         internal void TryCollectPickup(int pickupIndex, Collider collider)
         {

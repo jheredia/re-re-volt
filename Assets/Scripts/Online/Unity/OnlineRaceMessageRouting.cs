@@ -162,7 +162,8 @@ namespace ReReVolt.Online.Unity
     /// <summary>Small bounded codec isolated from NGO callbacks for focused validation.</summary>
     public static class OnlineRaceWireCodec
     {
-        private const int Version = 4;
+        private const int InputVersion = 4;
+        private const int SnapshotVersion = 5;
         private const int MaximumInputBytes = 2048;
         private const int MaximumSnapshotBytes = 8192;
 
@@ -170,14 +171,14 @@ namespace ReReVolt.Online.Unity
         [Serializable] private sealed class SnapshotEnvelope { public int Version; public DrivingWorldSnapshot Snapshot; }
 
         public static bool TryEncodeInput(PeerInputFrame frame, out byte[] bytes) =>
-            TryEncode(new InputEnvelope { Version = Version, Frame = frame }, MaximumInputBytes, out bytes);
+            TryEncode(new InputEnvelope { Version = InputVersion, Frame = frame }, MaximumInputBytes, out bytes);
         public static bool TryEncodeSnapshot(DrivingWorldSnapshot snapshot, out byte[] bytes) =>
-            TryEncode(new SnapshotEnvelope { Version = Version, Snapshot = snapshot }, MaximumSnapshotBytes, out bytes);
+            TryEncode(new SnapshotEnvelope { Version = SnapshotVersion, Snapshot = snapshot }, MaximumSnapshotBytes, out bytes);
 
         public static bool TryDecodeInput(byte[] bytes, out PeerInputFrame frame)
         {
             frame = null;
-            if (!TryDecode(bytes, MaximumInputBytes, out InputEnvelope message) || message.Version != Version || message.Frame == null)
+            if (!TryDecode(bytes, MaximumInputBytes, out InputEnvelope message) || message.Version != InputVersion || message.Frame == null)
                 return false;
             frame = message.Frame;
             return true;
@@ -186,7 +187,7 @@ namespace ReReVolt.Online.Unity
         public static bool TryDecodeSnapshot(byte[] bytes, out DrivingWorldSnapshot snapshot)
         {
             snapshot = null;
-            if (!TryDecode(bytes, MaximumSnapshotBytes, out SnapshotEnvelope message) || message.Version != Version || message.Snapshot == null)
+            if (!TryDecode(bytes, MaximumSnapshotBytes, out SnapshotEnvelope message) || message.Version != SnapshotVersion || message.Snapshot == null)
                 return false;
             snapshot = message.Snapshot;
             return true;

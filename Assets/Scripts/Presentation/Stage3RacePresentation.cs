@@ -42,6 +42,7 @@ namespace Presentation
         }
 
         private readonly Dictionary<int, TextMeshProUGUI> hudLabels = new();
+        private readonly Dictionary<int, RaceTelemetryDial> telemetryDials = new();
         private readonly Dictionary<int, RawImage> hudPortraits = new();
         private readonly List<RawImage> lobbyPortraits = new();
         private readonly Dictionary<int, string> weaponLabels = new();
@@ -615,6 +616,7 @@ namespace Presentation
             foreach (TextMeshProUGUI label in hudLabels.Values)
                 if (label != null) Destroy(label.transform.parent.parent.gameObject);
             hudLabels.Clear();
+            telemetryDials.Clear();
             hudPortraits.Clear();
             weaponIdentities.Clear();
 
@@ -670,6 +672,7 @@ namespace Presentation
                 textRect.offsetMin = new Vector2(textInset, compact ? 6f : 8f);
                 textRect.offsetMax = new Vector2(compact ? -80f : -112f, compact ? -6f : -9f);
                 hudLabels[player.PlayerIndex] = label;
+                telemetryDials[player.PlayerIndex] = RaceTelemetryDial.Create(viewportRoot.transform, vehicles.Players.Count);
                 weaponIdentities[player.PlayerIndex] = CreateWeaponIdentity(badge.transform, compact);
                 RefreshWeaponIdentity(player.PlayerIndex);
             }
@@ -697,6 +700,8 @@ namespace Presentation
                              $"{racer.CurrentPosition}/{total}\n" +
                              $"{persona.Callsign}   LAP {racer.CurrentLap}/{race.TotalLaps}{status}\n" +
                              $"{FormatTime(race.ElapsedTime)}   WPN [{weapon}]";
+                if (telemetryDials.TryGetValue(player.PlayerIndex, out RaceTelemetryDial dial))
+                    dial.SetTelemetry(player.Vehicle.CurrentSpeed, player.Vehicle.RearWheelRpm);
             }
         }
 

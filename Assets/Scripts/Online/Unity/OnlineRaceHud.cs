@@ -22,6 +22,7 @@ namespace ReReVolt.Online.Unity
             public uint RacerId;
             public int Slot;
             public TextMeshProUGUI Text;
+            public RaceTelemetryDial Telemetry;
             public string LastText;
         }
 
@@ -117,6 +118,7 @@ namespace ReReVolt.Online.Unity
                         label.Text.text = next;
                         label.LastText = next;
                     }
+                    label.Telemetry.SetTelemetry(state.SpeedKph, state.RearWheelRpm);
                     break;
                 }
             }
@@ -160,7 +162,8 @@ namespace ReReVolt.Online.Unity
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
             text.text = "P" + (racer.Slot + 1) + "   GET READY";
-            labels.Add(new LocalLabel { RacerId = racer.Id, Slot = racer.Slot, Text = text });
+            labels.Add(new LocalLabel { RacerId = racer.Id, Slot = racer.Slot, Text = text,
+                Telemetry = RaceTelemetryDial.Create(viewportObject.transform, localCount) });
         }
 
         private string Format(int slot, DrivingRacerState state, DrivingWorldSnapshot snapshot)

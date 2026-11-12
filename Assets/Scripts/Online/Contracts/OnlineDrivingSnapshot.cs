@@ -34,9 +34,13 @@ namespace ReReVolt.Online.Contracts
     [Serializable]
     public struct DrivingRacerState
     {
+        public const float MaximumSpeedKph = 320f;
+        public const float MaximumRearWheelRpm = 12000f;
         public uint RacerId;
         public WorldVector Position, Velocity, AngularVelocity;
         public WorldRotation Rotation;
+        // Host measured, bounded display telemetry. Never used for client simulation.
+        public float SpeedKph, RearWheelRpm;
         public int CompletedLaps, NextCheckpoint, PositionInRace, FinishPosition;
         public float FinishTime;
         public ulong AcknowledgedInput;
@@ -177,6 +181,8 @@ namespace ReReVolt.Online.Contracts
             {
                 if (!racers.Contains(racer.RacerId) || !seen.Add(racer.RacerId)) return SnapshotError.InvalidRoster;
                 if (!racer.Position.IsFinite || !racer.Velocity.IsFinite || !racer.AngularVelocity.IsFinite || !racer.Rotation.IsValid ||
+                    !WorldVector.Finite(racer.SpeedKph) || racer.SpeedKph < 0 || racer.SpeedKph > DrivingRacerState.MaximumSpeedKph ||
+                    !WorldVector.Finite(racer.RearWheelRpm) || racer.RearWheelRpm < 0 || racer.RearWheelRpm > DrivingRacerState.MaximumRearWheelRpm ||
                     (racer.HeldWeapon != WeaponKind.None && racer.HeldWeapon != WeaponKind.Bolt && racer.HeldWeapon != WeaponKind.Oil) ||
                     racer.CompletedLaps < 0 || racer.CompletedLaps > laps || racer.NextCheckpoint < 0 || racer.NextCheckpoint >= checkpoints ||
                     racer.PositionInRace < 1 || racer.PositionInRace > racers.Count || !positions.Add(racer.PositionInRace) ||

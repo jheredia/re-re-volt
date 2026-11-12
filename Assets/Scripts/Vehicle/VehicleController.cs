@@ -126,7 +126,10 @@ namespace Vehicle
         [HideInInspector] public float SteerInput; // -1 to 1
 
         // Computed
-        public float CurrentSpeed => vehicleRigidBody != null ? vehicleRigidBody.linearVelocity.magnitude * 3.6f: 0f; // Current speed in m/s
+        public float CurrentSpeed => vehicleRigidBody != null ? vehicleRigidBody.linearVelocity.magnitude * 3.6f: 0f; // km/h
+        /// <summary>Measured spin of the two driven WheelColliders; this is wheel RPM, not motor shaft RPM.</summary>
+        public float RearWheelRpm => wheelRL != null && wheelRR != null
+            ? (Mathf.Abs(wheelRL.rpm) + Mathf.Abs(wheelRR.rpm)) * .5f : 0f;
         public bool IsDrifting { get; private set; } // True when the car is drifting, determined by brake input and speed
         public bool IsConfigured => wheelFL != null && wheelFR != null && wheelRL != null && wheelRR != null;
         #endregion

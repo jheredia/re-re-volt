@@ -1,5 +1,15 @@
 # Stage 10 handover — Relay foundation in progress
 
+## Race telemetry dials — source-only checkpoint
+
+Offline and private online per-player HUDs now include viewport-local speed
+and driven rear-wheel RPM dials. Offline values come from the local vehicle;
+online values come from bounded host-published race snapshots. This is wheel
+spin, not motor-shaft RPM. The snapshot wire version and lobby compatibility
+fingerprint changed, so peers need matching builds. The source was reviewed,
+but Unity compilation, one-to-four-player layout captures, snapshot tests,
+and live Relay behavior remain pending owner-approved validation.
+
 ## Scene-track authoring workflow — source-only checkpoint
 
 A scene-track manifest and two Unity Editor commands now let a designer copy
