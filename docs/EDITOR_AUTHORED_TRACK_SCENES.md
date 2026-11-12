@@ -173,20 +173,20 @@ This manifest/Editor-command slice was reviewed in source only. Unity import,
 compilation, command execution, local selection, and online player behavior
 remain pending the next user-approved validation pass.
 
-## First generated-track bake command
+## Generated-track bake commands
 
-**Tools > ReReVolt > Tracks > Bake Sunset Patio Sweep Scene** is an Editor-only
-command that prepares an editable scene at
-`Assets/Scenes/CustomTracks/sunset-patio-sweep/Track_sunset-patio-sweep.unity`.
-It refuses an existing destination, builds the current generated Patio course
-in an isolated scene, maps its grid, ordered checkpoint/recovery, and pickup
+The Editor-only **Tools > ReReVolt > Tracks > Bake ... Scene** commands prepare
+editable Sunset Patio Sweep, Market Aisle Dash, and Club Bridge Exhibition
+scenes under `Assets/Scenes/CustomTracks/<stable-id>/Track_<stable-id>.unity`.
+Each refuses an existing destination, builds the current generated course in
+an isolated scene, maps its grid, ordered checkpoint/recovery, and pickup
 data to authoring markers, saves owned materials and meshes as assets, and
 leaves the original Editor scene active. It does not switch the production
-Patio catalog entry or enable the baked scene in builds. Those changes require
+catalog entries or enable the baked scenes in builds. Those changes require
 comparing the saved scene with the accepted generated course first.
 
-The bake command has been reviewed in source only; it has not been executed in
-Unity, and no Patio scene asset has been accepted. After the owner approves
-validation, run the bake in the Editor, reopen and inspect the saved scene,
+The bake commands have been reviewed in source only; they have not been
+executed in Unity, and no generated scene asset has been accepted. After the
+owner approves validation, run each bake in the Editor, reopen the saved scene,
 then check physical laps, recovery, pickups, AI, visual styles, and cleanup
 before replacing the generated track entry.

@@ -8,42 +8,57 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>Bakes the current generated Patio layout for editing without changing track registration.</summary>
+/// <summary>Preserves the original Patio entry point for existing editor callers.</summary>
 public static class PatioSweepBakeCommand
 {
-    private const string MenuPath = "Tools/ReReVolt/Tracks/Bake Sunset Patio Sweep Scene";
-    private const string Folder = SceneTrackManifest.SceneFolder + "/" + TrackCatalog.PatioSweepId;
-    private static readonly string ScenePath = SceneTrackManifest.ScenePathFor(TrackCatalog.PatioSweepId);
+    public static string Bake() => Stage9CGeneratedTrackBakeCommand.Bake(TrackCatalog.PatioSweepId);
+}
 
-    [MenuItem(MenuPath)]
-    private static void BakeFromMenu()
+/// <summary>Bakes a Stage 9C generated course into an isolated, editable scene.</summary>
+public static class Stage9CGeneratedTrackBakeCommand
+{
+    private const string MenuRoot = "Tools/ReReVolt/Tracks/";
+
+    [MenuItem(MenuRoot + "Bake Sunset Patio Sweep Scene")]
+    private static void BakePatioFromMenu() => BakeFromMenu(TrackCatalog.PatioSweepId);
+
+    [MenuItem(MenuRoot + "Bake Market Aisle Dash Scene")]
+    private static void BakeMarketFromMenu() => BakeFromMenu(TrackCatalog.MarketAislesId);
+
+    [MenuItem(MenuRoot + "Bake Club Bridge Exhibition Scene")]
+    private static void BakeBridgeFromMenu() => BakeFromMenu(TrackCatalog.BridgeExhibitionId);
+
+    private static void BakeFromMenu(string id)
     {
         try
         {
-            string path = Bake();
-            Debug.Log("[TrackAuthoring] Baked editable Patio scene at " + path +
+            string path = Bake(id);
+            Debug.Log("[TrackAuthoring] Baked editable scene at " + path +
                       ". The playable catalog and build scenes have not changed.");
         }
         catch (OperationCanceledException)
         {
-            Debug.Log("[TrackAuthoring] Patio bake canceled; created assets were removed.");
+            Debug.Log("[TrackAuthoring] Generated track bake canceled; created assets were removed.");
         }
         catch (Exception exception)
         {
-            Debug.LogError("[TrackAuthoring] Patio bake failed: " + exception);
-            EditorUtility.DisplayDialog("Patio scene was not baked", exception.Message, "OK");
+            Debug.LogError("[TrackAuthoring] Generated track bake failed: " + exception);
+            EditorUtility.DisplayDialog("Track scene was not baked", exception.Message, "OK");
         }
     }
 
-    public static string Bake()
+    public static string Bake(string id)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new InvalidOperationException("Leave Play mode before baking a track.");
-        if (!TrackCatalog.TryGet(TrackCatalog.PatioSweepId, out TrackDefinition definition) ||
-            definition.IsSceneAuthored)
-            throw new InvalidOperationException("The generated Patio catalog entry is unavailable.");
-        if (Directory.Exists(Folder) || AssetDatabase.IsValidFolder(Folder) || File.Exists(ScenePath))
-            throw new IOException("The Patio destination already exists: " + Folder);
+        TrackRuntimeBuilder builder = BuilderFor(id);
+        if (!TrackCatalog.TryGet(id, out TrackDefinition definition) || definition.IsSceneAuthored ||
+            !SceneTrackManifest.IsValidRevision(definition.ContentRevision))
+            throw new InvalidOperationException("The generated track catalog entry is unavailable: " + id);
+        string folder = SceneTrackManifest.SceneFolder + "/" + id;
+        string scenePath = SceneTrackManifest.ScenePathFor(id);
+        if (Directory.Exists(folder) || AssetDatabase.IsValidFolder(folder) || File.Exists(scenePath))
+            throw new IOException("The track destination already exists: " + folder);
 
         Scene originalScene = SceneManager.GetActiveScene();
         if (!originalScene.IsValid() || !originalScene.isLoaded)
@@ -51,37 +66,38 @@ public static class PatioSweepBakeCommand
         UnityEngine.Object originalSelection = Selection.activeObject;
         Scene temporaryScene = default;
         ITrackRuntime runtime = null;
-        bool createdParent = false;
-        bool createdFolder = false;
+        bool parentExistedBefore = AssetDatabase.IsValidFolder(SceneTrackManifest.SceneFolder) ||
+                                   Directory.Exists(SceneTrackManifest.SceneFolder);
         Exception failure = null;
         var cleanupErrors = new List<string>();
 
         try
         {
-            CheckCanceled("Preparing isolated scene", 0f);
+            CheckCanceled(definition.DisplayName, "Preparing isolated scene", 0f);
             if (!AssetDatabase.IsValidFolder(SceneTrackManifest.SceneFolder))
             {
                 string parentGuid = AssetDatabase.CreateFolder("Assets/Scenes", "CustomTracks");
-                createdParent = AssetDatabase.IsValidFolder(SceneTrackManifest.SceneFolder);
                 if (string.IsNullOrEmpty(parentGuid))
                     throw new IOException("Could not create the custom tracks folder.");
             }
-            string folderGuid = AssetDatabase.CreateFolder(SceneTrackManifest.SceneFolder,
-                TrackCatalog.PatioSweepId);
-            createdFolder = AssetDatabase.IsValidFolder(Folder);
+            string folderGuid = AssetDatabase.CreateFolder(SceneTrackManifest.SceneFolder, id);
             if (string.IsNullOrEmpty(folderGuid))
-                throw new IOException("Could not create the Patio asset folder.");
+                throw new IOException("Could not create the track asset folder.");
 
             temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
             if (!SceneManager.SetActiveScene(temporaryScene))
                 throw new InvalidOperationException("Could not activate the temporary bake scene.");
-            var raceObject = new GameObject("TemporaryPatioBakeRaceManager");
+            var raceObject = new GameObject("TemporaryTrackBakeRaceManager");
             RaceManager race = raceObject.AddComponent<RaceManager>();
-            runtime = Stage9CAuthoredTrackBuilder.BuildPatioSweep(race, null, null);
-            if (runtime.Root == null || runtime.Grid.Length != Stage9CAuthoredTrackBuilder.GridCount ||
+            runtime = builder(race, null, null);
+            if (runtime?.Root == null || runtime.Grid == null ||
+                runtime.Grid.Length != Stage9CAuthoredTrackBuilder.GridCount ||
+                runtime.PickupPositions == null ||
                 runtime.PickupPositions.Count != Stage9CAuthoredTrackBuilder.PickupCount ||
+                runtime.Checkpoints == null ||
                 runtime.Checkpoints.Length != definition.OrderedCheckpointCount)
-                throw new InvalidOperationException("The generated Patio layout no longer matches its catalog contract.");
+                throw new InvalidOperationException("The generated " + id +
+                    " layout no longer matches its catalog contract.");
 
             GameObject rootObject = runtime.Root;
             rootObject.name = "TrackAuthoringRoot";
@@ -94,11 +110,11 @@ public static class PatioSweepBakeCommand
             {
                 RaceCheckpoint checkpoint = runtime.Checkpoints[index];
                 if (checkpoint == null || checkpoint.CheckpointIndex != index)
-                    throw new InvalidOperationException("Patio checkpoint order changed at index " + index);
+                    throw new InvalidOperationException(id + " checkpoint order changed at index " + index);
                 SerializedProperty recovery = new SerializedObject(checkpoint).FindProperty("recoveryAnchor");
                 Transform anchor = recovery?.objectReferenceValue as Transform;
                 if (anchor == null || anchor.parent != rootObject.transform)
-                    throw new InvalidOperationException("Patio checkpoint " + index + " has no owned recovery pose.");
+                    throw new InvalidOperationException(id + " checkpoint " + index + " has no owned recovery pose.");
                 anchor.gameObject.AddComponent<TrackAuthoringAnchor>()
                     .Configure(TrackAnchorKind.Recovery, index);
                 checkpoint.Configure(null, index, anchor);
@@ -113,8 +129,8 @@ public static class PatioSweepBakeCommand
             }
             UnityEngine.Object.DestroyImmediate(raceObject);
 
-            CheckCanceled("Persisting Patio materials and meshes", .45f);
-            PersistRuntimeAssets(authoring);
+            CheckCanceled(definition.DisplayName, "Persisting materials and meshes", .45f);
+            PersistRuntimeAssets(authoring, folder);
             foreach (Renderer renderer in authoring.GetComponentsInChildren<Renderer>(true))
             {
                 bool decoration = renderer.GetComponent<NearCameraPresentationOccludable>() is
@@ -123,10 +139,10 @@ public static class PatioSweepBakeCommand
                 renderer.gameObject.AddComponent<TrackAuthoringVisual>().Configure(outline);
             }
             if (!TrackAuthoringEditorTools.TryValidateScene(temporaryScene, out string report))
-                throw new InvalidOperationException("Baked Patio scene failed structural validation:\n" + report);
-            CheckCanceled("Saving Patio scene", .85f);
-            if (!EditorSceneManager.SaveScene(temporaryScene, ScenePath))
-                throw new IOException("Unity could not save " + ScenePath);
+                throw new InvalidOperationException("Baked " + id + " scene failed structural validation:\n" + report);
+            CheckCanceled(definition.DisplayName, "Saving scene", .85f);
+            if (!EditorSceneManager.SaveScene(temporaryScene, scenePath))
+                throw new IOException("Unity could not save " + scenePath);
         }
         catch (Exception exception)
         {
@@ -152,29 +168,39 @@ public static class PatioSweepBakeCommand
 
         if (failure != null || cleanupErrors.Count != 0)
         {
-            if (createdFolder)
-                TryCleanup(() =>
-                {
-                    if (!AssetDatabase.DeleteAsset(Folder)) throw new IOException("Asset deletion failed.");
-                }, "new Patio assets", cleanupErrors);
-            if (createdParent)
-                TryCleanup(() =>
-                {
-                    if (!AssetDatabase.DeleteAsset(SceneTrackManifest.SceneFolder))
-                        throw new IOException("Asset deletion failed.");
-                }, "new custom tracks folder", cleanupErrors);
+            if (AssetDatabase.IsValidFolder(folder) || Directory.Exists(folder))
+                TryCleanup(() => DeleteCreatedFolder(folder), "new track assets", cleanupErrors);
+            if (!parentExistedBefore && (AssetDatabase.IsValidFolder(SceneTrackManifest.SceneFolder) ||
+                                         Directory.Exists(SceneTrackManifest.SceneFolder)))
+                TryCleanup(() => DeleteCreatedFolder(SceneTrackManifest.SceneFolder),
+                    "new custom tracks folder", cleanupErrors);
             if (cleanupErrors.Count != 0)
-                throw new InvalidOperationException("Patio bake failed; cleanup also failed for " +
+                throw new InvalidOperationException("Generated track bake failed; cleanup also failed for " +
                     string.Join(", ", cleanupErrors) + ".", failure);
             if (failure != null) throw failure;
         }
-        return ScenePath;
+        return scenePath;
     }
 
-    private static void PersistRuntimeAssets(TrackAuthoringRoot root)
+    private static TrackRuntimeBuilder BuilderFor(string id)
     {
-        if (string.IsNullOrEmpty(AssetDatabase.CreateFolder(Folder, "Materials")))
-            throw new IOException("Could not create the Patio material folder.");
+        switch (id)
+        {
+            case TrackCatalog.PatioSweepId:
+                return Stage9CAuthoredTrackBuilder.BuildPatioSweep;
+            case TrackCatalog.MarketAislesId:
+                return Stage9CAuthoredTrackBuilder.BuildMarketAisles;
+            case TrackCatalog.BridgeExhibitionId:
+                return Stage9CAuthoredTrackBuilder.BuildBridgeExhibition;
+            default:
+                throw new ArgumentException("Only Stage 9C generated tracks can be baked.", nameof(id));
+        }
+    }
+
+    private static void PersistRuntimeAssets(TrackAuthoringRoot root, string folder)
+    {
+        if (string.IsNullOrEmpty(AssetDatabase.CreateFolder(folder, "Materials")))
+            throw new IOException("Could not create the track material folder.");
         var materialCopies = new Dictionary<Material, Material>();
         foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
         {
@@ -186,10 +212,10 @@ public static class PatioSweepBakeCommand
                 if (!materialCopies.TryGetValue(source, out Material copy))
                 {
                     copy = new Material(source) { name = source.name };
-                    string path = $"{Folder}/Materials/Material_{materialCopies.Count:00}.mat";
+                    string path = $"{folder}/Materials/Material_{materialCopies.Count:00}.mat";
                     AssetDatabase.CreateAsset(copy, path);
                     if (AssetDatabase.LoadAssetAtPath<Material>(path) != copy)
-                        throw new IOException("Could not persist Patio material: " + path);
+                        throw new IOException("Could not persist track material: " + path);
                     materialCopies.Add(source, copy);
                 }
                 materials[index] = copy;
@@ -198,31 +224,37 @@ public static class PatioSweepBakeCommand
         }
         var meshCopies = new Dictionary<Mesh, Mesh>();
         foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
-            filter.sharedMesh = PersistMesh(filter.sharedMesh, meshCopies);
+            filter.sharedMesh = PersistMesh(filter.sharedMesh, meshCopies, folder);
         foreach (MeshCollider collider in root.GetComponentsInChildren<MeshCollider>(true))
-            collider.sharedMesh = PersistMesh(collider.sharedMesh, meshCopies);
+            collider.sharedMesh = PersistMesh(collider.sharedMesh, meshCopies, folder);
         AssetDatabase.SaveAssets();
     }
 
-    private static Mesh PersistMesh(Mesh source, Dictionary<Mesh, Mesh> copies)
+    private static Mesh PersistMesh(Mesh source, Dictionary<Mesh, Mesh> copies, string folder)
     {
         if (source == null || !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(source))) return source;
         if (copies.TryGetValue(source, out Mesh existing)) return existing;
         Mesh copy = UnityEngine.Object.Instantiate(source);
         copy.name = source.name;
-        string path = $"{Folder}/Mesh_{copies.Count:00}.asset";
+        string path = $"{folder}/Mesh_{copies.Count:00}.asset";
         AssetDatabase.CreateAsset(copy, path);
         if (AssetDatabase.LoadAssetAtPath<Mesh>(path) != copy)
-            throw new IOException("Could not persist Patio mesh: " + path);
+            throw new IOException("Could not persist track mesh: " + path);
         copies.Add(source, copy);
         return copy;
     }
 
-    private static void CheckCanceled(string step, float progress)
+    private static void CheckCanceled(string displayName, string step, float progress)
     {
         if (!Application.isBatchMode && EditorUtility.DisplayCancelableProgressBar(
-                "Bake Sunset Patio Sweep", step, progress))
-            throw new OperationCanceledException("Patio bake canceled.");
+                "Bake " + displayName, step, progress))
+            throw new OperationCanceledException(displayName + " bake canceled.");
+    }
+
+    private static void DeleteCreatedFolder(string folder)
+    {
+        if (!AssetDatabase.DeleteAsset(folder))
+            throw new IOException("Asset deletion failed: " + folder);
     }
 
     private static void TryCleanup(Action action, string label, List<string> errors)

@@ -10,15 +10,17 @@ fingerprint changed, so peers need matching builds. The source was reviewed,
 but Unity compilation, one-to-four-player layout captures, snapshot tests,
 and live Relay behavior remain pending owner-approved validation.
 
-## Patio generated-to-scene bake — source-only checkpoint
+## Stage 9C generated-to-scene bake — source-only checkpoint
 
-An Editor command now prepares a durable editable Sunset Patio Sweep scene
-from the current generated layout without changing the playable catalog or
-build scene list. It persists generated material/mesh assets and translates
+Editor commands now prepare durable editable Sunset Patio Sweep, Market Aisle
+Dash, and Club Bridge Exhibition scenes from their generated layouts without
+changing the playable catalog or build scene list. They persist generated
+material/mesh assets and translate
 grid, checkpoint, recovery, pickup, surface, visual-style, and decoration
-markers. The command has not run in Unity; no Patio scene has been generated
-or accepted. Later owner-approved validation must inspect and compare the
-saved scene before its stable catalog ID is switched to scene loading.
+markers. The commands have not run in Unity; no generated scene has been
+accepted. Later owner-approved validation must inspect and compare each saved
+scene before its stable catalog ID is switched to scene loading. RC Club
+Workshop has extra procedural art and needs a separate bake implementation.
 
 ## Scene-track authoring workflow — source-only checkpoint
 
