@@ -178,9 +178,10 @@ prove a drivable route or AI completion, so a new course still needs a one to
 four local player pass, zero to three AI pass, and a matching-build Relay pass
 before release. The generated tracks have not been migrated to scenes.
 
-This manifest/Editor-command slice was reviewed in source only. Unity import,
-compilation, command execution, local selection, and online player behavior
-remain pending the next user-approved validation pass.
+An isolated Unity 6000.6 batch run compiled and exercised custom-scene
+creation, checkpoint pairing, saved-scene reopening, and manifest sync.
+Interactive Editor use, local selection/driving, and online player behavior
+remain unverified.
 
 ## Generated-track bake commands
 
@@ -218,10 +219,10 @@ transaction fails. The four stable selection slots and names stay in place;
 the generated builders remain in source as fallback definitions. Additional
 custom scenes follow those four and the beta template in sorted ID order.
 
-No built-in override has been activated. The Editor assembly compiled during
-asset creation; activation itself still needs owner-approved Editor execution,
-saved-scene inspection, local/AI race checks, online compatibility, and player
-builds.
+No built-in override has been activated in the production project. An isolated
+Unity batch run activated and deactivated a disposable Patio override, then
+restored its generated catalog entry. Interactive Editor use, local/AI race
+checks, online compatibility, and player builds remain unverified.
 
 If an activated baked course needs more editing, open its saved scene alone,
 save any changes, then choose **Tools > ReReVolt > Tracks > Deactivate Open
@@ -231,8 +232,8 @@ meshes, and stable ID so the generated course becomes playable again and the
 scene can be revised and activated later. The disabled build-list entry keeps
 its position because activation did not record whether that entry existed
 beforehand. Manifest and build-list changes roll back together on failure;
-deactivation does not rewrite scene contents. This command has source review
-only and awaits owner-approved Editor use.
+deactivation does not rewrite scene contents. Its isolated Unity batch check
+passed; it has not been used interactively in the production project.
 
 ## Scene View authoring overlay
 

@@ -48,11 +48,12 @@ The structural validator checks references and required objects; it cannot
 prove that a human or AI can finish a lap. Before sharing a build, drive the
 course, check recovery and pickups, and confirm an AI completes three laps.
 Relay friends must use builds from the same commit and content revision.
-The creation and local-playtest commands have compiled, but have **not yet
-been exercised interactively**. The new checkpoint-pair command has source
-review only. If a command reports an error, keep the Console message for
-correction. These Editor, driving, Relay, and player-build checks remain
-deferred until the owner authorizes validation.
+An isolated Unity 6000.6 batch check created and reopened a disposable custom
+track, appended a checkpoint/recovery pair, and synced its metadata. These
+commands have **not yet been used interactively** in the owner's Editor. The
+local Play-start command and Scene View appearance remain untested. If a
+command reports an error, keep the Console message for correction. Driving,
+Relay, and player-build checks remain deferred.
 
 ## Editing an existing course
 

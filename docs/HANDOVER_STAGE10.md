@@ -1,5 +1,21 @@
 # Stage 10 handover — Relay foundation in progress
 
+## 2026-11-12 validation group 1 — Editor authoring
+
+At commit `65fc5a5`, an isolated Unity 6000.6.0f1 batch project completed a
+fresh import/compile and Editor command transaction with exit code 0. The
+saved beta template and four editable built-in scenes reopened and passed
+structural validation. A disposable custom track was created, extended with
+a checkpoint/recovery pair, saved/reopened, and synchronized; a Patio scene
+override was activated and deactivated back to its generated catalog entry.
+Evidence: `/private/tmp/stage10-group1.JmXO9l/group1-report.md` and
+`group1-unity.log` beside it. There were no compiler errors; the existing
+`VehicleManager.cs:53` obsolete API warning appeared twice. The original
+workspace was unchanged apart from its pre-existing `re-re-volt.slnx` edit.
+Scene View appearance, local Play-start/preference restoration, driving/AI,
+two-peer loading, HUD readability, player builds, and the integrated suite
+remain outside this group.
+
 ## Scene View track-authoring overlay — source-only checkpoint
 
 Selecting an authored track root now displays checkpoint order/direction,
@@ -30,8 +46,8 @@ and Relay behavior still require owner-approved validation.
 An Editor-only deactivation command is now available for a previously activated
 built-in bake. It removes that one override, disables its build-list entry,
 and leaves the editable scene/assets intact, with rollback for manifest and
-build-list changes. It has source review only; no override has been activated
-or deactivated in Unity.
+build-list changes. An isolated Unity batch check activated and deactivated a
+Patio override; no production override has been switched.
 
 ## Race telemetry dials — source-only checkpoint
 
@@ -56,7 +72,7 @@ scene before its stable catalog ID is switched to scene loading. RC Club
 Workshop's extra surface-decal meshes and exact style flags are included in
 the command; saved-scene and player behavior remain unverified.
 
-## Opt-in built-in scene overrides — source-only checkpoint
+## Opt-in built-in scene overrides — Editor transaction checkpoint
 
 The catalog can now replace any of its four generated courses with a
 scene-backed definition under the same stable ID and selection slot. An Editor
@@ -66,9 +82,10 @@ scene, manifest, and build list with rollback. Startup retains the generated
 Workshop shell while an overridden default scene loads, and Start remains
 locked unless the selected ID and runtime type match the active circuit.
 The online compatibility fingerprint includes scene-vs-generated source and
-revision. No override has been activated or tested in Unity.
+revision. An isolated Editor transaction passed, but no production override
+has been activated or driven.
 
-## Scene-track authoring workflow — source-only checkpoint
+## Scene-track authoring workflow — Editor transaction checkpoint
 
 A scene-track manifest and two Unity Editor commands now let a designer copy
 the beta template into a registered custom course, then synchronize saved lap,
@@ -76,9 +93,9 @@ checkpoint, and revision metadata after editing. Custom entries follow the
 four generated courses and beta template in deterministic ID order for local
 and private online selection. The scene remains geometry authority; the
 manifest holds selection and race-setup metadata. This slice has received
-source review only. Unity compilation, actual Editor command execution, local
-selection, and online player behavior remain unverified until the owner
-authorizes the pending validation set.
+source review and an isolated Unity 6000.6 batch transaction covering creation,
+checkpoint pairing, scene reopen, and metadata sync. Interactive local
+selection and online player behavior remain unverified.
 
 ## 2026-11-10 scene-authored online loading checkpoint
 
