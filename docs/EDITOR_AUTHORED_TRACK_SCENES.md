@@ -2,9 +2,16 @@
 
 **Decision:** use a small persistent front-end scene and separately authored track scenes, loaded additively for a race. Build one scene-authored beta track first; retain the four current code-built tracks while the loading seam is proven. This is a Unity Editor content workflow, distinct from the later in-game block track editor.
 
-## Current state and reason for the change
+## Original baseline and reason for the change
 
-`Assets/Scenes/SampleScene.unity` is the only enabled build scene. `Stage3Bootstrap` and `OnlineLobbyEntry` install themselves only when that scene is active. `TrackCatalog` holds four stable IDs, each mapped to a synchronous code builder returning `ITrackRuntime` (root, four grid transforms, ordered checkpoints, drivable mask, four pickup positions). Offline setup constructs the selected circuit immediately. Online host and client construct their own copy by the lobby's track ID; the host owns physics and checkpoints, while the client disables the track colliders and renders cars from accepted snapshots. These contracts already separate track *identity* from race authority, but there is no serialized Unity scene track to edit by hand.
+When this plan was written, `Assets/Scenes/SampleScene.unity` was the only
+enabled build scene and the four selectable courses were built from code.
+Those contracts already separated track *identity* from race authority, but
+there was no serialized Unity scene track to edit by hand. The current branch
+enables `FrontEnd.unity` first, includes the editable beta template, and has
+four saved scene copies of the generated courses. The copies have not replaced
+the playable generated courses. For current steps, use the
+[track-authoring quickstart](TRACK_AUTHORING_QUICKSTART.md).
 
 Unity supports additive scene loading and unloading; asynchronous loading is preferable so a track switch does not stall the lobby. A scene must be included in the player build's scene list for a direct `SceneManager` load. [Unity additive scenes](https://docs.unity3d.com/6000.1/Documentation/ScriptReference/SceneManagement.LoadSceneMode.Additive.html), [asynchronous loading](https://docs.unity3d.com/ja/current/ScriptReference/SceneManagement.SceneManager.LoadSceneAsync.html), [scene list](https://docs.unity3d.com/kr/6000.0/Manual/build-profile-scene-list.html).
 
