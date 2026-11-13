@@ -1,13 +1,18 @@
 # Exporting an in-game track for a packaged build
 
-**Status: source implemented, Unity validation pending.** This is a provisional
-workflow until the owner approves the editor validation group. Do not treat a
-successful JSON save as proof that a route drives well.
+**Status: editor route and export/bake checks passed in Unity 6000.6.** Local
+driving and online custom-layout transfer remain to be validated. Do not treat
+a successful JSON save as proof that a route drives well.
 
-1. In the game's title screen, choose **Create Track** or press F9. Build one
-   closed route. The top-down workspace shows the open end, raised pieces and
-   explicit road surfaces. Place props, then use **Prepare Local Test Drive** to
-   exercise the course before packaging it.
+1. In the game's title screen, choose **Create Track** or press F9. Select a
+   road piece in the palette, inspect its cyan curved preview and landing point
+   on the map, then choose **Place Preview**. Green marks the start and the
+   remaining gap. The displayed left/right labels match the top-down travel
+   direction; internal saved piece IDs remain stable. After a gentle approach
+   on the same level, choose **Auto Close to Start** to span a remaining 2–12
+   cell gap. It snaps the endpoint exactly onto the start socket. The physical
+   clearance check still has to pass before Test Drive. Place props, then use
+   **Prepare Local Test Drive** to exercise the course before packaging it.
 2. Choose **Export JSON**. The game writes a portable `<local-id>.json` file in
    `Application.persistentDataPath/TrackExports` and copies its full path to the
    clipboard. On macOS the file is under the game's Application Support data

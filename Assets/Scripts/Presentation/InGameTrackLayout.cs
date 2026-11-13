@@ -65,8 +65,10 @@ namespace Presentation
     /// <summary>Allowlisted first road kit. Exact geometry and vehicle clearance remain a later compiler gate.</summary>
     public static class InGameTrackKit
     {
-        public const string Version = "kit-1";
+        public const string Version = "kit-2";
+        public const string PreviousVersion = "kit-1";
         public const string StartId = "start-straight";
+        public const string CloseId = "close-to-start";
 
         private static readonly TrackPieceSpec[] Pieces =
         {
@@ -87,7 +89,9 @@ namespace Presentation
             new("ramp-down", 8, 0, 0, 0, -1, false, false, false),
             new("bridge-straight", 4, 0, 0, 0, 0, true, false, false),
             new("bridge-corner-left", 4, 4, 0, 2, 0, true, false, false),
-            new("bridge-corner-right", 4, 4, 0, -2, 0, true, false, false)
+            new("bridge-corner-right", 4, 4, 0, -2, 0, true, false, false),
+            // The last connector derives its reach from the current open socket.
+            new(CloseId, 0, 0, 0, 0, 0, false, false, false)
         };
 
         private static readonly Dictionary<string, TrackPieceSpec> ById = BuildIndex();
@@ -125,6 +129,9 @@ namespace Presentation
                 4 => (-1, 0), 5 => (-1, 1), 6 => (0, 1), _ => (1, 1)
             };
         }
+
+        internal static int ForwardX(int heading) => Direction(heading).x;
+        internal static int ForwardZ(int heading) => Direction(heading).z;
     }
 
     public sealed class InGameTrackLimits
@@ -188,6 +195,16 @@ namespace Presentation
 
         public bool TryAppend(string pieceId, TrackRoadSurface surface, out string error)
         {
+            if (!TryPreview(pieceId, surface, out TrackPiecePlacement placement, out error)) return false;
+            route.Add(placement);
+            return true;
+        }
+
+        /// <summary>Resolve the exact next socket without mutating the saved route.</summary>
+        public bool TryPreview(string pieceId, TrackRoadSurface surface,
+            out TrackPiecePlacement placement, out string error)
+        {
+            placement = default;
             if (IsClosed) { error = "The route is already closed."; return false; }
             if (route.Count >= limits.MaximumPieces) { error = "Road piece limit reached."; return false; }
             if (!InGameTrackKit.TryGet(pieceId, out TrackPieceSpec spec) || spec.Id == InGameTrackKit.StartId)
@@ -195,6 +212,29 @@ namespace Presentation
             if (!Enum.IsDefined(typeof(TrackRoadSurface), surface))
             { error = "Choose a supported road surface."; return false; }
             TrackSocket entry = OpenEnd;
+            if (spec.Id == InGameTrackKit.CloseId)
+            {
+                TrackSocket start = route[0].Entry;
+                int dx = start.X - entry.X;
+                int dz = start.Z - entry.Z;
+                float reach = (float)Math.Sqrt(dx * dx + dz * dz);
+                int headingDifference = (start.Heading - entry.Heading + 8) % 8;
+                if (headingDifference > 4) headingDifference -= 8;
+                int forwardX = InGameTrackKit.ForwardX(entry.Heading);
+                int forwardZ = InGameTrackKit.ForwardZ(entry.Heading);
+                int forwardReach = dx * forwardX + dz * forwardZ;
+                int lateralReach = dx * forwardZ - dz * forwardX;
+                if (route.Count + 1 < limits.MinimumLoopPieces || entry.Level != start.Level ||
+                    reach < 2f || reach > 12f || forwardReach <= 0 ||
+                    Math.Abs(lateralReach) > 2 || Math.Abs(headingDifference) > 1)
+                {
+                    error = "Auto-close needs a gentle approach to the start: same level, mostly forward, within 2–12 cells and 45° of its heading.";
+                    return false;
+                }
+                placement = new TrackPiecePlacement(spec, entry, start, surface);
+                error = null;
+                return true;
+            }
             if (spec.RaisedOnly && entry.Level == 0)
             { error = "Bridge pieces require a raised road level."; return false; }
             if ((spec.DiagonalOnly && entry.Heading % 2 == 0) ||
@@ -205,7 +245,7 @@ namespace Presentation
             { error = "This ramp leaves the supported height range."; return false; }
             if (Math.Abs(exit.X) > limits.MaximumCoordinate || Math.Abs(exit.Z) > limits.MaximumCoordinate)
             { error = "This piece leaves the editor footprint."; return false; }
-            route.Add(new TrackPiecePlacement(spec, entry, exit, surface));
+            placement = new TrackPiecePlacement(spec, entry, exit, surface);
             error = null;
             return true;
         }

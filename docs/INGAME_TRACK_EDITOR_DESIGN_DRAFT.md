@@ -1,6 +1,6 @@
 # In-game block track editor — review draft
 
-**Status:** agreed direction, implementation in progress, 2026-11-13. No in-game editor or Unity validation is claimed yet. The user choices below are binding; dimensions, budgets, and integration details marked **proposed** need play and technical review.
+**Status:** agreed direction, implementation in progress, 2026-11-13. The first in-game editor source has compiled and focused route/export/bake checks have run; local driving, visual usability, and online custom-layout transfer remain under validation. The user choices below are binding; dimensions, budgets, and integration details marked **proposed** need play and technical review.
 
 ## Goal and boundaries
 
@@ -85,18 +85,21 @@ versioned JSON, rejecting invented piece IDs or disconnected socket claims.
 `InGameTrackRuntimeBuilder` contains an initial closed-layout road/grid/gate/
 pickup construction path with style and object cleanup. The first in-game
 workspace is reachable from the title with F9 or its Create Track button;
-players can append pieces, see a schematic map, switch visual theme and road
+players can select and preview curved pieces before placement, use a bounded
+auto-close connector, see the remaining start gap, switch visual theme and road
 surface, place small road props, undo road pieces, name, save, and load local
 drafts. A preliminary overlap/support and passable-lane check gates the
 **Prepare Local Test Drive** command, which saves and selects the layout using
-the existing local race authority. This is source-only, uncompiled work. The
-geometry validator is deliberately conservative, prop-aware AI guidance is
-still pending, and no playable course is claimed. Explicit slick/high-grip road
+the existing local race authority. The geometry validator is deliberately
+conservative, prop-aware AI guidance is still pending, and no playable course
+is claimed. Explicit slick/high-grip road
 colliders now carry grip multipliers independently of theme. A native player
 can export a JSON copy, including a browser download on WebGL, and an Editor-only
 import command can bake it as an editable, registered scene for a later build.
-Online custom-layout transfer remains pending. None of this has been compiled
-or runtime checked; those checks await the owner's validation signal.
+Online custom-layout transfer remains pending. Unity 6000.6 has compiled the
+source, focused route/migration tests passed, and an isolated Editor batch check
+exported and baked a saved scene. Local driving and editor visual usability are
+not yet accepted.
 
 1. **Kit and compiler:** author the geometry/config and deterministic layout-to-`ITrackRuntime` compiler; start/grid, checkpoint/recovery, four pickups, style registration, and disposal work on flat and elevated loops. Minimal compile/smoke during implementation.
 2. **Editor controls and persistence:** in-game mouse/keyboard workspace, snap ghost, rotation/levels, palette, camera, undo/redo, draft save/load/rename/duplicate/delete, error messages, and unsaved-change handling.

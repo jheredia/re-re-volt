@@ -204,7 +204,8 @@ namespace Presentation
                 string json = File.ReadAllText(path, Encoding.UTF8);
                 SavedDraft data = JsonUtility.FromJson<SavedDraft>(json);
                 if (data == null || data.schemaVersion != SchemaVersion ||
-                    data.kitVersion != InGameTrackKit.Version || data.localId != localId ||
+                    (data.kitVersion != InGameTrackKit.Version &&
+                     data.kitVersion != InGameTrackKit.PreviousVersion) || data.localId != localId ||
                     !InGameTrackDraft.IsTheme(data.themeId) || data.route == null ||
                     data.route.Length < 1 || data.route.Length > limits.MaximumPieces)
                 { error = "Track draft has an incompatible schema, kit, or route."; return false; }

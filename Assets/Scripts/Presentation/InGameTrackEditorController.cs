@@ -26,6 +26,7 @@ namespace Presentation
         private string nameBuffer;
         private string message = "Choose a road piece to snap it to the open end.";
         private TrackRoadSurface selectedSurface;
+        private string selectedPieceId = "straight-short";
         private int selectedPropIndex;
         private bool placingProp;
         private Vector2 paletteScroll;
@@ -190,7 +191,7 @@ namespace Presentation
             }
             y += 40f;
 
-            GUI.Label(new Rect(x, y, width, 25f), "SNAP ROAD PIECES TO THE OPEN END");
+            GUI.Label(new Rect(x, y, width, 25f), "SELECT A PIECE, PREVIEW, THEN PLACE");
             y += 27f;
             float paletteHeight = Mathf.Max(96f, side.height * .22f);
             Rect scroll = new(x, y, width, paletteHeight);
@@ -199,8 +200,15 @@ namespace Presentation
             for (int i = 1; i < InGameTrackKit.All.Count; i++)
             {
                 TrackPieceSpec piece = InGameTrackKit.All[i];
+                Color before = GUI.color;
+                if (selectedPieceId == piece.Id) GUI.color = new Color(.55f, .95f, 1f);
                 if (GUI.Button(new Rect(0f, (i - 1) * 31f, width - 20f, 29f),
-                        piece.Id.Replace('-', ' ').ToUpperInvariant())) Append(piece.Id);
+                        PieceLabel(piece.Id)))
+                {
+                    selectedPieceId = piece.Id;
+                    message = "Previewing " + PieceLabel(piece.Id) + ". Use PLACE PREVIEW on the map.";
+                }
+                GUI.color = before;
             }
             GUI.EndScrollView();
             y += paletteHeight + 10f;
@@ -223,6 +231,8 @@ namespace Presentation
         {
             GUI.Box(area, string.Empty);
             IReadOnlyList<TrackPiecePlacement> route = draft.Layout.Route;
+            bool hasPreview = draft.Layout.TryPreview(selectedPieceId, selectedSurface,
+                out TrackPiecePlacement preview, out string previewError);
             int minX = 0, maxX = 0, minZ = 0, maxZ = 0;
             foreach (TrackPiecePlacement piece in route)
             {
@@ -230,6 +240,13 @@ namespace Presentation
                 maxX = Mathf.Max(maxX, Mathf.Max(piece.Entry.X, piece.Exit.X));
                 minZ = Mathf.Min(minZ, Mathf.Min(piece.Entry.Z, piece.Exit.Z));
                 maxZ = Mathf.Max(maxZ, Mathf.Max(piece.Entry.Z, piece.Exit.Z));
+            }
+            if (hasPreview)
+            {
+                minX = Mathf.Min(minX, preview.Exit.X);
+                maxX = Mathf.Max(maxX, preview.Exit.X);
+                minZ = Mathf.Min(minZ, preview.Exit.Z);
+                maxZ = Mathf.Max(maxZ, preview.Exit.Z);
             }
             float spanX = Mathf.Max(22f, maxX - minX + 12f);
             float spanZ = Mathf.Max(22f, maxZ - minZ + 12f);
@@ -239,7 +256,6 @@ namespace Presentation
             for (int i = 0; i < route.Count; i++)
             {
                 TrackPiecePlacement piece = route[i];
-                Vector2 a = new(centerX + piece.Entry.X * scale, centerY - piece.Entry.Z * scale);
                 Vector2 b = new(centerX + piece.Exit.X * scale, centerY - piece.Exit.Z * scale);
                 Color color = piece.Surface switch
                 {
@@ -249,9 +265,38 @@ namespace Presentation
                 };
                 if (piece.Exit.Level > 0 || piece.Entry.Level > 0)
                     color = Color.Lerp(color, Color.magenta, .3f);
-                DrawLine(a, b, Mathf.Clamp(scale * 1.4f, 8f, 28f), color);
+                DrawPiecePath(piece, centerX, centerY, scale,
+                    Mathf.Clamp(scale * 1.4f, 8f, 28f), color);
                 GUI.Label(new Rect(b.x - 13f, b.y - 13f, 35f, 25f), i.ToString());
             }
+            TrackSocket start = route[0].Entry;
+            Vector2 startPoint = new(centerX + start.X * scale, centerY - start.Z * scale);
+            GUI.color = Color.green;
+            GUI.DrawTexture(new Rect(startPoint.x - 8f, startPoint.y - 8f, 16f, 16f),
+                Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(startPoint.x + 10f, startPoint.y - 18f, 80f, 25f), "START");
+            if (hasPreview)
+            {
+                DrawPiecePath(preview, centerX, centerY, scale,
+                    Mathf.Clamp(scale * 1.8f, 10f, 36f), new Color(.3f, .95f, 1f, .72f));
+                Vector2 landing = new(centerX + preview.Exit.X * scale,
+                    centerY - preview.Exit.Z * scale);
+                GUI.color = Color.cyan;
+                GUI.DrawTexture(new Rect(landing.x - 9f, landing.y - 9f, 18f, 18f),
+                    Texture2D.whiteTexture);
+                GUI.color = Color.white;
+                if (preview.Exit != start)
+                    DrawLine(landing, startPoint, 2f, new Color(.55f, 1f, .6f, .7f));
+                float gap = Vector2.Distance(landing, startPoint) /
+                            scale * InGameTrackRuntimeBuilder.CellSize;
+                GUI.Label(new Rect(area.x + 18f, area.y + 40f, area.width - 35f, 28f),
+                    $"PREVIEW: {PieceLabel(selectedPieceId)}  •  LANDING ({preview.Exit.X}, {preview.Exit.Z}) " +
+                    $"LEVEL {preview.Exit.Level}  •  GAP TO START {gap:0.0} m");
+            }
+            else if (!draft.Layout.IsClosed)
+                GUI.Label(new Rect(area.x + 18f, area.y + 40f, area.width - 35f, 28f),
+                    "PREVIEW UNAVAILABLE: " + previewError);
             foreach (InGameTrackProp prop in draft.Props)
             {
                 Vector3 world = InGameTrackRouteValidator.PropPosition(route[prop.RoutePiece], prop);
@@ -269,10 +314,15 @@ namespace Presentation
                 Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 35f, 28f),
-                "TOP-DOWN ROUTE  •  COLORS = SURFACE  •  PURPLE = RAISED ROAD");
+                "TOP-DOWN ROUTE  •  CYAN = NEXT PIECE  •  GREEN = START / REMAINING GAP");
             IReadOnlyList<string> issues = draft.Layout.ValidateTopology();
             GUI.Label(new Rect(area.x + 18f, area.yMax - 36f, area.width - 35f, 28f),
                 issues.Count == 0 ? "ROUTE TOPOLOGY CLOSED — PHYSICAL CHECKS STILL REQUIRED" : issues[0]);
+            bool previousEnabled = GUI.enabled;
+            GUI.enabled = hasPreview;
+            if (GUI.Button(new Rect(area.xMax - 210f, area.yMax - 52f, 190f, 36f),
+                    "PLACE PREVIEW")) Append(selectedPieceId);
+            GUI.enabled = previousEnabled;
 
             Event input = Event.current;
             if (input.type == EventType.ScrollWheel && area.Contains(input.mousePosition))
@@ -286,6 +336,36 @@ namespace Presentation
                 input.Use();
             }
         }
+
+        private static void DrawPiecePath(TrackPiecePlacement piece, float centerX,
+            float centerY, float scale, float thickness, Color color)
+        {
+            Vector3 previous = InGameTrackRuntimeBuilder.Sample(piece, 0f);
+            for (int step = 1; step <= 16; step++)
+            {
+                Vector3 next = InGameTrackRuntimeBuilder.Sample(piece, step / 16f);
+                DrawLine(new Vector2(centerX + previous.x / InGameTrackRuntimeBuilder.CellSize * scale,
+                        centerY - previous.z / InGameTrackRuntimeBuilder.CellSize * scale),
+                    new Vector2(centerX + next.x / InGameTrackRuntimeBuilder.CellSize * scale,
+                        centerY - next.z / InGameTrackRuntimeBuilder.CellSize * scale),
+                    thickness, color);
+                previous = next;
+            }
+        }
+
+        private static string PieceLabel(string id) => id switch
+        {
+            "transition-left-45" => "45° RIGHT TURN",
+            "transition-right-45" => "45° LEFT TURN",
+            "corner-left-tight" => "TIGHT RIGHT TURN",
+            "corner-right-tight" => "TIGHT LEFT TURN",
+            "corner-left-wide" => "WIDE RIGHT TURN",
+            "corner-right-wide" => "WIDE LEFT TURN",
+            "bridge-corner-left" => "BRIDGE RIGHT TURN",
+            "bridge-corner-right" => "BRIDGE LEFT TURN",
+            "close-to-start" => "AUTO CLOSE TO START",
+            _ => id.Replace('-', ' ').ToUpperInvariant()
+        };
 
         private void PlacePropOnMap(Vector2 mouse, float centerX, float centerY, float scale)
         {
