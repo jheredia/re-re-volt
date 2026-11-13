@@ -1,6 +1,6 @@
 # In-game block track editor — review draft
 
-**Status:** design for discussion, 2026-11-13. No editor implementation or Unity validation is claimed here. The user choices below are binding; dimensions, budgets, and integration details marked **proposed** need play and technical review.
+**Status:** agreed direction, implementation in progress, 2026-11-13. No in-game editor or Unity validation is claimed yet. The user choices below are binding; dimensions, budgets, and integration details marked **proposed** need play and technical review.
 
 ## Goal and boundaries
 
@@ -31,7 +31,7 @@ The **first kit families** are: Start/Finish Straight; short and long Straights;
 | Ramp Up / Ramp Down | Same heading at both ends; cardinal and diagonal variants where supported | +1 / −1 |
 | Bridge Straight / Corner | Same heading or a catalog-defined bend | 0, raised only |
 
-Each socket has a position on a shared fixed-point planar lattice, one of eight outward headings in 45° steps, an integer road level, fixed road width, and height profile at the join. The catalog stores the authored socket offsets and allowed rotations for each variant; a diagonal piece is accepted only when its transformed sockets land on that lattice. After rotation, an open exit can meet only a compatible entry at the **same world position and deck height**, with opposed outward headings and matched width/profile; no gap, T-junction, fork, or loose crossing. Mirror only pieces with an authored mirror. A piece has one entry and one exit, so the first graph is exactly one cycle. Geometry occupies a 3D swept volume, not just a top-down tile. Two roads may cross only when vertical separation and vehicle/camera clearance pass; supports cannot block the lower road. A bridge may cross itself below, but never creates a second race route.
+Each socket has a position on a shared fixed-point planar lattice, one of eight headings in 45° steps, an integer road level, fixed road width, and height profile at the join. The route model stores the direction of travel at each socket; an authored mesh uses the opposite outward face at its entry. The catalog stores authored socket offsets and allowed rotations for each variant; a diagonal piece is accepted only when its transformed sockets land on that lattice. After rotation, an open exit can meet only a compatible entry at the **same world position and deck height**, with opposed mesh-facing directions and matched width/profile; no gap, T-junction, fork, or loose crossing. Mirror only pieces with an authored mirror. A piece has one entry and one exit, so the first graph is exactly one cycle. Geometry occupies a 3D swept volume, not just a top-down tile. Two roads may cross only when vertical separation and vehicle/camera clearance pass; supports cannot block the lower road. A bridge may cross itself below, but never creates a second race route.
 
 **Proposed tuning data:** grid pitch, road width, elevation step, minimum vertical clearance, vehicle/camera envelope, turn radii, and maximum grade belong in a versioned piece catalog/config asset. The UI defaults to levels **0–3** (ground plus three raised); a configurable maximum controls the picker and validator, and the file schema stores integer levels without baking in `3`. If the current vehicle cannot climb a proposed ramp or clear an overpass, adjust the authored piece dimensions before acceptance, not vehicle physics. The Start/Finish Straight reserves four safe grid poses and a clear launch/recovery envelope. Track direction, checkpoint order, and recovery yaw derive from the connected centerline; users do not hand-place race authority components.
 
@@ -77,6 +77,15 @@ Local editor v1 does not inject an unsaved custom track into Relay sessions. A l
 
 ## Delivery slices and acceptance
 
+**Implementation checkpoint (source only):** `InGameTrackLayout` defines the
+allowlisted eight-heading kit, open-end snapping, bounded levels, explicit road
+surface choice, undo-last, and preliminary loop topology errors.
+`InGameTrackDraftStore` saves and reloads even incomplete local layouts as
+versioned JSON, rejecting invented piece IDs or disconnected socket claims.
+This does not yet construct road geometry, provide editor controls, validate
+physical clearance, or make a custom track playable. Unity compile and runtime
+validation await the owner's validation signal.
+
 1. **Kit and compiler:** author the geometry/config and deterministic layout-to-`ITrackRuntime` compiler; start/grid, checkpoint/recovery, four pickups, style registration, and disposal work on flat and elevated loops. Minimal compile/smoke during implementation.
 2. **Editor controls and persistence:** in-game mouse/keyboard workspace, snap ghost, rotation/levels, palette, camera, undo/redo, draft save/load/rename/duplicate/delete, error messages, and unsaved-change handling.
 3. **Props, validation, and AI:** free surface placement, obstruction/path checks, route guidance adapter, ramp/bridge support clearance, local zero-to-three AI Test Drive. Retain real race authority.
@@ -91,6 +100,6 @@ Local editor v1 does not inject an unsaved custom track into Relay sessions. A l
 - Measure the fixed-point lattice and authored socket offsets for both cardinal and 45° diagonal variants; every allowed rotation must land sockets exactly on the lattice.
 - Decide how much free prop rotation/translation precision is needed while retaining deterministic validation and comfortable mouse controls.
 - Decide whether an invalid draft can be shared/exported locally as a file; it should never enter normal race selection until valid.
-- Confirm whether local editor implementation takes priority over the remaining fixed-track online beta validation, or follows that beta gate while preceding custom-track online sharing.
+- The user chose to build the local in-game editor before the remaining fixed-track online beta validation. The beta checks stay pending; online custom-track transfer follows local editor acceptance.
 
-**Roadmap proposal only:** move the **local in-game block editor** from “deferred optional systems” to the next prioritized prototype feature after currently committed online/local work, before online custom-track sharing and final integrated beta acceptance. Keep the existing Unity scene-authoring route for hand-built showcase tracks. Do not alter Stage 10 network authority or claim online custom tracks are ready. This document does not update the roadmap itself.
+**Roadmap decision:** the **local in-game block editor** is the next prioritized prototype feature after currently committed online/local work. Keep the existing Unity scene-authoring route for hand-built showcase tracks. Do not alter Stage 10 network authority or claim online custom tracks are ready.

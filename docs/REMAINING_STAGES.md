@@ -213,7 +213,24 @@ package, transport, service, or authority choice is final.
      platform build gates. Keep Windows and physical-controller runtime checks
      deferred as directed by the owner.
 
-7. **Final integrated prototype acceptance**
+7. **In-game block editor — prioritized before remaining online beta checks**
+   - The owner chose a local in-game editor as the next feature. The agreed
+     [editor design](INGAME_TRACK_EDITOR_DESIGN_DRAFT.md) uses snap-to-end road
+     pieces, cardinal and 45-degree diagonal sockets, one closed loop, ground
+     plus three initially exposed raised levels, ramps/bridges, simple props,
+     route-validated free placement of collidable obstacles, visual-only themes,
+     and explicit road surfaces for grip. Mouse and keyboard are the first
+     editing controls. Existing fixed tracks and the Unity Editor scene path stay.
+   - Implement the kit/compiler, workspace and local saves, props/validation/AI,
+     then local Test Drive and track selection. Custom-track Relay transfer is a
+     separate later deliverable. The current source-only first slice contains
+     the route kit/model and local draft persistence; it is not a playable
+     editor or a validated course.
+   - The owner asked to approve validation groups. Before any editor tests or
+     builds, list the pending checks and request a signal. Resume the remaining
+     fixed-track online beta checks after local editor implementation.
+
+8. **Final integrated prototype acceptance**
    - Run the consolidated test/build/profile/screenshot matrix after online
      integration, covering local and internet friend sessions across all four
      tracks.
@@ -230,7 +247,6 @@ package, transport, service, or authority choice is final.
 
 ## Other ideas already discussed — not counted above
 
-- Re-Volt-like block-based track editor using curated pieces, not free-form geometry.
 - One lore-driven modular/randomized exhibition track; fixed tracks remain the norm.
 - Cosmetic car customization, club paint, and decals.
 - More vehicle families and original special/novelty cars.

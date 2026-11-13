@@ -478,6 +478,24 @@ remains a first-class offline mode and must not be retrofitted around an
 unproven transport. The final prototype acceptance matrix runs only after this
 stage and covers both offline local and online friend sessions.
 
+### Stage 10A — Local in-game block track editor (priority update)
+
+The owner moved the local block editor ahead of remaining fixed-track online
+beta validation. The [agreed editor design](INGAME_TRACK_EDITOR_DESIGN_DRAFT.md)
+keeps the Unity scene-authoring route and four accepted fixed tracks while
+adding a separate saved layout source for local Test Drive and track selection.
+Implement the eight-direction road kit and deterministic compiler first, then
+mouse/keyboard editing and local persistence, then props, route clearance and
+AI guidance, and finally local race integration. Ramps and usable bridges are
+part of the first kit. Theme choice changes visuals only; explicit surfaces
+set grip. Collidable obstacles can sit anywhere on valid surfaces if the route
+remains passable. Custom-track transfer over Relay follows local editor
+acceptance. Do not change online authority for this local slice.
+
+The owner's validation cadence applies: continue implementation before tests,
+builds and broad audits, then list pending groups and request a signal. The
+previously approved fixed-track local driving/AI group 2 remains incomplete.
+
 ### Stage 11 — Post-development visual-style review
 
 After the playable game and its core content pipeline are stable, a dedicated
@@ -508,8 +526,6 @@ asset migration occurs before user approval.
 
 ### Deferred optional systems and content
 
-- A Re-Volt-like block-based track editor using a curated piece library rather
-  than free-form geometry.
 - One lore-driven modular/randomized exhibition track assembled from validated
   pieces. It remains a singular novelty; the other tracks stay fixed and
   learnable.
