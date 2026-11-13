@@ -102,12 +102,17 @@ namespace Presentation
         public static IReadOnlyList<TrackDefinition> BuildLocalCatalog()
         {
             var result = new List<TrackDefinition>(localEntries);
+            var registeredIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (TrackDefinition entry in localEntries) registeredIds.Add(entry.Id);
             var store = new InGameTrackDraftStore();
             foreach (string localId in store.ListLocalIds())
             {
+                string id = LocalDraftTrackId(localId);
+                // An imported scene takes the same stable slot as its source draft.
+                // Keep the draft editable without adding a duplicate race selection.
+                if (registeredIds.Contains(id)) continue;
                 if (!store.TryLoad(localId, out InGameTrackDraft draft, out _)) continue;
                 if (InGameTrackRouteValidator.Validate(draft).Count != 0) continue;
-                string id = LocalDraftTrackId(localId);
                 result.Add(new TrackDefinition(id, draft.Name.ToUpperInvariant(),
                     "PLAYER-BUILT CLUB LOOP", "LOCAL SAVED LAYOUT / " + draft.Layout.Route.Count + " CHECKPOINTS",
                     3, draft.Layout.Route.Count,

@@ -227,8 +227,11 @@ package, transport, service, or authority choice is final.
      persistence, an initial runtime compiler, conservative clearance and prop
      checks, and a title-accessible editing workspace. A local Test Drive
      preparation command is wired to the existing race composition, but
-     prop-aware AI guidance and actual surface grip are pending. None of this
-     new source has been compiled or validated in Unity.
+     prop-aware AI guidance is pending. Explicit road grip
+     markers are now source-wired independently of visual themes. An Editor-only
+     import command can bake exported JSON into a registered `.unity` scene for
+     a subsequent player build. None of this source has been compiled or
+     validated in Unity.
    - The owner asked to approve validation groups. Before any editor tests or
      builds, list the pending checks and request a signal. Resume the remaining
      fixed-track online beta checks after local editor implementation.

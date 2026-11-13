@@ -248,7 +248,7 @@ public static class Stage9CGeneratedTrackBakeCommand
         }
     }
 
-    private static void ConfigureVisuals(TrackAuthoringRoot authoring, ITrackRuntime runtime)
+    internal static void ConfigureVisuals(TrackAuthoringRoot authoring, ITrackRuntime runtime)
     {
         var workshop = runtime as PrototypeCircuitBuilder.Result;
         foreach (Renderer renderer in authoring.GetComponentsInChildren<Renderer>(true))
@@ -272,7 +272,7 @@ public static class Stage9CGeneratedTrackBakeCommand
         }
     }
 
-    private static void PersistRuntimeAssets(TrackAuthoringRoot root, string folder)
+    internal static void PersistRuntimeAssets(TrackAuthoringRoot root, string folder)
     {
         if (string.IsNullOrEmpty(AssetDatabase.CreateFolder(folder, "Materials")))
             throw new IOException("Could not create the track material folder.");

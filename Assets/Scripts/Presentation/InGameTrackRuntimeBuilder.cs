@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Core;
 using UnityEngine;
+using Vehicle;
 
 namespace Presentation
 {
@@ -143,7 +144,12 @@ namespace Presentation
                 Quaternion rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
                 CreateBox(parent, $"Road_{index:000}_{segment:00}", middle, rotation,
                     new Vector3(RoadWidth, RoadThickness, delta.magnitude + .9f), road, true,
-                    DrivableLayer, surfaceKind, renderers);
+                    DrivableLayer, surfaceKind, renderers, piece.Surface switch
+                    {
+                        TrackRoadSurface.Slick => .72f,
+                        TrackRoadSurface.HighGrip => 1.15f,
+                        _ => 1f
+                    });
                 previous = next;
             }
             // Elevated deck supports sit outside the carriageway; the later physical
@@ -324,7 +330,7 @@ namespace Presentation
 
         private static void CreateBox(Transform parent, string name, Vector3 position,
             Quaternion rotation, Vector3 size, Material material, bool collides, int layer,
-            TrackSurfaceKind surface, List<Renderer> renderers)
+            TrackSurfaceKind surface, List<Renderer> renderers, float roadGrip = 1f)
         {
             GameObject item = GameObject.CreatePrimitive(PrimitiveType.Cube);
             item.name = name;
@@ -343,6 +349,8 @@ namespace Presentation
             }
             else if (surface != TrackSurfaceKind.Unclassified)
                 item.AddComponent<TrackSurfaceMarker>().Configure(surface);
+            if (collides && !Mathf.Approximately(roadGrip, 1f))
+                item.AddComponent<RoadGripSurface>().Configure(roadGrip);
         }
 
         private static void DestroyOwned(UnityEngine.Object value)

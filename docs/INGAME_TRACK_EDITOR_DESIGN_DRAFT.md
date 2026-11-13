@@ -4,7 +4,7 @@
 
 ## Goal and boundaries
 
-Players assemble an original, learnable RC circuit **inside the game**, without Unity Editor. The first release uses mouse and keyboard to place a curated road kit at open connectors, closes one ordered loop, adds simple scenery and collidable obstacles, saves locally, and launches a local Test Drive with the normal race systems. Ramps and usable bridges are part of this first release. Custom-track transfer to online friends follows only after local editing works. This does not replace the four fixed tracks or the existing Unity scene-authoring path.
+Players assemble an original, learnable RC circuit **inside the game**, without Unity Editor. The first release uses mouse and keyboard to place a curated road kit at open connectors, closes one ordered loop, adds simple scenery and collidable obstacles, saves locally, and launches a local Test Drive with the normal race systems. Ramps and usable bridges are part of this first release. The same versioned layout must also export as a portable file: a Unity Editor import command bakes it into an editable `.unity` scene, registers the scene in the manifest and build list, and lets the owner package it with the other tracks. Custom-track transfer to online friends follows local editing, using the validated layout bytes and content hash rather than shipping a new Unity scene over Relay. This does not replace the four fixed tracks or the existing Unity scene-authoring path.
 
 Current code exposes `ITrackRuntime` (`Root`, four-place `Grid`, ordered `Checkpoints`, `DrivableMask`, pickup positions, disposal) through `TrackDefinition`/`TrackSession`. `SceneAuthoredTrackRuntime` is an additive-scene implementation. **Proposed:** a layout compiler and `LayoutTrackRuntime` become a third source of the same contract. The player file contains data and allowlisted piece IDs, never Unity scene/prefab paths or serialized components. `Stage3Bootstrap` and online race authority remain the owners of vehicles, laps, recovery, pickups, AI, presentation, and cleanup. A local-track catalog layer must add validated saved layouts without mutating an active `TrackSession`; refresh selection only in lobby/editor transitions.
 
@@ -73,7 +73,7 @@ The runtime builder owns every generated GameObject, collider, renderer registra
 
 ## Online sharing — later deliverable
 
-Local editor v1 does not inject an unsaved custom track into Relay sessions. A later online slice can transmit the canonical bounded layout and catalog/version/hash through a reliable, size-limited channel or require import before joining; the transport choice needs measurement. Host and peers validate the **same bytes** against the same allowlisted kit, compare content hashes before ready/start, and reject incompatible, missing, or oversized layouts with a useful error. The host remains authoritative for vehicles, AI, checkpoints/laps, recovery, pickups, and combat; remote replicas use the current visual-only path and never build rival authority. Persisting a received layout should require an explicit local save. No arbitrary Unity assets, scripts, URLs, or file paths arrive from another player. This is a later protocol design, not an implemented feature or a promise that current online sessions accept custom tracks.
+Local editor v1 does not inject an unsaved custom track into Relay sessions. A later online slice can transmit the canonical bounded layout and catalog/version/hash through a reliable, size-limited channel or require import before joining; the transport choice needs measurement. Host and peers validate the **same bytes** against the same allowlisted kit, compare content hashes before ready/start, and reject incompatible, missing, or oversized layouts with a useful error. The host remains authoritative for vehicles, AI, checkpoints/laps, recovery, pickups, and combat; remote replicas use the current visual-only path and never build rival authority. Persisting a received layout should require an explicit local save. No arbitrary Unity assets, scripts, URLs, or file paths arrive from another player. For packaged tracks, the Unity Editor can bake an exported local layout into a `.unity` scene and register it through the existing scene track path; this makes the track available in future builds. A running player cannot write an importable `.unity` asset into its own installed build. This is not a claim that current online sessions accept custom layout transfer.
 
 ## Delivery slices and acceptance
 
@@ -90,9 +90,13 @@ surface, place small road props, undo road pieces, name, save, and load local
 drafts. A preliminary overlap/support and passable-lane check gates the
 **Prepare Local Test Drive** command, which saves and selects the layout using
 the existing local race authority. This is source-only, uncompiled work. The
-geometry validator is deliberately conservative, prop-aware AI guidance and
-surface-specific vehicle grip are still pending, and no playable course is
-claimed. Unity compile and runtime checks await the owner's validation signal.
+geometry validator is deliberately conservative, prop-aware AI guidance is
+still pending, and no playable course is claimed. Explicit slick/high-grip road
+colliders now carry grip multipliers independently of theme. A native player
+can export a JSON copy, including a browser download on WebGL, and an Editor-only
+import command can bake it as an editable, registered scene for a later build.
+Online custom-layout transfer remains pending. None of this has been compiled
+or runtime checked; those checks await the owner's validation signal.
 
 1. **Kit and compiler:** author the geometry/config and deterministic layout-to-`ITrackRuntime` compiler; start/grid, checkpoint/recovery, four pickups, style registration, and disposal work on flat and elevated loops. Minimal compile/smoke during implementation.
 2. **Editor controls and persistence:** in-game mouse/keyboard workspace, snap ghost, rotation/levels, palette, camera, undo/redo, draft save/load/rename/duplicate/delete, error messages, and unsaved-change handling.

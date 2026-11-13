@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
@@ -250,8 +251,52 @@ namespace Presentation
             byte[] canonical = Encoding.UTF8.GetBytes(JsonUtility.ToJson(Encode(draft), false));
             using SHA256 sha = SHA256.Create();
             byte[] hash = sha.ComputeHash(canonical);
-            return "layout-v1-" + BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            return "layout-v1-" + BitConverter.ToString(hash).Replace("-", string.Empty)
+                .Substring(0, 48).ToLowerInvariant();
         }
+
+        /// <summary>Writes a portable JSON copy for Unity Editor import or later friend sharing.</summary>
+        public bool TryExport(InGameTrackDraft draft, out string exportedPath, out string error)
+        {
+            exportedPath = null;
+            if (!TrySave(draft, out error)) return false;
+            string source = Path.Combine(directory, draft.LocalId + ".json");
+#if UNITY_WEBGL && !UNITY_EDITOR
+            try
+            {
+                DownloadTrackLayout(draft.LocalId + ".json", File.ReadAllText(source, Encoding.UTF8));
+                exportedPath = draft.LocalId + ".json";
+                error = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                error = "Track layout could not be downloaded: " + exception.Message;
+                return false;
+            }
+#else
+            string exportDirectory = Path.Combine(Application.persistentDataPath, "TrackExports");
+            string destination = Path.Combine(exportDirectory, draft.LocalId + ".json");
+            try
+            {
+                Directory.CreateDirectory(exportDirectory);
+                File.Copy(source, destination, true);
+                exportedPath = destination;
+                error = null;
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                error = "Track layout could not be exported: " + exception.Message;
+                return false;
+            }
+#endif
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal", EntryPoint = "ReReVoltDownloadTrackLayout")]
+        private static extern void DownloadTrackLayout(string fileName, string json);
+#endif
 
         private static SavedDraft Encode(InGameTrackDraft draft)
         {

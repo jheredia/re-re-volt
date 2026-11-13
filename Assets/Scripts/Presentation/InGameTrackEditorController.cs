@@ -159,8 +159,10 @@ namespace Presentation
             }
             y += 42f;
             if (GUI.Button(new Rect(x, y, width * .48f, 35f), "SAVE DRAFT")) Save();
-            if (GUI.Button(new Rect(x + width * .52f, y, width * .48f, 35f), "NEW DRAFT")) NewDraft();
+            if (GUI.Button(new Rect(x + width * .52f, y, width * .48f, 35f), "EXPORT JSON")) Export();
             y += 43f;
+            if (GUI.Button(new Rect(x, y, width, 32f), "NEW DRAFT")) NewDraft();
+            y += 38f;
             if (GUI.Button(new Rect(x, y, width * .48f, 35f), "UNDO  [CTRL Z]")) Undo();
             if (GUI.Button(new Rect(x + width * .52f, y, width * .48f, 35f), "REDO  [CTRL Y]")) Redo();
             y += 43f;
@@ -381,6 +383,24 @@ namespace Presentation
             RefreshLibrary();
             catalogChanged();
             return true;
+        }
+
+        private void Export()
+        {
+            try { draft.Rename(nameBuffer); }
+            catch (ArgumentException exception) { message = exception.Message; return; }
+            if (!store.TryExport(draft, out string path, out string error))
+            { message = error; return; }
+#if UNITY_WEBGL && !UNITY_EDITOR
+            message = "Portable track JSON downloaded: " + path;
+#else
+            GUIUtility.systemCopyBuffer = path;
+            message = "Portable JSON exported. File path copied to clipboard: " + path;
+#endif
+            dirty = false;
+            confirmClose = false;
+            RefreshLibrary();
+            catalogChanged();
         }
 
         private void PrepareTestDrive()

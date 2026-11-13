@@ -68,12 +68,22 @@ namespace Vehicle
         private float combatSteering = 1f;
         private float frontLeftGrip = 1f;
         private float frontRightGrip = 1f;
+        private float forwardLeftBaseline = 1f;
+        private float forwardRightBaseline = 1f;
+        private float rearLeftForwardBaseline = 1f;
+        private float rearRightForwardBaseline = 1f;
+        private float surfaceFrontLeft = 1f;
+        private float surfaceFrontRight = 1f;
+        private float surfaceRearLeft = 1f;
+        private float surfaceRearRight = 1f;
         private HandlingModelId selectedHandlingModel = HandlingModelId.A;
         private IVehicleHandlingModelRuntime handlingModelRuntime;
         private DirectionChangeTimer directionChangeTimer;
 
         public bool HasCombatModifier => combatGrip < 1f || combatMotor < 1f || combatSteering < 1f;
         public float CombatGripMultiplier => combatGrip;
+        public float AverageRoadGripMultiplier =>
+            (surfaceFrontLeft + surfaceFrontRight + surfaceRearLeft + surfaceRearRight) * .25f;
         internal float CombatSteeringMultiplier => combatSteering;
         internal float MaximumSpeedMetersPerSecond => maxSpeed;
         internal float MaximumSteerAngle => maxSteerAngle;
@@ -160,7 +170,12 @@ namespace Vehicle
                 return;
             }
 
+            SampleRoadGrip();
             GetHandlingModelRuntime().FixedStep(this);
+            ApplyForwardRoadGrip(wheelFL, forwardLeftBaseline, surfaceFrontLeft);
+            ApplyForwardRoadGrip(wheelFR, forwardRightBaseline, surfaceFrontRight);
+            ApplyForwardRoadGrip(wheelRL, rearLeftForwardBaseline, surfaceRearLeft);
+            ApplyForwardRoadGrip(wheelRR, rearRightForwardBaseline, surfaceRearRight);
             RecordHandlingSample();
         }
 
@@ -322,6 +337,34 @@ namespace Vehicle
         {
             frontLeftGrip = wheelFL.sidewaysFriction.stiffness;
             frontRightGrip = wheelFR.sidewaysFriction.stiffness;
+            forwardLeftBaseline = wheelFL.forwardFriction.stiffness;
+            forwardRightBaseline = wheelFR.forwardFriction.stiffness;
+            rearLeftForwardBaseline = wheelRL.forwardFriction.stiffness;
+            rearRightForwardBaseline = wheelRR.forwardFriction.stiffness;
+        }
+
+        private void SampleRoadGrip()
+        {
+            surfaceFrontLeft = WheelRoadGrip(wheelFL);
+            surfaceFrontRight = WheelRoadGrip(wheelFR);
+            surfaceRearLeft = WheelRoadGrip(wheelRL);
+            surfaceRearRight = WheelRoadGrip(wheelRR);
+        }
+
+        private static float WheelRoadGrip(WheelCollider wheel)
+        {
+            if (!wheel.GetGroundHit(out WheelHit hit) || hit.collider == null ||
+                !hit.collider.TryGetComponent(out RoadGripSurface marker)) return 1f;
+            return marker.Multiplier;
+        }
+
+        private static void ApplyForwardRoadGrip(WheelCollider wheel, float baseline, float multiplier)
+        {
+            WheelFrictionCurve curve = wheel.forwardFriction;
+            float stiffness = baseline * multiplier;
+            if (Mathf.Approximately(curve.stiffness, stiffness)) return;
+            curve.stiffness = stiffness;
+            wheel.forwardFriction = curve;
         }
 
         #region Motor
@@ -381,7 +424,9 @@ namespace Vehicle
         private void SetWheelSidewaysStiffness(WheelCollider wheel, float stiffness)
         {
             WheelFrictionCurve curve = wheel.sidewaysFriction;
-            curve.stiffness = stiffness;
+            float roadGrip = wheel == wheelFL ? surfaceFrontLeft : wheel == wheelFR ? surfaceFrontRight :
+                wheel == wheelRL ? surfaceRearLeft : surfaceRearRight;
+            curve.stiffness = stiffness * roadGrip;
             wheel.sidewaysFriction = curve;
         }
         #endregion
