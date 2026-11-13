@@ -26,7 +26,13 @@ the four existing playable courses.
    needs a trigger collider that is **disabled in the saved scene**. Select
    `TrackAuthoringRoot` to see numbered checkpoints, route arrows, anchor
    poses, and index warnings in the Scene View. Place grid and recovery poses
-   on clear drivable road, facing the intended direction.
+   on clear drivable road, facing the intended direction. To extend the route,
+   select a road piece near the new crossing (or focus the Scene View) and use
+   **Tools > ReReVolt > Tracks > Add Checkpoint and Recovery Pair**. It appends
+   the next index with a linked, disabled trigger and supports Undo. Move and
+   rotate the new pair to the exact crossing and safe recovery pose; the
+   initial placement is only a starting point. Fix any duplicate or missing
+   indices before using this command.
 4. Save the scene. Choose **Tools > ReReVolt > Tracks > Validate Open Track
    Scene** and fix any Console errors. If playable content, lap count, or
    checkpoint count changed, update `TrackAuthoringRoot`'s **Content Revision**
@@ -43,8 +49,9 @@ prove that a human or AI can finish a lap. Before sharing a build, drive the
 course, check recovery and pickups, and confirm an AI completes three laps.
 Relay friends must use builds from the same commit and content revision.
 The creation and local-playtest commands have compiled, but have **not yet
-been exercised interactively**; if either reports an error, keep the Console
-message for correction. These driving, Relay, and player-build checks remain
+been exercised interactively**. The new checkpoint-pair command has source
+review only. If a command reports an error, keep the Console message for
+correction. These Editor, driving, Relay, and player-build checks remain
 deferred until the owner authorizes validation.
 
 ## Editing an existing course
