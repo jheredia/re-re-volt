@@ -3,6 +3,7 @@ using System.Linq;
 using Core;
 using Presentation;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -67,7 +68,7 @@ public static class OpenAuthoredTrackPlaytestCommand
                 string.Equals(entry.path, FrontEndPath, StringComparison.Ordinal)))
             throw new InvalidOperationException("The FrontEnd scene must exist and be enabled in Build Settings.");
 
-        SceneAsset previousStartScene = EditorApplication.playModeStartScene;
+        SceneAsset previousStartScene = EditorSceneManager.playModeStartScene;
         bool hadPreferences = PlayerPrefs.HasKey(DemoFlowPreferences.StorageKey);
         string previousPreferences = hadPreferences
             ? PlayerPrefs.GetString(DemoFlowPreferences.StorageKey) : string.Empty;
@@ -81,7 +82,7 @@ public static class OpenAuthoredTrackPlaytestCommand
         preferences.Load();
         if (!preferences.SetTrackId(authoring.StableId))
             throw new InvalidOperationException("The selected track could not be saved for this playtest.");
-        EditorApplication.playModeStartScene = frontEnd;
+        EditorSceneManager.playModeStartScene = frontEnd;
         Debug.Log("[TrackAuthoring] Playing saved track '" + authoring.StableId +
                   "' through FrontEnd. Stop Play mode to restore the previous selection.");
         EditorApplication.isPlaying = true;
@@ -101,7 +102,7 @@ public static class OpenAuthoredTrackPlaytestCommand
     {
         if (!SessionState.GetBool(PendingKey, false)) return;
         string previousScenePath = SessionState.GetString(PreviousStartSceneKey, string.Empty);
-        EditorApplication.playModeStartScene = string.IsNullOrEmpty(previousScenePath)
+        EditorSceneManager.playModeStartScene = string.IsNullOrEmpty(previousScenePath)
             ? null : AssetDatabase.LoadAssetAtPath<SceneAsset>(previousScenePath);
         if (SessionState.GetBool(HadPreferencesKey, false))
             PlayerPrefs.SetString(DemoFlowPreferences.StorageKey,

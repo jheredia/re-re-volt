@@ -5,15 +5,27 @@
 Selecting an authored track root now displays checkpoint order/direction,
 grid and recovery poses, pickup positions, and missing/duplicate/out-of-range
 index status in the Unity Scene View. It is read-only and does not alter the
-runtime track contract. Unity import and visual inspection are deferred with
-the other owner-approved validation groups.
+runtime track contract. The Editor assembly compiled during scene asset
+creation; visual inspection is deferred with the other owner-approved checks.
 
 A separate Editor command can launch a saved, registered open course through
 the real local FrontEnd while temporarily selecting its ID. It refuses dirty,
 invalid, unregistered, or metadata-mismatched scenes and restores the prior
 Play-start scene and local selection on exiting Play mode. Baked built-in
-courses must be activated before this command can load them. This command is
-source-reviewed only; Unity compilation and Editor use remain deferred.
+courses must be activated before this command can load them. The Editor
+assembly compiled, but this playtest command has not been used.
+
+## Four editable built-in course scenes — content checkpoint
+
+Unity 6000.6 batch asset creation saved editable scenes and owned materials
+for RC Club Workshop, Sunset Patio Sweep, Market Aisle Dash, and Club Bridge
+Exhibition under `Assets/Scenes/CustomTracks`; Workshop also owns eight saved
+surface-decal meshes. The batch command exited successfully after using a
+Single temporary scene because Unity rejected activation of a new additive
+scene in batch mode. No production catalog override or build scene list entry
+changed. The scenes are starting assets for hand editing, not accepted playable
+replacements: scene reopen, local/AI driving, visual styles, pickup/recovery,
+and Relay behavior still require owner-approved validation.
 
 ## Race telemetry dials — source-only checkpoint
 
@@ -25,18 +37,18 @@ fingerprint changed, so peers need matching builds. The source was reviewed,
 but Unity compilation, one-to-four-player layout captures, snapshot tests,
 and live Relay behavior remain pending owner-approved validation.
 
-## Stage 9C generated-to-scene bake — source-only checkpoint
+## Stage 9C generated-to-scene bake — implementation checkpoint
 
 Editor commands now prepare durable editable RC Club Workshop, Sunset Patio
 Sweep, Market Aisle Dash, and Club Bridge Exhibition scenes from their
 generated layouts without changing the playable catalog or build scene list.
 They persist generated material/mesh assets and translate grid, checkpoint,
 recovery, pickup, surface, visual-style, and decoration
-markers. The commands have not run in Unity; no generated scene has been
-accepted. Later owner-approved validation must inspect and compare each saved
+markers. The commands produced saved assets in Unity, but no generated scene
+has been accepted. Later owner-approved validation must inspect and compare each saved
 scene before its stable catalog ID is switched to scene loading. RC Club
 Workshop's extra surface-decal meshes and exact style flags are included in
-the source-only command; saved-scene and player behavior remain unverified.
+the command; saved-scene and player behavior remain unverified.
 
 ## Opt-in built-in scene overrides — source-only checkpoint
 

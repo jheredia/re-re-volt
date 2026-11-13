@@ -185,11 +185,12 @@ leaves the original Editor scene active. It does not switch the production
 catalog entries or enable the baked scenes in builds. Those changes require
 comparing the saved scene with the accepted generated course first.
 
-The bake commands have been reviewed in source only; they have not been
-executed in Unity, and no generated scene asset has been accepted. After the
-owner approves validation, run each bake in the Editor, reopen the saved scene,
-then check physical laps, recovery, pickups, AI, visual styles, and cleanup
-before replacing the generated track entry.
+The four bake commands have now created editable scenes in Unity 6000.6 with
+owned material assets; Workshop also has eight saved decal meshes. The batch
+asset-creation run exited successfully. No generated scene has been accepted
+as a playable replacement. After the owner approves validation, reopen each
+saved scene and check physical laps, recovery, pickups, AI, visual styles,
+and cleanup before replacing the generated track entry.
 
 The Workshop bake additionally persists the eight authored-surface decal meshes
 and their runtime material, retaining referenced texture assets. It copies the
@@ -208,9 +209,10 @@ transaction fails. The four stable selection slots and names stay in place;
 the generated builders remain in source as fallback definitions. Additional
 custom scenes follow those four and the beta template in sorted ID order.
 
-No built-in override has been activated. This source-only implementation still
-needs owner-approved Unity compilation, Editor command execution, saved-scene
-inspection, local/AI race checks, online compatibility, and player builds.
+No built-in override has been activated. The Editor assembly compiled during
+asset creation; activation itself still needs owner-approved Editor execution,
+saved-scene inspection, local/AI race checks, online compatibility, and player
+builds.
 
 ## Scene View authoring overlay
 
@@ -218,8 +220,8 @@ Selecting a `TrackAuthoringRoot` now shows numbered checkpoints and route
 arrows, grid and recovery poses, pickup positions, and index-count/status
 labels in the Scene View. Missing, duplicate, and out-of-range indices are
 flagged without changing the scene; the structural validator remains the
-acceptance check. This Editor-only aid has been reviewed in source but still
-needs owner-approved Unity import and a Scene View readability check.
+acceptance check. This Editor-only aid compiled during asset creation but still
+needs an owner-approved Scene View readability check.
 
 For a saved, registered scene, **Tools > ReReVolt > Tracks > Play Registered
 Open Track Locally** temporarily selects its stable ID and starts Play mode
@@ -228,5 +230,5 @@ and enabled in Build Settings, with matching catalog revision/lap/checkpoint
 metadata. Stop Play mode to return to the Editor; the command restores the
 previous Play-start scene and local selection preference. A fresh custom scene
 must be registered first, and a baked built-in course must be activated first.
-This playtest command is source-only and has not been run in Unity. It helps
+The command compiled during asset creation but has not been used in Play mode. It helps
 drive a course locally but does not replace a bot completion or Relay check.

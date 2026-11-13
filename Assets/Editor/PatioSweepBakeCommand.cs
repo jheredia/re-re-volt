@@ -19,6 +19,50 @@ public static class Stage9CGeneratedTrackBakeCommand
 {
     private const string MenuRoot = "Tools/ReReVolt/Tracks/";
 
+    /// <summary>Batch entry point for creating the four editable scene assets in one Editor invocation.</summary>
+    public static void BakeAllToEditableScenes()
+    {
+        if (!Application.isBatchMode)
+            throw new InvalidOperationException("Use the individual menu commands in an interactive Editor.");
+        string[] ids =
+        {
+            TrackCatalog.WorkshopCircuitId,
+            TrackCatalog.PatioSweepId,
+            TrackCatalog.MarketAislesId,
+            TrackCatalog.BridgeExhibitionId
+        };
+        foreach (string id in ids)
+        {
+            string folder = SceneTrackManifest.SceneFolder + "/" + id;
+            if (Directory.Exists(folder) || AssetDatabase.IsValidFolder(folder) ||
+                File.Exists(SceneTrackManifest.ScenePathFor(id)))
+                throw new IOException("No scenes were baked: destination already exists: " + folder);
+        }
+
+        var createdFolders = new List<string>();
+        try
+        {
+            foreach (string id in ids)
+            {
+                // The batch bake uses a Single scene below. Reload a saved inert
+                // base before each course; never save changes to this scene.
+                EditorSceneManager.OpenScene("Assets/Scenes/FrontEnd.unity", OpenSceneMode.Single);
+                string path = Bake(id);
+                createdFolders.Add(SceneTrackManifest.SceneFolder + "/" + id);
+                Debug.Log("[TrackAuthoring] Created editable scene asset: " + path);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("[TrackAuthoring] Four editable course scenes created; playable catalog and build scene list are unchanged.");
+        }
+        catch
+        {
+            for (int index = createdFolders.Count - 1; index >= 0; index--)
+                if (!AssetDatabase.DeleteAsset(createdFolders[index]))
+                    Debug.LogError("[TrackAuthoring] Batch rollback could not remove " + createdFolders[index]);
+            throw;
+        }
+    }
+
     [MenuItem(MenuRoot + "Bake RC Club Workshop Scene")]
     private static void BakeWorkshopFromMenu() => BakeFromMenu(TrackCatalog.WorkshopCircuitId);
 
@@ -87,8 +131,13 @@ public static class Stage9CGeneratedTrackBakeCommand
             if (string.IsNullOrEmpty(folderGuid))
                 throw new IOException("Could not create the track asset folder.");
 
-            temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            if (!SceneManager.SetActiveScene(temporaryScene))
+            // Edit-mode batch runs cannot activate a new additive scene. A
+            // Single scene is already active; interactive baking retains its
+            // isolated additive scene beside the author's current work.
+            bool batchSingleScene = Application.isBatchMode;
+            temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,
+                batchSingleScene ? NewSceneMode.Single : NewSceneMode.Additive);
+            if (!batchSingleScene && !SceneManager.SetActiveScene(temporaryScene))
                 throw new InvalidOperationException("Could not activate the temporary bake scene.");
             var raceObject = new GameObject("TemporaryTrackBakeRaceManager");
             RaceManager race = raceObject.AddComponent<RaceManager>();
@@ -148,17 +197,20 @@ public static class Stage9CGeneratedTrackBakeCommand
         finally
         {
             EditorUtility.ClearProgressBar();
-            TryCleanup(() =>
+            if (!Application.isBatchMode)
             {
-                if (!SceneManager.SetActiveScene(originalScene))
-                    throw new InvalidOperationException("Could not reactivate the original scene.");
-            }, "original active scene", cleanupErrors);
-            TryCleanup(() =>
-            {
-                if (temporaryScene.IsValid() && temporaryScene.isLoaded &&
-                    !EditorSceneManager.CloseScene(temporaryScene, true))
-                    throw new InvalidOperationException("Could not close the temporary scene.");
-            }, "temporary scene", cleanupErrors);
+                TryCleanup(() =>
+                {
+                    if (!SceneManager.SetActiveScene(originalScene))
+                        throw new InvalidOperationException("Could not reactivate the original scene.");
+                }, "original active scene", cleanupErrors);
+                TryCleanup(() =>
+                {
+                    if (temporaryScene.IsValid() && temporaryScene.isLoaded &&
+                        !EditorSceneManager.CloseScene(temporaryScene, true))
+                        throw new InvalidOperationException("Could not close the temporary scene.");
+                }, "temporary scene", cleanupErrors);
+            }
             TryCleanup(() => runtime?.Dispose(), "generated runtime", cleanupErrors);
             TryCleanup(() => Selection.activeObject = originalSelection, "selection", cleanupErrors);
         }
