@@ -96,6 +96,25 @@ namespace Presentation
             { schemaVersion = CurrentSchemaVersion, tracks = next }));
         }
 
+        public SceneTrackManifest Without(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A track ID is required.", nameof(id));
+            var next = new List<SceneTrackRecord>(tracks.Length);
+            bool found = false;
+            foreach (SceneTrackRecord track in tracks)
+            {
+                if (string.Equals(track.Id, id, StringComparison.Ordinal))
+                {
+                    found = true;
+                    continue;
+                }
+                next.Add(track);
+            }
+            if (!found) throw new ArgumentException("The track ID is not registered in the manifest.", nameof(id));
+            return Parse(JsonUtility.ToJson(new SceneTrackManifest
+            { schemaVersion = CurrentSchemaVersion, tracks = next.ToArray() }));
+        }
+
         public string ToJson() => JsonUtility.ToJson(this, true) + "\n";
     }
 

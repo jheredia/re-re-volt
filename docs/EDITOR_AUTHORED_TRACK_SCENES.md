@@ -214,6 +214,17 @@ asset creation; activation itself still needs owner-approved Editor execution,
 saved-scene inspection, local/AI race checks, online compatibility, and player
 builds.
 
+If an activated baked course needs more editing, open its saved scene alone,
+save any changes, then choose **Tools > ReReVolt > Tracks > Deactivate Open
+Baked Track Scene**. This removes only that built-in override from the manifest
+and disables its Build Settings entry. It keeps the `.unity` scene, materials,
+meshes, and stable ID so the generated course becomes playable again and the
+scene can be revised and activated later. The disabled build-list entry keeps
+its position because activation did not record whether that entry existed
+beforehand. Manifest and build-list changes roll back together on failure;
+deactivation does not rewrite scene contents. This command has source review
+only and awaits owner-approved Editor use.
+
 ## Scene View authoring overlay
 
 Selecting a `TrackAuthoringRoot` now shows numbered checkpoints and route

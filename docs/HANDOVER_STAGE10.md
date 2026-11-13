@@ -27,6 +27,12 @@ changed. The scenes are starting assets for hand editing, not accepted playable
 replacements: scene reopen, local/AI driving, visual styles, pickup/recovery,
 and Relay behavior still require owner-approved validation.
 
+An Editor-only deactivation command is now available for a previously activated
+built-in bake. It removes that one override, disables its build-list entry,
+and leaves the editable scene/assets intact, with rollback for manifest and
+build-list changes. It has source review only; no override has been activated
+or deactivated in Unity.
+
 ## Race telemetry dials — source-only checkpoint
 
 Offline and private online per-player HUDs now include viewport-local speed
