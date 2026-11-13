@@ -8,6 +8,13 @@ index status in the Unity Scene View. It is read-only and does not alter the
 runtime track contract. Unity import and visual inspection are deferred with
 the other owner-approved validation groups.
 
+A separate Editor command can launch a saved, registered open course through
+the real local FrontEnd while temporarily selecting its ID. It refuses dirty,
+invalid, unregistered, or metadata-mismatched scenes and restores the prior
+Play-start scene and local selection on exiting Play mode. Baked built-in
+courses must be activated before this command can load them. This command is
+source-reviewed only; Unity compilation and Editor use remain deferred.
+
 ## Race telemetry dials — source-only checkpoint
 
 Offline and private online per-player HUDs now include viewport-local speed

@@ -220,3 +220,13 @@ labels in the Scene View. Missing, duplicate, and out-of-range indices are
 flagged without changing the scene; the structural validator remains the
 acceptance check. This Editor-only aid has been reviewed in source but still
 needs owner-approved Unity import and a Scene View readability check.
+
+For a saved, registered scene, **Tools > ReReVolt > Tracks > Play Registered
+Open Track Locally** temporarily selects its stable ID and starts Play mode
+from `FrontEnd.unity`. It requires the scene to be structurally valid, saved,
+and enabled in Build Settings, with matching catalog revision/lap/checkpoint
+metadata. Stop Play mode to return to the Editor; the command restores the
+previous Play-start scene and local selection preference. A fresh custom scene
+must be registered first, and a baked built-in course must be activated first.
+This playtest command is source-only and has not been run in Unity. It helps
+drive a course locally but does not replace a bot completion or Relay check.
