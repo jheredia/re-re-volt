@@ -133,6 +133,8 @@ A future **single changing course** can use the same catalog/runtime contract wi
 
 ## Creating another playable scene track
 
+For the hands-on sequence, see [Create an original track in Unity](TRACK_AUTHORING_QUICKSTART.md).
+
 Use **Tools > ReReVolt > Tracks > Create Playable Scene Track** in the Unity
 Editor. Enter a permanent lowercase ID, display name, one-line flow description,
 and content revision (for example `v1`). The command copies
