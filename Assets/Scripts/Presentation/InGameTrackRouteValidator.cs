@@ -8,7 +8,32 @@ namespace Presentation
     public static class InGameTrackRouteValidator
     {
         private const int SamplesPerPiece = 10;
-        private const float MinimumDeckClearance = 3f;
+        public const float MinimumDeckClearance = 3f;
+
+        public readonly struct RoadOverlap
+        {
+            // Zero-based route indices; the editor presents these as piece numbers + 1.
+            public readonly int First;
+            public readonly int Second;
+
+            public RoadOverlap(int first, int second) { First = first; Second = second; }
+        }
+
+        public static IReadOnlyList<RoadOverlap> FindRoadOverlaps(InGameTrackLayout layout)
+        {
+            if (layout == null) throw new ArgumentNullException(nameof(layout));
+            IReadOnlyList<TrackPiecePlacement> route = layout.Route;
+            var overlaps = new List<RoadOverlap>();
+            for (int first = 0; first < route.Count; first++)
+                for (int second = first + 2; second < route.Count; second++)
+                {
+                    if (layout.IsClosed && first == 0 && second == route.Count - 1) continue;
+                    if (TooClose(route[first], route[second]))
+                        overlaps.Add(new RoadOverlap(first, second));
+                    if (overlaps.Count >= 8) return overlaps;
+                }
+            return overlaps;
+        }
 
         public static IReadOnlyList<string> Validate(InGameTrackLayout layout)
         {
@@ -18,17 +43,10 @@ namespace Presentation
             IReadOnlyList<TrackPiecePlacement> route = layout.Route;
             // Road slabs overlap at joined sockets by design. Every other pair must be
             // separated in plan or by enough vertical space for the toy car and camera.
-            for (int first = 0; first < route.Count; first++)
+            foreach (RoadOverlap overlap in FindRoadOverlaps(layout))
             {
-                for (int second = first + 2; second < route.Count; second++)
-                {
-                    if (first == 0 && second == route.Count - 1) continue;
-                    if (TooClose(route[first], route[second]))
-                    {
-                        errors.Add($"Road pieces {first + 1} and {second + 1} overlap without safe height clearance.");
-                        if (errors.Count >= 8) return errors;
-                    }
-                }
+                errors.Add($"Road pieces {overlap.First + 1} and {overlap.Second + 1} overlap without safe height clearance (at least {MinimumDeckClearance:0.0} m).");
+                if (errors.Count >= 8) return errors;
             }
             for (int bridge = 0; bridge < route.Count; bridge++)
             {

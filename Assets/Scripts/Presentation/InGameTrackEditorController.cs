@@ -36,6 +36,12 @@ namespace Presentation
         private bool open;
         private bool dirty;
         private bool confirmClose;
+        private InGameTrackLayout overlapLayout;
+        private int overlapRouteCount = -1;
+        private IReadOnlyList<InGameTrackRouteValidator.RoadOverlap> roadOverlaps =
+            Array.Empty<InGameTrackRouteValidator.RoadOverlap>();
+        private int inspectedPieceIndex = -1;
+        private GUIStyle pieceNumberStyle;
 
         public bool IsOpen => open;
         public string CurrentDraftId => draft?.LocalId;
@@ -231,6 +237,7 @@ namespace Presentation
         {
             GUI.Box(area, string.Empty);
             IReadOnlyList<TrackPiecePlacement> route = draft.Layout.Route;
+            RefreshRoadOverlaps();
             bool hasPreview = draft.Layout.TryPreview(selectedPieceId, selectedSurface,
                 out TrackPiecePlacement preview, out string previewError);
             int minX = 0, maxX = 0, minZ = 0, maxZ = 0;
@@ -256,7 +263,10 @@ namespace Presentation
             for (int i = 0; i < route.Count; i++)
             {
                 TrackPiecePlacement piece = route[i];
-                Vector2 b = new(centerX + piece.Exit.X * scale, centerY - piece.Exit.Z * scale);
+                Vector3 midpoint = InGameTrackRuntimeBuilder.Sample(piece, .5f);
+                Vector2 badge = new(centerX + midpoint.x / InGameTrackRuntimeBuilder.CellSize * scale,
+                    centerY - midpoint.z / InGameTrackRuntimeBuilder.CellSize * scale);
+                bool conflicting = IsOverlappingPiece(i);
                 Color color = piece.Surface switch
                 {
                     TrackRoadSurface.Slick => new Color(.55f, .78f, 1f),
@@ -265,9 +275,24 @@ namespace Presentation
                 };
                 if (piece.Exit.Level > 0 || piece.Entry.Level > 0)
                     color = Color.Lerp(color, Color.magenta, .3f);
+                if (conflicting) color = new Color(1f, .18f, .14f);
                 DrawPiecePath(piece, centerX, centerY, scale,
-                    Mathf.Clamp(scale * 1.4f, 8f, 28f), color);
-                GUI.Label(new Rect(b.x - 13f, b.y - 13f, 35f, 25f), i.ToString());
+                    Mathf.Clamp(scale * (conflicting ? 1.9f : 1.4f), 8f, 36f), color);
+                GUI.color = conflicting ? new Color(.8f, .1f, .08f) :
+                    i == inspectedPieceIndex ? new Color(.1f, .5f, .65f) : new Color(.13f, .18f, .2f);
+                GUI.DrawTexture(new Rect(badge.x - 19f, badge.y - 13f, 38f, 26f),
+                    Texture2D.whiteTexture);
+                GUI.color = Color.white;
+                if (pieceNumberStyle == null)
+                {
+                    pieceNumberStyle = new GUIStyle(GUI.skin.label)
+                    {
+                        alignment = TextAnchor.MiddleCenter, fontSize = 16, fontStyle = FontStyle.Bold
+                    };
+                    pieceNumberStyle.normal.textColor = Color.white;
+                }
+                GUI.Label(new Rect(badge.x - 19f, badge.y - 13f, 38f, 26f),
+                    (i + 1).ToString(), pieceNumberStyle);
             }
             TrackSocket start = route[0].Entry;
             Vector2 startPoint = new(centerX + start.X * scale, centerY - start.Z * scale);
@@ -314,10 +339,15 @@ namespace Presentation
                 Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(area.x + 18f, area.y + 12f, area.width - 35f, 28f),
-                "TOP-DOWN ROUTE  •  CYAN = NEXT PIECE  •  GREEN = START / REMAINING GAP");
+                "CYAN NEXT  •  RED OVERLAP  •  WHEEL ZOOM  •  RIGHT-DRAG PAN  •  CLICK ROAD TO INSPECT");
+            if (GUI.Button(new Rect(area.xMax - 130f, area.y + 38f, 110f, 28f), "RESET VIEW"))
+            { mapPan = Vector2.zero; mapZoom = 1f; }
             IReadOnlyList<string> issues = draft.Layout.ValidateTopology();
-            GUI.Label(new Rect(area.x + 18f, area.yMax - 36f, area.width - 35f, 28f),
-                issues.Count == 0 ? "ROUTE TOPOLOGY CLOSED — PHYSICAL CHECKS STILL REQUIRED" : issues[0]);
+            string status = issues.Count > 0 ? issues[0] : roadOverlaps.Count > 0
+                ? $"RED PIECES {roadOverlaps[0].First + 1} + {roadOverlaps[0].Second + 1} OVERLAP: " +
+                  $"NEED {InGameTrackRouteValidator.MinimumDeckClearance:0.0} m HEIGHT GAP OR A REROUTE."
+                : "ROAD CLEARANCE PASSES. PREPARE LOCAL TEST DRIVE TO CHECK PROPS AND LOAD.";
+            GUI.Label(new Rect(area.x + 18f, area.yMax - 37f, area.width - 245f, 30f), status);
             bool previousEnabled = GUI.enabled;
             GUI.enabled = hasPreview;
             if (GUI.Button(new Rect(area.xMax - 210f, area.yMax - 52f, 190f, 36f),
@@ -327,14 +357,55 @@ namespace Presentation
             Event input = Event.current;
             if (input.type == EventType.ScrollWheel && area.Contains(input.mousePosition))
             { mapZoom = Mathf.Clamp(mapZoom * (input.delta.y > 0 ? .9f : 1.1f), .5f, 3f); input.Use(); }
-            if (input.type == EventType.MouseDrag && input.button == 2 && area.Contains(input.mousePosition))
-            { mapPan += input.delta; input.Use(); }
-            if (placingProp && input.type == EventType.MouseDown && input.button == 0 &&
+            if (input.type == EventType.MouseDrag && (input.button == 1 || input.button == 2) &&
                 area.Contains(input.mousePosition))
+            { mapPan += input.delta; input.Use(); }
+            if (input.type == EventType.MouseDown && input.button == 0 &&
+                area.Contains(input.mousePosition) && input.mousePosition.y < area.yMax - 60f)
             {
-                PlacePropOnMap(input.mousePosition, centerX, centerY, scale);
+                if (placingProp) PlacePropOnMap(input.mousePosition, centerX, centerY, scale);
+                else InspectPiece(input.mousePosition, route, centerX, centerY, scale);
                 input.Use();
             }
+        }
+
+        private void RefreshRoadOverlaps()
+        {
+            if (overlapLayout == draft.Layout && overlapRouteCount == draft.Layout.Route.Count) return;
+            overlapLayout = draft.Layout;
+            overlapRouteCount = draft.Layout.Route.Count;
+            roadOverlaps = InGameTrackRouteValidator.FindRoadOverlaps(draft.Layout);
+            if (inspectedPieceIndex >= overlapRouteCount) inspectedPieceIndex = -1;
+        }
+
+        private bool IsOverlappingPiece(int index)
+        {
+            foreach (InGameTrackRouteValidator.RoadOverlap overlap in roadOverlaps)
+                if (overlap.First == index || overlap.Second == index) return true;
+            return false;
+        }
+
+        private void InspectPiece(Vector2 mouse, IReadOnlyList<TrackPiecePlacement> route,
+            float centerX, float centerY, float scale)
+        {
+            float nearest = 25f * 25f;
+            int selected = -1;
+            for (int i = 0; i < route.Count; i++)
+                for (int sample = 0; sample <= 16; sample++)
+                {
+                    Vector3 world = InGameTrackRuntimeBuilder.Sample(route[i], sample / 16f);
+                    Vector2 point = new(centerX + world.x / InGameTrackRuntimeBuilder.CellSize * scale,
+                        centerY - world.z / InGameTrackRuntimeBuilder.CellSize * scale);
+                    float distance = (point - mouse).sqrMagnitude;
+                    if (distance >= nearest) continue;
+                    nearest = distance;
+                    selected = i;
+                }
+            if (selected < 0) return;
+            inspectedPieceIndex = selected;
+            TrackPiecePlacement piece = route[selected];
+            message = $"PIECE {selected + 1}: {PieceLabel(piece.Spec.Id)}  •  LEVEL {piece.Entry.Level} → {piece.Exit.Level}" +
+                      (IsOverlappingPiece(selected) ? "  •  RED: OVERLAPS ANOTHER ROAD PIECE" : string.Empty);
         }
 
         private static void DrawPiecePath(TrackPiecePlacement piece, float centerX,

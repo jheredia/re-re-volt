@@ -4,6 +4,15 @@
 
 ## Goal and boundaries
 
+**Raised-road direction under discussion (2026-11-13):** Treat road shape and
+elevation as one continuous piece system. Leave space beneath raised road empty
+until scenery/support props are placed, so a lower route can pass through a
+clear opening. Surface selection continues to set grip independently of the
+visual theme. A baked `.unity` scene remains the place for detailed hand-built
+scenery. Current code still has bridge-specific palette pieces and automatic
+support posts; replacing those requires a compatibility path for saved drafts
+and baked scenes.
+
 Players assemble an original, learnable RC circuit **inside the game**, without Unity Editor. The first release uses mouse and keyboard to place a curated road kit at open connectors, closes one ordered loop, adds simple scenery and collidable obstacles, saves locally, and launches a local Test Drive with the normal race systems. Ramps and usable bridges are part of this first release. The same versioned layout must also export as a portable file: a Unity Editor import command bakes it into an editable `.unity` scene, registers the scene in the manifest and build list, and lets the owner package it with the other tracks. Custom-track transfer to online friends follows local editing, using the validated layout bytes and content hash rather than shipping a new Unity scene over Relay. This does not replace the four fixed tracks or the existing Unity scene-authoring path.
 
 Current code exposes `ITrackRuntime` (`Root`, four-place `Grid`, ordered `Checkpoints`, `DrivableMask`, pickup positions, disposal) through `TrackDefinition`/`TrackSession`. `SceneAuthoredTrackRuntime` is an additive-scene implementation. **Proposed:** a layout compiler and `LayoutTrackRuntime` become a third source of the same contract. The player file contains data and allowlisted piece IDs, never Unity scene/prefab paths or serialized components. `Stage3Bootstrap` and online race authority remain the owners of vehicles, laps, recovery, pickups, AI, presentation, and cleanup. A local-track catalog layer must add validated saved layouts without mutating an active `TrackSession`; refresh selection only in lobby/editor transitions.

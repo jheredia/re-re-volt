@@ -13,6 +13,14 @@ a successful JSON save as proof that a route drives well.
    cell gap. It snaps the endpoint exactly onto the start socket. The physical
    clearance check still has to pass before Test Drive. Place props, then use
    **Prepare Local Test Drive** to exercise the course before packaging it.
+   Use the mouse wheel to zoom the route, right-drag or middle-drag to pan,
+   and **Reset View** to recenter it. The numbered badges match validation
+   messages: “pieces 14 and 16” means badges **14** and **16**. Conflicting
+   road pieces turn red. Click a road piece to inspect its type and height level.
+   Crossings need at least **3.0 m** of vertical separation; one full raised
+   level is **3.5 m**. If the road is still red, reroute or move the crossing
+   away from a ramp's partially raised section. A bridge support must also
+   stay clear of the lower road.
 2. Choose **Export JSON**. The game writes a portable `<local-id>.json` file in
    `Application.persistentDataPath/TrackExports` and copies its full path to the
    clipboard. On macOS the file is under the game's Application Support data

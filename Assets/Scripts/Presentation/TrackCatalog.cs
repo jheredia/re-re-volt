@@ -200,8 +200,23 @@ namespace Presentation
         public static bool TryGetLocal(string id, out TrackDefinition definition)
         {
             if (TryGet(id, out definition)) return true;
-            definition = string.Equals(id, betaTemplate.Id, StringComparison.Ordinal) ? betaTemplate : null;
-            return definition != null;
+            if (string.Equals(id, betaTemplate.Id, StringComparison.Ordinal))
+            {
+                definition = betaTemplate;
+                return true;
+            }
+            // Saved in-game layouts are discovered at runtime and are not part of
+            // the static scene catalog. Preferences must recognize the same local
+            // entries that TrackSession can select after the editor saves a draft.
+            if (!string.IsNullOrEmpty(id) && id.StartsWith("local-", StringComparison.Ordinal))
+                foreach (TrackDefinition local in BuildLocalCatalog())
+                    if (string.Equals(local.Id, id, StringComparison.Ordinal))
+                    {
+                        definition = local;
+                        return true;
+                    }
+            definition = null;
+            return false;
         }
 
         public static bool IsLocalAvailable(string id) => TryGetLocal(id, out TrackDefinition definition) && definition.IsAvailable;
