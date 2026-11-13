@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using Vehicle;
 using Weapons;
@@ -30,6 +31,7 @@ namespace Presentation
 
         private ITrackRuntime circuit;
         private string activeTrackId;
+        private string activeTrackRevision;
         private bool initialized;
         private bool trackLoadPending;
         private CancellationTokenSource trackLoadCancellation;
@@ -38,6 +40,7 @@ namespace Presentation
         public VehicleManager VehicleManager { get; private set; }
         public AIManager AIManager { get; private set; }
         public Stage3RacePresentation Presentation { get; private set; }
+        public InGameTrackEditorController TrackEditor { get; private set; }
         public WeaponManager WeaponManager { get; private set; }
         public HandlingBakeOffCoordinator HandlingBakeOff { get; private set; }
         public RcAudioPresentation AudioPresentation { get; private set; }
@@ -88,7 +91,7 @@ namespace Presentation
             DemoPreferences.Load();
             // The accepted generated circuit remains the initial shell while an authored
             // scene saved in preferences is loaded and validated additively.
-            TrackSession = new TrackSession(TrackCatalog.LocalEntries);
+            TrackSession = new TrackSession(TrackCatalog.BuildLocalCatalog());
             TrackDefinition initialShell = TrackCatalog.Entries[0];
 
             if (!RaceManager.ConfigureRace(initialShell.LapCount, initialShell.OrderedCheckpointCount))
@@ -99,6 +102,7 @@ namespace Presentation
 
             circuit = initialShell.Builder(RaceManager, transform, VisualStyle);
             activeTrackId = initialShell.Id;
+            activeTrackRevision = initialShell.ContentRevision;
             if (!VehicleManager.Configure(RaceManager, circuit.Grid, null, lobbyCamera, VisualStyle))
             {
                 Debug.LogError("[Stage3] VehicleManager could not accept the generated four-place grid.", this);
@@ -120,7 +124,12 @@ namespace Presentation
                 DemoPreferences, AIManager, TrackSession, TryCycleTrack,
                 () => !trackLoadPending && circuit != null &&
                       string.Equals(TrackSession.SelectedTrackId, activeTrackId, StringComparison.Ordinal) &&
+                      string.Equals(TrackSession.SelectedTrack.ContentRevision, activeTrackRevision,
+                          StringComparison.Ordinal) &&
                       TrackSession.SelectedTrack.IsSceneAuthored == (circuit is SceneAuthoredTrackRuntime));
+            TrackEditor = gameObject.AddComponent<InGameTrackEditorController>();
+            TrackEditor.Configure(RaceManager, VehicleManager, Presentation, TryPrepareLocalTestDrive,
+                RefreshLocalTrackCatalog);
             WeaponManager = FindAnyObjectByType<WeaponManager>();
             if (WeaponManager == null) WeaponManager = CreateChild<WeaponManager>("WeaponManager");
             WeaponManager.Configure(RaceManager, VehicleManager, Presentation, circuit.DrivableMask, VisualStyle);
@@ -154,12 +163,33 @@ namespace Presentation
             if (!TrackSession.TryCycle(direction)) return false;
             if (!TrackSession.CanStart) return true;
             if (string.Equals(activeTrackId, TrackSession.SelectedTrackId, System.StringComparison.Ordinal) &&
+                string.Equals(activeTrackRevision, TrackSession.SelectedTrack.ContentRevision,
+                    StringComparison.Ordinal) &&
                 TrackSession.SelectedTrack.IsSceneAuthored == (circuit is SceneAuthoredTrackRuntime))
             {
                 DemoPreferences.SetTrackId(TrackSession.SelectedTrackId);
                 return true;
             }
             BeginTrackActivation(previousSelection);
+            return true;
+        }
+
+        private void RefreshLocalTrackCatalog()
+        {
+            if (!initialized || trackLoadPending || RaceManager.CurrentState != RaceManager.RaceState.Idle) return;
+            string selectedId = TrackSession.SelectedTrackId;
+            TrackSession = new TrackSession(TrackCatalog.BuildLocalCatalog(), selectedId);
+            Presentation.SetTrackSession(TrackSession);
+        }
+
+        private bool TryPrepareLocalTestDrive(InGameTrackDraft draft)
+        {
+            if (draft == null || trackLoadPending || RaceManager.CurrentState != RaceManager.RaceState.Idle ||
+                VehicleManager.Players.Count != 0 || Keyboard.current == null) return false;
+            RefreshLocalTrackCatalog();
+            if (!TrackSession.TrySelect(TrackCatalog.LocalDraftTrackId(draft.LocalId))) return false;
+            if (!VehicleManager.TryJoinKeyboard(Keyboard.current, out _)) return false;
+            BeginTrackActivation(activeTrackId);
             return true;
         }
 
@@ -210,6 +240,7 @@ namespace Presentation
                 circuit = candidate;
                 candidate = null;
                 activeTrackId = selected.Id;
+                activeTrackRevision = selected.ContentRevision;
                 DemoPreferences.SetTrackId(selected.Id);
                 committed = true;
                 ReleaseTrackRuntime(previousRuntime);
@@ -233,7 +264,7 @@ namespace Presentation
             }
             if (this && !committed)
             {
-                if (rulesChanged && TrackCatalog.TryGetLocal(previousSelection, out TrackDefinition previous))
+                if (rulesChanged && TrackSession.TryGetDefinition(previousSelection, out TrackDefinition previous))
                     RaceManager.TryReconfigureIdleRace(previous.LapCount, previous.OrderedCheckpointCount);
                 VehicleManager.TryReconfigureTrack(circuit.Grid, circuit.DrivableMask);
                 AIManager.TryReconfigureTrack(circuit.Grid, circuit.Checkpoints, circuit.DrivableMask);

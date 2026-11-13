@@ -82,9 +82,17 @@ allowlisted eight-heading kit, open-end snapping, bounded levels, explicit road
 surface choice, undo-last, and preliminary loop topology errors.
 `InGameTrackDraftStore` saves and reloads even incomplete local layouts as
 versioned JSON, rejecting invented piece IDs or disconnected socket claims.
-This does not yet construct road geometry, provide editor controls, validate
-physical clearance, or make a custom track playable. Unity compile and runtime
-validation await the owner's validation signal.
+`InGameTrackRuntimeBuilder` contains an initial closed-layout road/grid/gate/
+pickup construction path with style and object cleanup. The first in-game
+workspace is reachable from the title with F9 or its Create Track button;
+players can append pieces, see a schematic map, switch visual theme and road
+surface, place small road props, undo road pieces, name, save, and load local
+drafts. A preliminary overlap/support and passable-lane check gates the
+**Prepare Local Test Drive** command, which saves and selects the layout using
+the existing local race authority. This is source-only, uncompiled work. The
+geometry validator is deliberately conservative, prop-aware AI guidance and
+surface-specific vehicle grip are still pending, and no playable course is
+claimed. Unity compile and runtime checks await the owner's validation signal.
 
 1. **Kit and compiler:** author the geometry/config and deterministic layout-to-`ITrackRuntime` compiler; start/grid, checkpoint/recovery, four pickups, style registration, and disposal work on flat and elevated loops. Minimal compile/smoke during implementation.
 2. **Editor controls and persistence:** in-game mouse/keyboard workspace, snap ghost, rotation/levels, palette, camera, undo/redo, draft save/load/rename/duplicate/delete, error messages, and unsaved-change handling.

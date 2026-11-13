@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 
@@ -9,12 +11,50 @@ namespace Presentation
     public sealed class InGameTrackDraft
     {
         internal InGameTrackDraft(string localId, string name, string themeId, InGameTrackLayout layout)
-        { LocalId = localId; Name = name; ThemeId = themeId; Layout = layout; }
+        {
+            LocalId = localId; Name = name; ThemeId = themeId; Layout = layout;
+            propsView = props.AsReadOnly();
+        }
+
+        private readonly List<InGameTrackProp> props = new();
+        private readonly IReadOnlyList<InGameTrackProp> propsView;
 
         public string LocalId { get; }
         public string Name { get; private set; }
         public string ThemeId { get; private set; }
         public InGameTrackLayout Layout { get; }
+        public IReadOnlyList<InGameTrackProp> Props => propsView;
+
+        public bool TryAddProp(string propId, int routePiece, float u, float v, float yaw, out string error)
+        {
+            if (!InGameTrackPropKit.TryGet(propId, out InGameTrackPropSpec spec))
+            { error = "Choose an allowlisted prop."; return false; }
+            if (props.Count >= 64 || spec.Collides && CountCollidableProps() >= 24)
+            { error = "Prop limit reached."; return false; }
+            if (routePiece < 0 || routePiece >= Layout.Route.Count || !IsFinite(u) ||
+                !IsFinite(v) || !IsFinite(yaw) || u < 0f || u > 1f || v < -1f || v > 1f ||
+                yaw < -360f || yaw > 360f)
+            { error = "Place the prop on a supported road surface."; return false; }
+            props.Add(new InGameTrackProp(spec, routePiece, u, v, yaw));
+            error = null;
+            return true;
+        }
+
+        public bool TryRemoveLastProp()
+        {
+            if (props.Count == 0) return false;
+            props.RemoveAt(props.Count - 1);
+            return true;
+        }
+
+        private int CountCollidableProps()
+        {
+            int count = 0;
+            foreach (InGameTrackProp prop in props) if (prop.Spec.Collides) count++;
+            return count;
+        }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         public static InGameTrackDraft Create(string name = "My Club Loop", InGameTrackLimits limits = null) =>
             new(Guid.NewGuid().ToString("N"), CheckedName(name), "workshop", new InGameTrackLayout(limits));
@@ -61,6 +101,17 @@ namespace Presentation
             public string name;
             public string themeId;
             public SavedPiece[] route;
+            public SavedProp[] props;
+        }
+
+        [Serializable]
+        private sealed class SavedProp
+        {
+            public string id;
+            public int routePiece;
+            public float u;
+            public float v;
+            public float yaw;
         }
 
         [Serializable]
@@ -78,6 +129,27 @@ namespace Presentation
         {
             this.limits = limits ?? new InGameTrackLimits();
             directory = storageDirectory ?? Path.Combine(Application.persistentDataPath, "TrackDrafts");
+        }
+
+        public IReadOnlyList<string> ListLocalIds()
+        {
+            if (!Directory.Exists(directory)) return Array.Empty<string>();
+            var ids = new List<string>();
+            try
+            {
+                foreach (string path in Directory.EnumerateFiles(directory, "*.json"))
+                {
+                    string id = Path.GetFileNameWithoutExtension(path);
+                    if (IsValidLocalId(id)) ids.Add(id);
+                    if (ids.Count >= 256) break;
+                }
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                Debug.LogWarning("[TrackEditor] Local draft list is unavailable: " + exception.Message);
+            }
+            ids.Sort(StringComparer.Ordinal);
+            return ids;
         }
 
         public bool TrySave(InGameTrackDraft draft, out string error)
@@ -152,6 +224,15 @@ namespace Presentation
                     { error = $"Track draft piece {i + 1} is invalid or disconnected."; return false; }
                 }
                 draft = new InGameTrackDraft(localId, name, data.themeId, layout);
+                if (data.props != null)
+                {
+                    if (data.props.Length > 64)
+                    { error = "Track draft has too many props."; draft = null; return false; }
+                    foreach (SavedProp prop in data.props)
+                        if (prop == null || !draft.TryAddProp(prop.id, prop.routePiece, prop.u,
+                                prop.v, prop.yaw, out error))
+                        { error = "Track draft contains an invalid prop."; draft = null; return false; }
+                }
                 error = null;
                 return true;
             }
@@ -163,6 +244,15 @@ namespace Presentation
             }
         }
 
+        public static string ContentRevision(InGameTrackDraft draft)
+        {
+            if (draft == null) throw new ArgumentNullException(nameof(draft));
+            byte[] canonical = Encoding.UTF8.GetBytes(JsonUtility.ToJson(Encode(draft), false));
+            using SHA256 sha = SHA256.Create();
+            byte[] hash = sha.ComputeHash(canonical);
+            return "layout-v1-" + BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
         private static SavedDraft Encode(InGameTrackDraft draft)
         {
             var result = new SavedDraft
@@ -172,7 +262,8 @@ namespace Presentation
                 localId = draft.LocalId,
                 name = draft.Name,
                 themeId = draft.ThemeId,
-                route = new SavedPiece[draft.Layout.Route.Count]
+                route = new SavedPiece[draft.Layout.Route.Count],
+                props = new SavedProp[draft.Props.Count]
             };
             for (int i = 0; i < result.route.Length; i++)
             {
@@ -182,6 +273,15 @@ namespace Presentation
                     id = piece.Spec.Id, x = piece.Entry.X, z = piece.Entry.Z,
                     level = piece.Entry.Level, heading = piece.Entry.Heading,
                     surface = (int)piece.Surface
+                };
+            }
+            for (int i = 0; i < result.props.Length; i++)
+            {
+                InGameTrackProp prop = draft.Props[i];
+                result.props[i] = new SavedProp
+                {
+                    id = prop.Spec.Id, routePiece = prop.RoutePiece,
+                    u = prop.U, v = prop.V, yaw = prop.Yaw
                 };
             }
             return result;

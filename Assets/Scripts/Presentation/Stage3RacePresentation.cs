@@ -103,6 +103,12 @@ namespace Presentation
         public string SelectedTrackId => tracks?.SelectedTrackId ?? string.Empty;
         public bool SelectedTrackAvailable => (tracks == null || tracks.CanStart) && (trackReady == null || trackReady());
 
+        public void SetTrackSession(TrackSession session)
+        {
+            tracks = session ?? throw new ArgumentNullException(nameof(session));
+            RefreshLobbyText();
+        }
+
         /// <summary>Stage 4 integration point for the existing single-slot weapon inventory.</summary>
         public void SetWeaponSlot(int playerIndex, string weaponName)
         {
@@ -798,6 +804,7 @@ namespace Presentation
                 builder.AppendLine("ENTER   JOIN WITH KEYBOARD");
                 builder.AppendLine("MENU / START   JOIN WITH A GAMEPAD");
                 builder.AppendLine("F8   ONLINE CONNECTION (KEYBOARD)");
+                builder.AppendLine("F9   CREATE OR EDIT A LOCAL TRACK (MOUSE + KEYBOARD)");
                 builder.AppendLine("ADD UP TO FOUR LOCAL DRIVERS, THEN PICK A CAR AND HANDLING MODEL.");
                 lobbyPlayers.text = builder.ToString();
                 return;

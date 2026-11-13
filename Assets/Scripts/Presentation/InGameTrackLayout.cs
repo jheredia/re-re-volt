@@ -91,8 +91,9 @@ namespace Presentation
         };
 
         private static readonly Dictionary<string, TrackPieceSpec> ById = BuildIndex();
+        private static readonly IReadOnlyList<TrackPieceSpec> ReadOnlyPieces = Array.AsReadOnly(Pieces);
 
-        public static IReadOnlyList<TrackPieceSpec> All => Pieces;
+        public static IReadOnlyList<TrackPieceSpec> All => ReadOnlyPieces;
 
         public static bool TryGet(string id, out TrackPieceSpec spec) =>
             ById.TryGetValue(id ?? string.Empty, out spec);
@@ -169,17 +170,19 @@ namespace Presentation
     {
         private readonly List<TrackPiecePlacement> route = new();
         private readonly InGameTrackLimits limits;
+        private readonly IReadOnlyList<TrackPiecePlacement> routeView;
 
         public InGameTrackLayout(InGameTrackLimits limits = null, int startHeading = 0)
         {
             this.limits = limits ?? new InGameTrackLimits();
+            routeView = route.AsReadOnly();
             var entry = new TrackSocket(0, 0, 0, startHeading);
             TrackPieceSpec start = InGameTrackKit.All[0];
             route.Add(new TrackPiecePlacement(start, entry, InGameTrackKit.Exit(entry, start),
                 TrackRoadSurface.Standard));
         }
 
-        public IReadOnlyList<TrackPiecePlacement> Route => route.AsReadOnly();
+        public IReadOnlyList<TrackPiecePlacement> Route => routeView;
         public TrackSocket OpenEnd => route[route.Count - 1].Exit;
         public bool IsClosed => route.Count > 1 && OpenEnd == route[0].Entry;
 

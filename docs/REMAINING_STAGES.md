@@ -223,9 +223,12 @@ package, transport, service, or authority choice is final.
      editing controls. Existing fixed tracks and the Unity Editor scene path stay.
    - Implement the kit/compiler, workspace and local saves, props/validation/AI,
      then local Test Drive and track selection. Custom-track Relay transfer is a
-     separate later deliverable. The current source-only first slice contains
-     the route kit/model and local draft persistence; it is not a playable
-     editor or a validated course.
+     separate later deliverable. Source now includes the route kit, local draft
+     persistence, an initial runtime compiler, conservative clearance and prop
+     checks, and a title-accessible editing workspace. A local Test Drive
+     preparation command is wired to the existing race composition, but
+     prop-aware AI guidance and actual surface grip are pending. None of this
+     new source has been compiled or validated in Unity.
    - The owner asked to approve validation groups. Before any editor tests or
      builds, list the pending checks and request a signal. Resume the remaining
      fixed-track online beta checks after local editor implementation.

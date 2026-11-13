@@ -98,6 +98,27 @@ namespace Presentation
         public static IReadOnlyList<TrackDefinition> LocalEntries => localEntries;
         public static TrackDefinition Default => entries[0];
 
+        /// <summary>Local-only saved layouts are deliberately excluded from Relay's selectable roster.</summary>
+        public static IReadOnlyList<TrackDefinition> BuildLocalCatalog()
+        {
+            var result = new List<TrackDefinition>(localEntries);
+            var store = new InGameTrackDraftStore();
+            foreach (string localId in store.ListLocalIds())
+            {
+                if (!store.TryLoad(localId, out InGameTrackDraft draft, out _)) continue;
+                if (InGameTrackRouteValidator.Validate(draft).Count != 0) continue;
+                string id = LocalDraftTrackId(localId);
+                result.Add(new TrackDefinition(id, draft.Name.ToUpperInvariant(),
+                    "PLAYER-BUILT CLUB LOOP", "LOCAL SAVED LAYOUT / " + draft.Layout.Route.Count + " CHECKPOINTS",
+                    3, draft.Layout.Route.Count,
+                    (race, parent, style) => InGameTrackRuntimeBuilder.Build(draft, race, parent, style),
+                    contentRevision: InGameTrackDraftStore.ContentRevision(draft)));
+            }
+            return result;
+        }
+
+        public static string LocalDraftTrackId(string localId) => "local-" + localId;
+
         /// <summary>Refresh after an Editor authoring command changes the manifest without a domain reload.</summary>
 #if UNITY_EDITOR
         public static void ReloadSceneManifest(string json) => localEntries = BuildSelectableEntries(json);
@@ -215,6 +236,9 @@ namespace Presentation
         public TrackDefinition SelectedTrack => entries[selectedIndex];
         public string SelectedTrackId => SelectedTrack.Id;
         public bool CanStart => SelectedTrack.IsAvailable;
+
+        public bool TryGetDefinition(string id, out TrackDefinition definition) =>
+            entriesById.TryGetValue(id ?? string.Empty, out definition);
 
         public bool TrySelect(string id)
         {
