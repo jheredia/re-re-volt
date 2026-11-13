@@ -80,8 +80,10 @@ lines when something fails; redact share codes and account identifiers before
 sharing. A local UDP or same-Mac pass must not be reported as a separate-network
 Relay pass.
 
-**WebGL:** the accepted Stage 9 WebGL build starts offline, but online
-native-host/browser-client Relay interoperability has not been validated. A
-browser build must be served by a web server. Treat any WebGL online run as a
-separate experimental check; do not rely on it as the only friend-test path.
+**WebGL:** a same-Mac native-host/browser-client Relay check has joined,
+started a Workshop race, accepted brief browser driving input, and returned
+the browser to the menu after host leave. A browser build must be served by a
+web server. Full race, combat hit, Results/rematch, other tracks, and
+separate-machine/cross-network interoperability still need their own checks;
+do not rely on WebGL as the only friend-test path yet.
 Windows runtime and physical multi-controller validation remain deferred.
