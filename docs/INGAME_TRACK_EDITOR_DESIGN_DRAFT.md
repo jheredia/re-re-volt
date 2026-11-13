@@ -20,19 +20,18 @@ Mouse/keyboard baseline: left click place/select, right click or Esc cancel, whe
 
 ## Initial road kit and socket contract (proposed)
 
-The **exact first kit** is: Start/Finish Straight (length 4 units); Straight 1; Straight 2; 90° Corner 1; 90° Corner 2 (wide); left and right S-Bend; Ramp Up; Ramp Down; Bridge Span 2; Bridge Corner 2. Road pieces can be placed at ground or raised levels when their geometry permits. Bridge pieces are traversable road with guard edges and automatic supports; they are not decoration. Existing fixed-track geometry need not be rebuilt as these pieces.
+The **first kit families** are: Start/Finish Straight; short and long Straights; tight and wide 90° Corners; left and right 45° Transitions; short and long Diagonal Straights; left and right S-Bends; Ramp Up and Ramp Down; Bridge Straight and Bridge Corner. The piece catalog can provide cardinal and diagonal variants where the authored sockets quantize correctly. Road pieces can be placed at ground or raised levels when their geometry permits. Bridge pieces are traversable road with guard edges and automatic supports; they are not decoration. Existing fixed-track geometry need not be rebuilt as these pieces.
 
-| Piece | Local entry → exit centerline sockets, in grid units | Level change |
+| Piece family | Entry → exit heading | Level change |
 | --- | --- | --- |
-| Start/Finish Straight | `(-2,0) W → (2,0) E` | 0 |
-| Straight 1 / Straight 2 | `(-0.5,0) W → (0.5,0) E` / `(-1,0) W → (1,0) E` | 0 |
-| 90° Corner 1 / Corner 2 | `(-0.5,0) W → (0,0.5) N` / `(-1,0) W → (0,1) N` | 0 |
-| S-Bend left / right | `(-1,0) W → (1,1) E` / `(-1,0) W → (1,-1) E` | 0 |
-| Ramp Up / Ramp Down | `(-1,0) W → (1,0) E` | +1 / −1 |
-| Bridge Span 2 | `(-1,0) W → (1,0) E` | 0, raised only |
-| Bridge Corner 2 | `(-1,0) W → (0,1) N` | 0, raised only |
+| Start/Finish, Straight, Diagonal Straight | Same heading at both ends | 0 |
+| 45° Transition left / right | Change heading by one 45° step | 0 |
+| Tight / wide 90° Corner | Change heading by two 45° steps | 0 |
+| S-Bend left / right | Same heading with a lateral offset | 0 |
+| Ramp Up / Ramp Down | Same heading at both ends; cardinal and diagonal variants where supported | +1 / −1 |
+| Bridge Straight / Corner | Same heading or a catalog-defined bend | 0, raised only |
 
-Each socket has a quantized world position, cardinal outward heading, integer road level, fixed road width, and height profile at the join. After rotation, an open exit can meet only a compatible entry at the **same world position and deck height**, with opposed outward headings and matched width/profile; no gap, T-junction, fork, or loose crossing. Mirror only pieces with an authored mirror. A piece has one entry and one exit, so the first graph is exactly one cycle. Geometry occupies a 3D swept volume, not just a top-down tile. Two roads may cross only when vertical separation and vehicle/camera clearance pass; supports cannot block the lower road. A bridge may cross itself below, but never creates a second race route.
+Each socket has a position on a shared fixed-point planar lattice, one of eight outward headings in 45° steps, an integer road level, fixed road width, and height profile at the join. The catalog stores the authored socket offsets and allowed rotations for each variant; a diagonal piece is accepted only when its transformed sockets land on that lattice. After rotation, an open exit can meet only a compatible entry at the **same world position and deck height**, with opposed outward headings and matched width/profile; no gap, T-junction, fork, or loose crossing. Mirror only pieces with an authored mirror. A piece has one entry and one exit, so the first graph is exactly one cycle. Geometry occupies a 3D swept volume, not just a top-down tile. Two roads may cross only when vertical separation and vehicle/camera clearance pass; supports cannot block the lower road. A bridge may cross itself below, but never creates a second race route.
 
 **Proposed tuning data:** grid pitch, road width, elevation step, minimum vertical clearance, vehicle/camera envelope, turn radii, and maximum grade belong in a versioned piece catalog/config asset. The UI defaults to levels **0–3** (ground plus three raised); a configurable maximum controls the picker and validator, and the file schema stores integer levels without baking in `3`. If the current vehicle cannot climb a proposed ramp or clear an overpass, adjust the authored piece dimensions before acceptance, not vehicle physics. The Start/Finish Straight reserves four safe grid poses and a clear launch/recovery envelope. Track direction, checkpoint order, and recovery yaw derive from the connected centerline; users do not hand-place race authority components.
 
@@ -70,7 +69,7 @@ The runtime builder owns every generated GameObject, collider, renderer registra
 
 ## Theme and prop rules
 
-**Proposed first presets:** Workshop, Patio, Market. These are original visual/dressing palettes with distinct scale cues, light, road marking and prop sets; the route topology remains the player's. Surface physics should initially be chosen by explicit road piece/surface data rather than theme so a theme switch cannot silently change lap feasibility (**inference to confirm**). Each preset supplies compatible Clean 3D/Ink Lite/Full Ink materials and legible road edges. Props are allowlisted, finite, and tagged `decorative` or `collidable`; visual-only theme swapping cannot change their collision hull. Bridge supports and safety edges are structural parts of pieces, not freely placed props.
+**Proposed first presets:** Workshop, Patio, Market. These are original visual/dressing palettes with distinct scale cues, light, road marking and prop sets; the route topology remains the player's. The user's choice is that themes change visuals only. Explicit road piece/surface data sets grip, so switching a theme cannot silently change handling. Each preset supplies compatible Clean 3D/Ink Lite/Full Ink materials and legible road edges. Props are allowlisted, finite, and tagged `decorative` or `collidable`; visual-only theme swapping cannot change their collision hull. Bridge supports and safety edges are structural parts of pieces, not freely placed props.
 
 ## Online sharing — later deliverable
 
@@ -87,10 +86,11 @@ Local editor v1 does not inject an unsaved custom track into Relay sessions. A l
 
 ## Open design questions
 
-- Confirm the three theme names and whether a visual theme may also select physics surfaces.
+- Confirm the three proposed theme names and art palettes; theme selection is visual only.
 - Confirm the first kit's physical grid pitch, road width, level step, slope, bridge underside/camera clearance, and vehicle-specific clearance envelope from actual play.
-- Decide whether all piece placements use cardinal rotation only in v1; this draft proposes that for robust snapping and serialization.
+- Measure the fixed-point lattice and authored socket offsets for both cardinal and 45° diagonal variants; every allowed rotation must land sockets exactly on the lattice.
 - Decide how much free prop rotation/translation precision is needed while retaining deterministic validation and comfortable mouse controls.
 - Decide whether an invalid draft can be shared/exported locally as a file; it should never enter normal race selection until valid.
+- Confirm whether local editor implementation takes priority over the remaining fixed-track online beta validation, or follows that beta gate while preceding custom-track online sharing.
 
 **Roadmap proposal only:** move the **local in-game block editor** from “deferred optional systems” to the next prioritized prototype feature after currently committed online/local work, before online custom-track sharing and final integrated beta acceptance. Keep the existing Unity scene-authoring route for hand-built showcase tracks. Do not alter Stage 10 network authority or claim online custom tracks are ready. This document does not update the roadmap itself.
