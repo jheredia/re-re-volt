@@ -7,6 +7,6 @@
   <Project Path="ReReVolt.LocalPlayers.Tests.csproj" />
   <Project Path="ReReVolt.Online.Contracts.csproj" />
   <Project Path="ReReVolt.Online.World.Tests.csproj" />
-  <Project Path="ReReVolt.Online.Contracts.Tests.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="ReReVolt.Online.Contracts.Tests.csproj" />
 </Solution>

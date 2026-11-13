@@ -65,6 +65,9 @@ public static class InGameTrackSceneBakeCommand
         Scene originalScene = SceneManager.GetActiveScene();
         if (!originalScene.IsValid() || !originalScene.isLoaded)
             throw new InvalidOperationException("Open a Unity Editor scene before importing a layout.");
+        string originalScenePath = originalScene.path;
+        if (Application.isBatchMode && string.IsNullOrEmpty(originalScenePath))
+            throw new InvalidOperationException("Batch import needs a saved active scene to restore afterward.");
         UnityEngine.Object originalSelection = Selection.activeObject;
         EditorBuildSettingsScene[] previousBuildScenes = EditorBuildSettings.scenes;
         Scene temporaryScene = default;
@@ -86,8 +89,10 @@ public static class InGameTrackSceneBakeCommand
                 throw new IOException("Could not create this track's asset folder.");
             folderCreated = true;
 
-            temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            if (!SceneManager.SetActiveScene(temporaryScene))
+            bool batchSingleScene = Application.isBatchMode;
+            temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,
+                batchSingleScene ? NewSceneMode.Single : NewSceneMode.Additive);
+            if (!batchSingleScene && !SceneManager.SetActiveScene(temporaryScene))
                 throw new InvalidOperationException("Could not activate the isolated bake scene.");
             raceObject = new GameObject("TemporaryLayoutBakeRace");
             RaceManager race = raceObject.AddComponent<RaceManager>();
@@ -161,8 +166,10 @@ public static class InGameTrackSceneBakeCommand
             }, "temporary race", cleanupErrors);
             TryCleanup(() =>
             {
-                if (SceneManager.GetActiveScene() != originalScene &&
-                    !SceneManager.SetActiveScene(originalScene))
+                if (Application.isBatchMode)
+                    EditorSceneManager.OpenScene(originalScenePath, OpenSceneMode.Single);
+                else if (SceneManager.GetActiveScene() != originalScene &&
+                         !SceneManager.SetActiveScene(originalScene))
                     throw new InvalidOperationException("Could not reactivate the original scene.");
             }, "original scene", cleanupErrors);
             TryCleanup(() =>

@@ -1,4 +1,16 @@
 {
     "schemaVersion": 1,
-    "tracks": []
+    "tracks": [
+        {
+            "id": "welcome-to-the-neighborhood",
+            "displayName": "NEIGHBORHOOD",
+            "description": "A cul-de-sac",
+            "previewMetadata": "SCENE-AUTHORED / 8 CHECKPOINTS",
+            "scenePath": "Assets/Scenes/CustomTracks/welcome-to-the-neighborhood/Track_welcome-to-the-neighborhood.unity",
+            "contentRevision": "v1",
+            "lapCount": 3,
+            "orderedCheckpointCount": 8,
+            "overridesBuiltIn": false
+        }
+    ]
 }
